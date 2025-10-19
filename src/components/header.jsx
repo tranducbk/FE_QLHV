@@ -206,7 +206,7 @@ const Header = () => {
         );
         setDocuments((prevDocs) =>
           prevDocs.map((doc) =>
-            doc._id === notificationId ? { ...doc, isRead: true } : doc
+            doc.id === notificationId ? { ...doc, isRead: true } : doc
           )
         );
         // Điều hướng đến trang kết quả học tập
@@ -288,7 +288,7 @@ const Header = () => {
   const notificationItems =
     Array.isArray(documents) && documents.length > 0
       ? documents.map((doc) => ({
-          key: doc._id,
+          key: doc.id,
           label: (
             <Card
               size="small"
@@ -300,7 +300,7 @@ const Header = () => {
                 border: `1px solid ${themeToken.colorBorder}`,
                 opacity: doc.isRead ? 0.7 : 1,
               }}
-              onClick={(e) => handleUpdateIsRead(e, doc._id)}
+              onClick={(e) => handleUpdateIsRead(e, doc.id)}
             >
               <Space direction="vertical" size={4} style={{ width: "100%" }}>
                 <Space>

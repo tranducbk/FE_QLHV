@@ -1,0 +1,231 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Ant Design styles */
+@import "antd/dist/reset.css";
+
+/* Custom CSS variables for theme colors */
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-border: #e5e7eb;
+  --color-text: #1f2937;
+  --color-text-secondary: #6b7280;
+
+  /* Table colors */
+  --table-header-bg: #f8fafc;
+  --table-header-text: #374151;
+  --table-body-bg: #ffffff;
+  --table-body-text: #1f2937;
+  --table-border: #e2e8f0;
+  --table-row-border: #f1f5f9;
+
+  /* Card colors */
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: #e5e7eb;
+  --card-head-bg: rgba(255, 255, 255, 0.95);
+  --card-head-text: #1f2937;
+  --card-body-text: #374151;
+}
+
+.dark {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-border: #334155;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+
+  /* Table colors */
+  --table-header-bg: #1e293b;
+  --table-header-text: #f8fafc;
+  --table-body-bg: #0f172a;
+  --table-body-text: #f1f5f9;
+  --table-border: #334155;
+  --table-row-border: #334155;
+
+  /* Card colors */
+  --card-bg: rgba(30, 41, 59, 0.9);
+  --card-border: #334155;
+  --card-head-bg: rgba(30, 41, 59, 0.95);
+  --card-head-text: #f1f5f9;
+  --card-body-text: #e2e8f0;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* Hide scrollbar for all browsers */
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Glass morphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* Enhanced specificity for Ant Design components */
+.contact-page .ant-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+.contact-page .ant-card-head {
+  background: var(--card-head-bg);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.contact-page .ant-card-head-title {
+  color: var(--card-head-text);
+}
+
+.contact-page .ant-card-body {
+  color: var(--card-body-text);
+}
+
+.contact-page .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--table-border);
+}
+
+.contact-page .ant-table-thead > tr > th {
+  background: var(--table-header-bg);
+  border-bottom: 1px solid var(--table-border);
+  font-weight: 600;
+  color: var(--table-header-text);
+  border-right: none !important;
+}
+
+.contact-page .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--table-row-border);
+  color: var(--table-body-text);
+  background: var(--table-body-bg);
+  border-right: none !important;
+}
+
+.contact-page .ant-table-tbody > tr:last-child > td {
+  border-bottom: none;
+}
+
+/* Remove hover effect */
+.contact-page .ant-table-tbody > tr:hover > td {
+  background: var(--table-body-bg) !important;
+}
+
+/* Table cell content styling */
+.contact-page .ant-table-tbody > tr > td .ant-space {
+  color: inherit;
+}
+
+/* Alert styling - Improved for light mode */
+.contact-page .ant-alert {
+  border-radius: 8px;
+  border: none;
+}
+
+.contact-page .ant-alert-warning {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+}
+
+.contact-page .ant-alert-warning .ant-alert-message {
+  color: #92400e;
+}
+
+.contact-page .ant-alert-warning .ant-alert-description {
+  color: #78350f;
+}
+
+/* Dark mode alert */
+.dark .contact-page .ant-alert-warning {
+  background: #451a03;
+  border: 1px solid #92400e;
+}
+
+.dark .contact-page .ant-alert-warning .ant-alert-message {
+  color: #fbbf24;
+}
+
+.dark .contact-page .ant-alert-warning .ant-alert-description {
+  color: #f3f4f6;
+}
+
+.contact-page .ant-typography {
+  margin-bottom: 0;
+}
+
+.contact-page .ant-typography h1,
+.contact-page .ant-typography h2,
+.contact-page .ant-typography h3,
+.contact-page .ant-typography h4,
+.contact-page .ant-typography h5 {
+  color: var(--color-text);
+}
+
+.contact-page .ant-typography p {
+  color: var(--color-text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .contact-page .ant-table {
+    font-size: 12px;
+  }
+
+  .contact-page .ant-table-thead > tr > th,
+  .contact-page .ant-table-tbody > tr > td {
+    padding: 8px 4px;
+  }
+}

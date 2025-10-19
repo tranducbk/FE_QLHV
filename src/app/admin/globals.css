@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text: #012970;
+  --bgSoft: #2d2b42;
+  --bg: #f6f9ff;
+  --textSoft: #e5e5e5;
+  --btn: #3673fd;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.light-notification {
+  @apply bg-white text-gray-900 border border-gray-200;
+}
+
+.dark-notification {
+  @apply bg-gray-800 text-gray-700 border border-gray-700;
+}
+
+.light-notification .ant-notification-notice-message,
+.light-notification .ant-notification-notice-description {
+  @apply text-gray-900 !important;
+}
+
+.dark-notification .ant-notification-notice-message,
+.dark-notification .ant-notification-notice-description {
+  @apply text-gray-100 !important;
+}

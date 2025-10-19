@@ -1,0 +1,347 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS variables for theme colors */
+:root {
+  --primary-color: #3b82f6;
+  --secondary-color: #64748b;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --border-color: #e5e7eb;
+  --table-header-bg: #f8fafc;
+  --table-body-bg: #ffffff;
+  --table-border: #e2e8f0;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --alert-info-bg: #eff6ff;
+  --alert-info-border: #3b82f6;
+  --alert-warning-bg: #fffbeb;
+  --alert-warning-border: #f59e0b;
+}
+
+.dark {
+  --primary-color: #60a5fa;
+  --secondary-color: #94a3b8;
+  --success-color: #34d399;
+  --warning-color: #fbbf24;
+  --error-color: #f87171;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #262626;
+  --border-color: #374151;
+  --table-header-bg: #1e293b;
+  --table-body-bg: #0f172a;
+  --table-border: #334155;
+  --card-bg: #1e293b;
+  --card-border: #374151;
+  --alert-info-bg: #1e3a8a;
+  --alert-info-border: #3b82f6;
+  --alert-warning-bg: #92400e;
+  --alert-warning-border: #f59e0b;
+}
+
+/* Prevent flash by setting initial background */
+html {
+  background-color: #ffffff;
+}
+
+html.dark {
+  background-color: #1a1a1a;
+}
+
+body {
+  background-color: inherit;
+  color: inherit;
+}
+
+/* Smooth transitions for theme changes - only after initial load */
+.theme-loaded * {
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* Hide scrollbar for all browsers */
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar for dark mode */
+.dark *::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
+.dark *::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background: #6b7280;
+  border-radius: 4px;
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Glass morphism effect */
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Fixed header styles to override Ant Design */
+.fixed-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.fixed-header .ant-typography {
+  color: #1f2937;
+}
+
+.fixed-header .ant-btn {
+  color: #1f2937;
+}
+
+.fixed-header .ant-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.fixed-header .ant-avatar {
+  border: 1px solid #e5e7eb;
+}
+
+.fixed-header .ant-dropdown-trigger {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+.fixed-header .ant-dropdown-trigger:hover {
+  background: #f9fafb;
+}
+
+/* Header specific classes */
+.header-title {
+  color: #1f2937;
+}
+
+.header-button {
+  color: #1f2937;
+}
+
+.header-button:hover {
+  background-color: #f3f4f6;
+}
+
+.header-user-button {
+  color: #1f2937;
+}
+
+.header-user-button:hover {
+  background-color: #f9fafb;
+}
+
+.header-text {
+  color: #1f2937;
+}
+
+.header-text-secondary {
+  color: #6b7280;
+}
+
+.header-icon {
+  color: #1f2937;
+}
+
+/* Ensure header is always on top */
+.ant-layout-header {
+  z-index: 9999;
+}
+
+/* Ensure dropdowns appear above header */
+.ant-dropdown {
+  z-index: 10000;
+}
+
+.ant-dropdown-menu {
+  z-index: 10001;
+}
+
+/* Theme-aware component classes */
+.theme-header {
+  @apply bg-white border-gray-200 text-gray-800 border-b fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 transition-colors duration-200;
+  z-index: 9999;
+}
+
+.dark .theme-header {
+  @apply bg-gray-800 border-gray-700 text-white;
+}
+
+.theme-title {
+  @apply m-0 flex items-center transition-colors duration-200 text-gray-800;
+}
+
+.dark .theme-title {
+  @apply text-white;
+}
+
+.theme-button-primary {
+  @apply transition-colors duration-200 text-gray-800 hover:bg-gray-100;
+}
+
+.dark .theme-button-primary {
+  @apply text-white hover:bg-gray-700;
+}
+
+.theme-button-secondary {
+  @apply flex items-center px-3 py-2 rounded-lg border transition-colors duration-200 text-gray-800 bg-white border-gray-200 hover:bg-gray-50;
+}
+
+.dark .theme-button-secondary {
+  @apply text-white bg-gray-700 border-gray-600 hover:bg-gray-600;
+}
+
+.theme-text-primary {
+  @apply transition-colors duration-200 text-gray-800;
+}
+
+.dark .theme-text-primary {
+  @apply text-white;
+}
+
+.theme-text-secondary {
+  @apply transition-colors duration-200 text-gray-500;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.dark .theme-text-secondary {
+  @apply text-gray-300;
+}
+
+.theme-icon {
+  @apply transition-colors duration-200 text-gray-800;
+  font-size: 0.75rem;
+}
+
+.dark .theme-icon {
+  @apply text-white;
+}
+
+/* Global Ant Notification styles (apply for all pages) */
+.light-notification {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(229, 231, 235, 0.9) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark-notification {
+  background-color: rgba(17, 24, 39, 0.95) !important;
+  border: 1px solid rgba(55, 65, 81, 0.9) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4),
+    0 4px 6px -2px rgba(0, 0, 0, 0.3) !important;
+  color: #e5e7eb !important;
+}
+
+/* Icon colors and state bars */
+.ant-notification-notice-icon-success,
+.anticon-check-circle,
+.anticon-check-circle-fill {
+  color: #10b981 !important;
+}
+.ant-notification-notice-success {
+  border-left: 4px solid #10b981 !important;
+}
+
+.ant-notification-notice-icon-warning,
+.anticon-exclamation-circle,
+.anticon-exclamation-circle-fill {
+  color: #f59e0b !important;
+}
+.ant-notification-notice-warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.ant-notification-notice-icon-error,
+.anticon-close-circle,
+.anticon-close-circle-fill {
+  color: #ef4444 !important;
+}
+.ant-notification-notice-error {
+  border-left: 4px solid #ef4444 !important;
+}
+
+/* Dark mode: ensure close (x) icon is white */
+.dark-notification .ant-notification-notice-close,
+.dark-notification .ant-notification-notice-close .anticon,
+.dark-notification .anticon-close,
+.dark-notification .anticon-close-circle,
+.dark-notification .anticon-close-circle-fill {
+  color: #e5e7eb !important;
+}
+
+.dark-notification .ant-notification-notice-close:hover,
+.dark-notification .ant-notification-notice-close .anticon:hover {
+  color: #ffffff !important;
+}
+
+/* Dark mode: force light text for message/description */
+.dark-notification .ant-notification-notice-message,
+.dark-notification .ant-notification-notice-description {
+  color: #e5e7eb !important;
+}

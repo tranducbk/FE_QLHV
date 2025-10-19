@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --text: #012970;
+  --bgSoft: #2d2b42;
+  --bg: #f6f9ff;
+  --textSoft: #e5e5e5;
+  --btn: #3673fd;
+
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --background-light: #f0f9ff;
+  --background-dark: #1f2937;
+  --card-light: rgba(255, 255, 255, 0.95);
+  --card-dark: rgba(31, 41, 55, 0.95);
+  --text-light: #1f2937;
+  --text-dark: #f9fafb;
+  --text-secondary-light: #6b7280;
+  --text-secondary-dark: #d1d5db;
+  --border-light: rgba(229, 231, 235, 0.5);
+  --border-dark: rgba(75, 85, 99, 0.3);
+}
+
+[data-theme="dark"] {
+  --text: #f9fafb;
+  --bg: #1f2937;
+  --textSoft: #d1d5db;
+  --bgSoft: #374151;
+}
+
+.dark {
+  --text: #f9fafb;
+  --bg: #1f2937;
+  --textSoft: #d1d5db;
+  --bgSoft: #374151;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.ant-card {
+  transition: all 0.3s ease !important;
+}
+
+.ant-input,
+.ant-input-password {
+  transition: all 0.3s ease !important;
+}
+
+.ant-btn {
+  transition: all 0.3s ease !important;
+}
+
+.ant-form-item-label > label {
+  transition: color 0.3s ease !important;
+}
+
+.ant-alert {
+  transition: all 0.3s ease !important;
+}
+
+.ant-divider {
+  transition: all 0.3s ease !important;
+}
+
+.ant-typography {
+  transition: color 0.3s ease !important;
+}
+
+.ant-config-provider {
+  transition: all 0.3s ease !important;
+}
+
+.ant-form-item {
+  transition: all 0.3s ease !important;
+}
+
+.ant-form-item-control-input {
+  transition: all 0.3s ease !important;
+}
+
+.ant-form-item-control-input-content {
+  transition: all 0.3s ease !important;
+}
+
+.ant-input-affix-wrapper {
+  transition: all 0.3s ease !important;
+}
+
+.ant-input-password-icon {
+  transition: all 0.3s ease !important;
+  color: #6b7280 !important;
+}
+
+.ant-input-password-icon:hover {
+  color: #374151 !important;
+}
+
+.ant-btn-primary {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-btn-primary:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+}
+
+.ant-btn-link {
+  color: var(--primary-color) !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-btn-link:hover {
+  color: var(--primary-hover) !important;
+}
+
+.ant-alert-info {
+  border-color: var(--primary-color) !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark .ant-alert-info {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
+
+.anticon-eye,
+.anticon-eye-invisible {
+  color: #6b7280 !important;
+}
+
+.anticon-eye:hover,
+.anticon-eye-invisible:hover {
+  color: #374151 !important;
+}
+
+.dark .anticon-eye,
+.dark .anticon-eye-invisible {
+  color: #9ca3af !important;
+}
+
+.dark .anticon-eye:hover,
+.dark .anticon-eye-invisible:hover {
+  color: #d1d5db !important;
+}
+
+/* Notification Styles */
+.ant-notification-notice-icon-success,
+.anticon-check-circle,
+.anticon-check-circle-fill {
+  color: #10b981 !important;
+}
+
+.ant-notification-notice-success {
+  border-left: 4px solid #10b981 !important;
+}
+
+.ant-notification-notice-icon-warning,
+.anticon-exclamation-circle,
+.anticon-exclamation-circle-fill {
+  color: #f59e0b !important;
+}
+
+.ant-notification-notice-warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.ant-notification-notice-icon-error,
+.anticon-close-circle,
+.anticon-close-circle-fill {
+  color: #ef4444 !important;
+}
+
+.ant-notification-notice-error {
+  border-left: 4px solid #ef4444 !important;
+}

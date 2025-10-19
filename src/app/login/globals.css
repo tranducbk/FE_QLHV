@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ant Design Input Styles */
+.ant-input {
+  background-color: rgb(249 250 251) !important;
+  border-color: rgb(209 213 219) !important;
+  color: rgb(17 24 39) !important;
+  border-radius: 8px !important;
+  border-width: 1px !important;
+}
+
+.ant-input::placeholder {
+  color: rgb(156 163 175) !important;
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  border-color: rgb(37 99 235) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+}
+
+.ant-input-password {
+  background-color: rgb(249 250 251) !important;
+  border-color: rgb(209 213 219) !important;
+  color: rgb(17 24 39) !important;
+  border-radius: 8px !important;
+  border-width: 1px !important;
+}
+
+.ant-input-password .ant-input {
+  background-color: transparent !important;
+  border: none !important;
+  color: inherit !important;
+}
+
+.ant-input-password .anticon {
+  color: rgb(156 163 175) !important;
+}
+
+.ant-input-password .anticon:hover {
+  color: rgb(75 85 99) !important;
+}

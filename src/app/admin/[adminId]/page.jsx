@@ -76,7 +76,7 @@ const UserProfile = ({ params }) => {
       await withLoading(fetchProfile);
     };
     loadData();
-  }, [params.adminId, withLoading]);
+  }, [withLoading]);
 
   const fetchProfile = async () => {
     const token = localStorage.getItem("token");

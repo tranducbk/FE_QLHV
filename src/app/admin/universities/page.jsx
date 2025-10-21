@@ -645,7 +645,7 @@ export default function Universities() {
                                     </div>
                                   ) : (
                                     <div className="text-gray-400 dark:text-gray-500 text-sm italic">
-                                      -
+                                      Chưa có thời gian di chuyển
                                     </div>
                                   )}
                                 </td>

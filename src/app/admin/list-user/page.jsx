@@ -556,29 +556,29 @@ const ListUser = () => {
         // Khởi tạo các select động từ dữ liệu có sẵn
         let foundUniversity = null;
 
-        if (res.data.university && typeof res.data.university === "object") {
-          // Nếu university là object (populated), sử dụng university object
+        if (
+          res.data.university &&
+          typeof res.data.university === "object" &&
+          res.data.university.id
+        ) {
+          // Ưu tiên sử dụng university object từ API
           foundUniversity = res.data.university;
-          console.log("University is object:", foundUniversity);
+          console.log("University from API:", foundUniversity);
+        } else if (res.data.universityId) {
+          // Fallback: tìm theo universityId
+          foundUniversity = universities.find(
+            (u) => u.id === res.data.universityId
+          );
+          console.log("University found by universityId:", foundUniversity);
         } else if (
           res.data.university &&
           typeof res.data.university === "string"
         ) {
-          // Nếu university là string (university name), tìm university object
+          // Fallback: tìm theo tên
           foundUniversity = universities.find(
             (u) => u.universityName === res.data.university
           );
           console.log("University found by name:", foundUniversity);
-        } else if (
-          res.data.university &&
-          typeof res.data.university === "string" &&
-          res.data.university.length === 24
-        ) {
-          // Nếu university là ObjectId string, tìm university object
-          foundUniversity = universities.find(
-            (u) => u.id === res.data.university
-          );
-          console.log("University found by ObjectId:", foundUniversity);
         }
 
         if (foundUniversity) {
@@ -594,22 +594,24 @@ const ListUser = () => {
             let selectedOrgId = null;
             if (
               res.data.organization &&
-              typeof res.data.organization === "object"
+              typeof res.data.organization === "object" &&
+              res.data.organization.id
             ) {
+              // Ưu tiên sử dụng organization object từ API
               selectedOrgId = res.data.organization.id;
+              console.log("Organization from API:", res.data.organization);
+            } else if (res.data.organizationId) {
+              // Fallback: sử dụng organizationId
+              selectedOrgId = res.data.organizationId;
             } else if (
               res.data.organization &&
               typeof res.data.organization === "string"
             ) {
+              // Fallback: tìm theo tên
               const selectedOrg = organizations.find(
                 (org) => org.organizationName === res.data.organization
               );
               selectedOrgId = selectedOrg?.id;
-            } else if (
-              res.data.organization &&
-              res.data.organization.length === 24
-            ) {
-              selectedOrgId = res.data.organization;
             }
 
             if (selectedOrgId) {
@@ -622,6 +624,24 @@ const ListUser = () => {
               // Tìm education level đã chọn
               let selectedLevelId = null;
               if (
+                res.data.education_level &&
+                typeof res.data.education_level === "object" &&
+                res.data.education_level.id
+              ) {
+                // Ưu tiên sử dụng education_level object từ API
+                selectedLevelId = res.data.education_level.id;
+                console.log(
+                  "✅ Education level from API:",
+                  res.data.education_level
+                );
+              } else if (res.data.educationLevelId) {
+                // Fallback: sử dụng educationLevelId
+                selectedLevelId = res.data.educationLevelId;
+                console.log(
+                  "✅ Education level from educationLevelId:",
+                  selectedLevelId
+                );
+              } else if (
                 res.data.educationLevel &&
                 typeof res.data.educationLevel === "object"
               ) {
@@ -634,15 +654,11 @@ const ListUser = () => {
                   (level) => level.levelName === res.data.educationLevel
                 );
                 selectedLevelId = selectedLevelObj?.id;
-              } else if (
-                res.data.educationLevel &&
-                res.data.educationLevel.length === 24
-              ) {
-                selectedLevelId = res.data.educationLevel;
               }
 
               if (selectedLevelId) {
                 setSelectedLevel(selectedLevelId);
+                console.log("✅ Set selectedLevel:", selectedLevelId);
 
                 // Load classes
                 const classes = await fetchClasses(selectedLevelId);
@@ -650,18 +666,26 @@ const ListUser = () => {
 
                 // Tìm class đã chọn
                 let selectedClassId = null;
-                if (res.data.class && typeof res.data.class === "object") {
+                if (
+                  res.data.class &&
+                  typeof res.data.class === "object" &&
+                  res.data.class.id
+                ) {
+                  // Ưu tiên sử dụng class object từ API
                   selectedClassId = res.data.class.id;
+                  console.log("Class from API:", res.data.class);
+                } else if (res.data.classId) {
+                  // Fallback: sử dụng classId
+                  selectedClassId = res.data.classId;
                 } else if (
                   res.data.class &&
                   typeof res.data.class === "string"
                 ) {
+                  // Fallback: tìm theo tên
                   const selectedClassObj = classes.find(
                     (cls) => cls.className === res.data.class
                   );
                   selectedClassId = selectedClassObj?.id;
-                } else if (res.data.class && res.data.class.length === 24) {
-                  selectedClassId = res.data.class;
                 }
 
                 if (selectedClassId) {
@@ -1435,9 +1459,7 @@ const ListUser = () => {
                           </div>
                           <div className="mb-2 text-gray-900 dark:text-white">
                             <span className="font-bold">Trình độ đào tạo:</span>{" "}
-                            {profileEducationLevel?.levelName ||
-                              profileDetail?.educationLevel?.levelName ||
-                              profileDetail?.educationLevel ||
+                            {profileDetail?.education_level?.levelName ||
                               "Chưa có dữ liệu"}
                           </div>
                           <div className="mb-2 text-gray-900 dark:text-white">

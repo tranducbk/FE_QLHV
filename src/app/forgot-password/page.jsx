@@ -45,7 +45,6 @@ const ForgotPassword = () => {
             router.push("/users");
           }
         } catch (error) {
-          console.log(error);
         }
       }
     };
@@ -66,7 +65,6 @@ const ForgotPassword = () => {
       if (error.response) {
         setError(error.response.data);
       } else {
-        console.log(error);
       }
     } finally {
       setLoading(false);

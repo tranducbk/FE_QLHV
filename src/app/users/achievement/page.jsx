@@ -61,7 +61,6 @@ const AchievementContent = () => {
           setRecommendations({ suggestions: [] });
         }
       } catch (error) {
-        console.log(error);
       }
     }
   };

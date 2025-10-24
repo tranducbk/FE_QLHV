@@ -55,7 +55,6 @@ export default function Home() {
 
         setLearningResult(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -73,7 +72,6 @@ export default function Home() {
 
         setStudent(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -91,7 +89,6 @@ export default function Home() {
 
         setCutRice(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -109,7 +106,6 @@ export default function Home() {
 
         setAchievement(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -127,7 +123,6 @@ export default function Home() {
 
         setTrainingRatings(res.data);
       } catch (error) {
-        console.log(error);
         setTrainingRatings([]);
       }
     }
@@ -146,7 +141,6 @@ export default function Home() {
 
         setSemesters(res.data || []);
       } catch (error) {
-        console.log(error);
         setSemesters([]);
       }
     }
@@ -194,7 +188,6 @@ export default function Home() {
 
         setDetailedLearningResults(res.data || []);
       } catch (error) {
-        console.log("Error fetching detailed learning results:", error);
         setDetailedLearningResults([]);
       }
     }
@@ -838,6 +831,114 @@ export default function Home() {
                       <p className="text-xs text-slate-600 dark:text-slate-400">
                         Yếu
                       </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* Row 3: Thống kê khen thưởng - Cùng grid layout */}
+          <div className="grid grid-cols-1 gap-4 mt-4">
+            <Link href="/admin/achievement" className="block">
+              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <TrophyOutlined className="text-white text-lg" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                        Thống kê khen thưởng
+                      </h3>
+                      <p className="text-slate-600 dark:text-slate-400 text-xs">
+                        Tổng hợp thành tích học viên
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                      {achievement?.totalAchievements || 0}
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs">
+                      khen thưởng
+                    </p>
+                  </div>
+                </div>
+
+                {/* Achievement Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {/* Chiến sĩ tiên tiến */}
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-3 text-center border border-blue-200 dark:border-blue-800">
+                    <div className="text-2xl mb-2">🏅</div>
+                    <div className="text-lg font-black text-blue-600 dark:text-blue-400">
+                      {achievement?.totalAdvancedSoldier || 0}
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                      Chiến sĩ tiên tiến
+                    </p>
+                  </div>
+
+                  {/* Chiến sĩ thi đua */}
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 text-center border border-amber-200 dark:border-amber-800">
+                    <div className="text-2xl mb-2">🏆</div>
+                    <div className="text-lg font-black text-amber-600 dark:text-amber-400">
+                      {achievement?.totalCompetitiveSoldier || 0}
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                      Chiến sĩ thi đua
+                    </p>
+                  </div>
+
+                  {/* Bằng khen BQP */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-3 text-center border border-purple-200 dark:border-purple-800">
+                    <div className="text-2xl mb-2">🎖️</div>
+                    <div className="text-lg font-black text-purple-600 dark:text-purple-400">
+                      {achievement?.totalMinistryRewards || 0}
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                      Bằng khen BQP
+                    </p>
+                  </div>
+
+                  {/* CSTĐ Toàn Quân */}
+                  <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-3 text-center border border-red-200 dark:border-red-800">
+                    <div className="text-2xl mb-2">🥇</div>
+                    <div className="text-lg font-black text-red-600 dark:text-red-400">
+                      {achievement?.totalNationalRewards || 0}
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
+                      CSTĐ Toàn Quân
+                    </p>
+                  </div>
+                </div>
+
+                {/* Scientific Research */}
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                          {achievement?.totalScientificTopics || 0}
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          Đề tài NCKH
+                        </p>
+                      </div>
+                      <div className="text-2xl">📚</div>
+                    </div>
+                  </div>
+                  <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                          {achievement?.totalScientificInitiatives || 0}
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          Sáng kiến KH
+                        </p>
+                      </div>
+                      <div className="text-2xl">💡</div>
                     </div>
                   </div>
                 </div>

@@ -120,7 +120,6 @@ const SideBarContent = () => {
         }
       } catch (error) {
         router.push("/login");
-        console.log(error);
       }
     }
   };
@@ -161,10 +160,7 @@ const SideBarContent = () => {
       currentPath.startsWith("/admin/yearly-statistics")
     ) {
       setOpenKeys(["learning"]);
-    } else if (
-      currentPath.startsWith("/admin/violation") ||
-      currentPath.startsWith("/admin/physical-results")
-    ) {
+    } else if (currentPath.startsWith("/admin/violation")) {
       setOpenKeys(["training"]);
     } else if (
       currentPath.startsWith("/admin/list-user") ||
@@ -288,42 +284,12 @@ const SideBarContent = () => {
                 Quản lý các kì học
               </Menu.Item>
 
-              {/* <Menu.Item
-                key="/admin/vacation-schedules"
-                icon={<CalendarOutlined />}
-              >
-                Tranh thủ học viên
-              </Menu.Item> */}
-
               <Menu.Item
                 key="/admin/training-rating"
                 icon={<ThunderboltOutlined />}
               >
                 Xếp loại rèn luyện
               </Menu.Item>
-              {/* 
-              <SubMenu
-                key="training"
-                icon={<TrophyOutlined />}
-                title="Rèn luyện học viên"
-              >
-                <Menu.Item
-                  key="/admin/violation"
-                  icon={<ExclamationCircleOutlined />}
-                >
-                  Lỗi vi phạm
-                </Menu.Item>
-                <Menu.Item
-                  key="/admin/physical-results"
-                  icon={<HeartOutlined />}
-                >
-                  Kết quả thể lực
-                </Menu.Item>
-              </SubMenu>
-
-              <Menu.Item key="/admin/list-guard" icon={<SafetyOutlined />}>
-                Danh sách gác đêm
-              </Menu.Item> */}
 
               {/* <Menu.Item key="/admin/list-help-cooking" icon={<FireOutlined />}>
                 Danh sách giúp bếp

@@ -57,7 +57,6 @@ const Violation = () => {
         setViolationId(violationId);
         setShowFormEdit(true);
       } catch (error) {
-        console.log(error);
         handleNotify("danger", "Lỗi!", "Không thể tải thông tin vi phạm");
       }
     }
@@ -160,7 +159,6 @@ const Violation = () => {
 
         setViolation(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };

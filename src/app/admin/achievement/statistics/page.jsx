@@ -120,7 +120,6 @@ const AchievementStatistics = () => {
         // Tính thống kê theo năm được chọn
         computeYearStats(achievementsData, selectedYear);
       } catch (error) {
-        console.log("Error fetching statistics:", error.message || error);
         handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu");
       } finally {
         setLoading(false);

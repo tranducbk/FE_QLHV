@@ -45,7 +45,6 @@ const Statictical = () => {
 
         setLearningClassification(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -60,7 +59,6 @@ const Statictical = () => {
         );
         setLearningResultBySemester(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -134,7 +132,6 @@ const Statictical = () => {
       }));
       setClassStatsByYear({ schoolYear: latestYear, data: classData });
     } catch (error) {
-      console.log(error);
     }
   };
 
@@ -152,7 +149,6 @@ const Statictical = () => {
           res.data || { schoolYear: null, topStudents: [] }
         );
       } catch (error) {
-        console.log(error);
       }
     }
   };

@@ -38,21 +38,17 @@ const SemesterResults = () => {
 
   // Helpers cho nhập KQHT
   const parseTermFromId = (id) => {
-    console.log("parseTermFromId input:", id);
     if (!id) return null;
     const semester = semesters.find((s) => s.id === id);
     if (!semester) return null;
 
     if (semester.code.startsWith("HK")) {
-      console.log("parseTermFromId return original:", semester.code);
       return semester.code; // Trả về nguyên string "HK1", "HK2", "HK3"
     }
     if (semester.code.includes(".")) {
       const result = "HK" + semester.code.split(".")[1]; // Chuyển đổi thành "HK1", "HK2", "HK3"
-      console.log("parseTermFromId return converted:", result);
       return result;
     }
-    console.log("parseTermFromId return null");
     return null;
   };
   const findSchoolYearById = (id) => {
@@ -339,12 +335,9 @@ const SemesterResults = () => {
   };
 
   const handleEditLearningResult = (id) => {
-    console.log("handleEditLearningResult called with id:", id);
-    console.log("learningResult:", learningResult);
     setLearnId(id);
 
     const semester = learningResult.find((item) => item.id === id);
-    console.log("Found semester:", semester);
     if (semester) {
       // Set editing semester để form biết đang chỉnh sửa
       setEditingSemester(semester);
@@ -383,7 +376,6 @@ const SemesterResults = () => {
 
       setIsOpenLearningResult(true);
     } else {
-      console.log("Semester not found for id:", id);
     }
   };
 
@@ -440,8 +432,6 @@ const SemesterResults = () => {
 
   const fetchLearningResult = async () => {
     const token = localStorage.getItem("token");
-    console.log("DEBUG - fetchLearningResult - studentId:", studentId);
-    console.log("DEBUG - fetchLearningResult - token:", !!token);
 
     if (token && studentId) {
       try {
@@ -450,8 +440,6 @@ const SemesterResults = () => {
             token: `Bearer ${token}`,
           },
         });
-        console.log("DEBUG - fetchLearningResult response:", res.data);
-        console.log(
           "DEBUG - fetchLearningResult subjects:",
           res.data.semesterResults?.map((item) => ({
             id: item.id,
@@ -466,7 +454,6 @@ const SemesterResults = () => {
         // Cũng set vào semesterResults để hiển thị
         setSemesterResults(res.data.semesterResults || []);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -525,7 +512,6 @@ const SemesterResults = () => {
         // Mặc định hiển thị "Tất cả học kỳ" khi mới vào
         // Không set selectedSemester để giữ giá trị rỗng
       } catch (e) {
-        console.log(e);
       }
     };
     fetchSemesters();

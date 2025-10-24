@@ -165,7 +165,6 @@ const CutRice = () => {
         });
         setCutRice(sortedData);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -218,7 +217,6 @@ const CutRice = () => {
           });
           setCutRice(sortedData);
         } catch (error) {
-          console.log(error);
         }
       }
     };

@@ -60,7 +60,6 @@ export default function Home() {
 
         setLearningResult(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -78,7 +77,6 @@ export default function Home() {
 
         setSemesterResults(res.data.semesterResults || []);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -99,7 +97,6 @@ export default function Home() {
 
         setTuitionFee(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -120,7 +117,6 @@ export default function Home() {
 
         setTimeTable(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -145,7 +141,6 @@ export default function Home() {
           setCutRice(null);
         }
       } catch (error) {
-        console.log(error);
         setCutRice(null);
       }
     }
@@ -162,14 +157,9 @@ export default function Home() {
         });
         setProfile(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
-
-  // Removed: fetchPhisicalResult function
-
-  // Removed: fetchVacationSchedule function
 
   const fetchAchievement = async (sid) => {
     const token = localStorage.getItem("token");
@@ -187,12 +177,9 @@ export default function Home() {
 
         setAchievement(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
-
-  // Removed: fetchHelpCooking function
 
   const fetchSchedule = async () => {
     const token = localStorage.getItem("token");
@@ -224,7 +211,6 @@ export default function Home() {
 
         setCommanderDutySchedule(currentSchedule);
       } catch (error) {
-        console.log(error);
         setCommanderDutySchedule(null);
       }
     }

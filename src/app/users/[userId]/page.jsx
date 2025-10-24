@@ -72,7 +72,6 @@ const UserProfile = ({ params }) => {
         });
         setUniversities(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -89,7 +88,6 @@ const UserProfile = ({ params }) => {
         );
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -108,7 +106,6 @@ const UserProfile = ({ params }) => {
         );
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -127,7 +124,6 @@ const UserProfile = ({ params }) => {
         );
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -426,7 +422,6 @@ const UserProfile = ({ params }) => {
 
         setProfile(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };

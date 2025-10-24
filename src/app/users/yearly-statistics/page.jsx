@@ -181,7 +181,6 @@ const YearlyStatistics = () => {
       });
 
       const semesterResults = gradeRes.data.semesterResults || [];
-      console.log("User semester results:", semesterResults);
 
       // Lấy danh sách các năm học có dữ liệu kết quả học tập
       const yearsWithData = [
@@ -200,7 +199,6 @@ const YearlyStatistics = () => {
         setSelectedSchoolYear("all");
       }
     } catch (error) {
-      console.log("Error fetching school years:", error);
       setSchoolYears([]);
       setSelectedSchoolYear("");
     }
@@ -339,7 +337,6 @@ const YearlyStatistics = () => {
       setYearlyResults(finalResults);
       setAvailableUnits([]); // Không cần đơn vị cho user view
     } catch (error) {
-      console.log("Error fetching yearly results:", error);
       setYearlyResults([]);
     }
   };
@@ -382,7 +379,6 @@ const YearlyStatistics = () => {
         setStudentDetail(data);
       }
     } catch (error) {
-      console.log("Error fetching student detail:", error);
       handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm của sinh viên");
     }
   };
@@ -431,7 +427,6 @@ const YearlyStatistics = () => {
           setStudentDetail(combinedData);
         }
       } catch (error) {
-        console.log("Error fetching semester details:", error);
         handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm");
       }
     }

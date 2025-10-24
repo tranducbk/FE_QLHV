@@ -67,7 +67,6 @@ const TimeTable = () => {
         if (item.schoolWeek) student.weeks.push(item.schoolWeek);
 
         // Debug log để kiểm tra dữ liệu
-        console.log(
           `Student: ${item.fullName}, Classroom: ${item.classroom}, All classrooms:`,
           student.classrooms
         );
@@ -96,7 +95,6 @@ const TimeTable = () => {
       setAllStudents(sortedStudents);
       setFilteredStudents(sortedStudents);
     } catch (error) {
-      console.log(error);
       handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu lịch học");
     }
   };
@@ -212,8 +210,6 @@ const TimeTable = () => {
 
         // Lấy tên file từ response header hoặc tạo tên file động
         const contentDisposition = response.headers["content-disposition"];
-        console.log("Response headers:", response.headers);
-        console.log("Content-Disposition:", contentDisposition);
 
         let fileName = "thoikhoabieu.xlsx";
 
@@ -221,10 +217,8 @@ const TimeTable = () => {
           const fileNameMatch = contentDisposition.match(
             /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
           );
-          console.log("Filename match:", fileNameMatch);
           if (fileNameMatch && fileNameMatch[1]) {
             fileName = fileNameMatch[1].replace(/['"]/g, "");
-            console.log("Using filename from header:", fileName);
           }
         } else if (selectedUnits.length > 0) {
           // Tạo tên file động nếu không có header
@@ -232,7 +226,6 @@ const TimeTable = () => {
             .map((unit) => unit.replace(/[^a-zA-Z0-9]/g, ""))
             .join("_");
           fileName = `thoikhoabieu_${unitNames}.xlsx`;
-          console.log("Using generated filename:", fileName);
         }
 
         const url = window.URL.createObjectURL(new Blob([response.data]));

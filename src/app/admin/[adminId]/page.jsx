@@ -91,7 +91,6 @@ const UserProfile = ({ params }) => {
 
         setProfile(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -114,7 +113,6 @@ const UserProfile = ({ params }) => {
 
     if (event.target.files) {
       const avatar = URL.createObjectURL(event.target.files[0]);
-      console.log(avatar);
       setFormData({
         ...formData,
         avatar: avatar,

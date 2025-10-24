@@ -79,14 +79,12 @@ const LearningResults = () => {
         headers: { token: `Bearer ${token}` },
       });
       const list = res.data || [];
-      console.log("Semesters data:", list);
       setSemesters(list);
       if (list.length > 0) {
         // Chọn tất cả các kỳ ban đầu
         setSelectedSemesters(list.map((semester) => semester.id));
       }
     } catch (error) {
-      console.log("Error fetching semesters:", error);
       setSemesters([]);
       setSelectedSemesters([]);
     }
@@ -122,7 +120,6 @@ const LearningResults = () => {
         .map((item) => item.schoolYear)
         .join(",");
 
-      console.log("Fetching with semester and schoolYear:", {
         semesterParam,
         schoolYearParam,
       });
@@ -134,7 +131,6 @@ const LearningResults = () => {
         }
       );
 
-      console.log("Learning results data:", res.data);
       setLearningResults(res.data || []);
 
       // Lấy danh sách các đơn vị có sẵn từ dữ liệu
@@ -190,7 +186,6 @@ const LearningResults = () => {
         setStudentDetail(data);
       }
     } catch (error) {
-      console.log("Error fetching student detail:", error);
       handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm của sinh viên");
     }
   };
@@ -248,7 +243,6 @@ const LearningResults = () => {
         fetchLearningResults();
       }
     } catch (error) {
-      console.log("Error updating rating:", error);
       handleNotify("error", "Lỗi", "Không thể cập nhật xếp loại");
     }
   };
@@ -294,7 +288,6 @@ const LearningResults = () => {
 
       handleNotify("success", "Thành công", "Đã xuất file PDF");
     } catch (error) {
-      console.log("Error exporting PDF:", error);
       handleNotify("error", "Lỗi", "Không thể xuất file PDF");
     }
   };

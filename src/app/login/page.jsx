@@ -44,7 +44,6 @@ const Login = () => {
             setUserType("student");
           }
         } catch (error) {
-          console.log("Token invalid:", error);
           localStorage.removeItem("token");
         }
       }

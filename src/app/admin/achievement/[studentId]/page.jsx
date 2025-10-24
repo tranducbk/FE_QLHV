@@ -72,7 +72,6 @@ const StudentAchievement = () => {
           setRecommendations({ suggestions: [] });
         }
       } catch (error) {
-        console.log(error);
         handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu học viên");
       } finally {
         setLoading(false);

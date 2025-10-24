@@ -72,7 +72,6 @@ const PartyRating = () => {
         }
       );
 
-      console.log("Party ratings data:", res.data);
 
       const processedData = res.data || [];
 
@@ -113,7 +112,6 @@ const PartyRating = () => {
         setSelectedSchoolYear("all");
       }
     } catch (error) {
-      console.log("Error fetching initial data:", error);
       setPartyRatings([]);
       setSchoolYears([]);
       setSelectedSchoolYear("");
@@ -137,7 +135,6 @@ const PartyRating = () => {
         }
       );
 
-      console.log(`Party ratings data for ${year}:`, res.data);
       const data = res.data || [];
       setPartyRatings(data);
       const units = [
@@ -147,7 +144,6 @@ const PartyRating = () => {
       ];
       setAvailableUnits(units);
     } catch (error) {
-      console.log("Error fetching party ratings for year:", error);
       setPartyRatings([]);
     }
   };
@@ -199,7 +195,6 @@ const PartyRating = () => {
         }
       }
     } catch (error) {
-      console.log("Error updating party rating:", error);
       handleNotify("error", "Lỗi", "Không thể Cập nhật xếp loại Đảng viên");
     }
   };
@@ -297,7 +292,6 @@ const PartyRating = () => {
             successCount++;
           }
         } catch (error) {
-          console.log(`Error updating student ${student.fullName}:`, error);
           errorCount++;
         }
       }
@@ -321,7 +315,6 @@ const PartyRating = () => {
         handleNotify("error", "Lỗi", "Không thể cập nhật bất kỳ sinh viên nào");
       }
     } catch (error) {
-      console.log("Error in bulk update:", error);
       handleNotify(
         "error",
         "Lỗi",

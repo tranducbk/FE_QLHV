@@ -27,7 +27,6 @@ const TimeTableDetail = ({ params }) => {
 
         setTimeTable(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };

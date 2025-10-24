@@ -82,7 +82,6 @@ const Header = () => {
 
       setDocuments(res.data);
     } catch (error) {
-      console.log(error);
     }
   };
 
@@ -144,7 +143,6 @@ const Header = () => {
           setUserDetail(res.data);
         }
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -163,7 +161,6 @@ const Header = () => {
 
         setUser(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -181,7 +178,6 @@ const Header = () => {
         localStorage.removeItem("token");
         router.push("/login");
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -223,7 +219,6 @@ const Header = () => {
         setDropdownOpen(false);
         router.push(`/users/learning-information?tab=results`);
       } catch (error) {
-        console.log(error);
       }
     }
   };

@@ -117,7 +117,6 @@ const TuitionFees = () => {
         setTuitionFees(res.data);
         // stats sẽ tính lại trong useEffect theo bộ lọc
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -154,7 +153,6 @@ const TuitionFees = () => {
       setSemesters(sorted);
       // Mặc định không chọn (hiển thị tất cả)
     } catch (error) {
-      console.log(error);
     }
   };
 
@@ -177,7 +175,6 @@ const TuitionFees = () => {
         setTuitionFees(res.data);
         // stats sẽ tính lại theo bộ lọc phía dưới
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -357,7 +354,6 @@ const TuitionFees = () => {
             ? exportSelectedUnits.join(",")
             : "all";
 
-        console.log("Frontend - Export parameters:", {
           semesterParam,
           schoolYearParam,
           unitParam,
@@ -468,7 +464,6 @@ const TuitionFees = () => {
             ? exportSelectedUnits.join(",")
             : "all";
 
-        console.log("Frontend - Export Word parameters:", {
           semesterParam,
           schoolYearParam,
           unitParam,

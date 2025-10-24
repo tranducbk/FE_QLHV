@@ -51,7 +51,6 @@ const CommanderDutySchedule = () => {
           `/users/commander-duty-schedule?page=${currentPage}&year=${year}&month=${month}`
         );
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -74,14 +73,12 @@ const CommanderDutySchedule = () => {
         );
 
         if (res.status === 404) setCommanderDutySchedule([]);
-        console.log(res.data);
         setCommanderDutySchedule(res.data);
 
         router.push(
           `/users/commander-duty-schedule?page=${currentPage}&year=${year}&month=${month}`
         );
       } catch (error) {
-        console.log(error);
       }
     }
   };

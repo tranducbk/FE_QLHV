@@ -42,13 +42,11 @@ const Achievement = () => {
 
         // Đảm bảo res.data là mảng
         const studentsData = Array.isArray(res.data) ? res.data : [];
-        console.log("Students data:", studentsData); // Debug log
         setStudents(studentsData);
 
         // Sử dụng achievement đã được populate từ API
         const achievementsData = {};
         for (const student of studentsData) {
-          console.log("Student with achievement:", student);
           if (student.achievement) {
             achievementsData[student.id] = student.achievement;
           } else {
@@ -71,24 +69,20 @@ const Achievement = () => {
 
         // Fetch recommendations for each student in parallel
         const recommendationsData = {};
-        console.log(
           "Fetching recommendations for students:",
           studentsData.length
         );
 
         const recommendationPromises = studentsData.map(async (student) => {
           try {
-            console.log(`Fetching recommendations for student: ${student.id}`);
             const recRes = await axios.get(
               `${BASE_URL}/achievement/admin/${student.id}/recommendations`,
               {
                 headers: { token: `Bearer ${token}` },
               }
             );
-            console.log(`Recommendations for ${student.id}:`, recRes.data);
             return { studentId: student.id, data: recRes.data };
           } catch (error) {
-            console.log(
               `Error fetching recommendations for student ${student.id}:`,
               error
             );
@@ -101,10 +95,8 @@ const Achievement = () => {
           recommendationsData[studentId] = data;
         });
 
-        console.log("Final recommendations data:", recommendationsData);
         setRecommendations(recommendationsData);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -118,19 +110,14 @@ const Achievement = () => {
 
   useEffect(() => {
     if (showFormAdd) {
-      console.log(
         "Form opened, selectedStudentForForm:",
         selectedStudentForForm
       );
-      console.log("Current addFormData:", addFormData);
     }
   }, [showFormAdd, selectedStudentForForm, addFormData]);
 
   const handleAddYearlyAchievement = async (e) => {
     e.preventDefault();
-    console.log("Form submitted!");
-    console.log("Selected student:", selectedStudentForForm);
-    console.log("Form data:", addFormData);
 
     if (!selectedStudentForForm) {
       handleNotify("danger", "Lỗi!", "Vui lòng chọn học viên");
@@ -160,8 +147,6 @@ const Achievement = () => {
 
     const token = localStorage.getItem("token");
     try {
-      console.log("Adding achievement for student:", selectedStudentForForm.id);
-      console.log("Form data:", addFormData);
 
       const response = await axios.post(
         `${BASE_URL}/achievement/admin/${selectedStudentForForm.id}`,
@@ -170,7 +155,6 @@ const Achievement = () => {
           headers: { token: `Bearer ${token}` },
         }
       );
-      console.log("Response:", response.data);
       const message = response.data.message || "Thêm khen thưởng thành công";
       handleNotify("success", "Thành công!", message);
       setShowFormAdd(false);
@@ -903,7 +887,6 @@ const Achievement = () => {
                                 <tbody>
                                   {rows && rows.length > 0 ? (
                                     rows.map((ya, index) => {
-                                      console.log(
                                         "Rendering yearly achievement:",
                                         ya
                                       );
@@ -1048,7 +1031,6 @@ const Achievement = () => {
 
                             {/* Hiển thị suggestions */}
                             {(() => {
-                              console.log(
                                 `Checking suggestions for student ${student.id}:`,
                                 recommendations[student.id]
                               );

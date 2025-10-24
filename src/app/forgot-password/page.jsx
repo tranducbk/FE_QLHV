@@ -34,11 +34,14 @@ const ForgotPassword = () => {
             });
             router.push("/admin");
           } else {
-            await axios.get(`${BASE_URL}/student/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
+            await axios.get(
+              `${BASE_URL}/student/by-user/${decodedToken.id}`,
+              {
+                headers: {
+                  token: `Bearer ${token}`,
+                },
+              }
+            );
             router.push("/users");
           }
         } catch (error) {

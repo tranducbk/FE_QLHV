@@ -23,7 +23,20 @@ const AchievementContent = () => {
       try {
         const decodedToken = jwtDecode(token);
         const studentIdParam = searchParams?.get("studentId");
-        const targetStudentId = studentIdParam || decodedToken.id;
+
+        // Nếu có studentId trong params thì dùng, không thì lấy từ user data
+        let targetStudentId = studentIdParam;
+        if (!targetStudentId) {
+          // Lấy studentId từ helper route
+          const studentRes = await axios.get(
+            `${BASE_URL}/student/by-user/${decodedToken.id}`,
+            {
+              headers: { token: `Bearer ${token}` },
+            }
+          );
+          targetStudentId = studentRes.data.id;
+        }
+
         const res = await axios.get(
           `${BASE_URL}/achievement/${targetStudentId}`,
           {

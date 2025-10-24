@@ -22,15 +22,35 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { loading, withLoading } = useLoading(true);
+  const [studentId, setStudentId] = useState(null);
 
-  const fetchLearningResult = async () => {
+  // Helper function to get studentId from userId
+  const fetchStudentId = async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        const res = await axios.get(
+          `${BASE_URL}/student/by-user/${decodedToken.id}`,
+          { headers: { token: `Bearer ${token}` } }
+        );
+        setStudentId(res.data.id);
+        return res.data.id;
+      } catch (error) {
+        console.error("Error fetching studentId:", error);
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const fetchLearningResult = async (sid) => {
     const token = localStorage.getItem("token");
 
-    if (token) {
-      const decodedToken = jwtDecode(token);
+    if (token && sid) {
       try {
         const res = await axios.get(
-          `${BASE_URL}/student/${decodedToken.id}/learning-information`,
+          `${BASE_URL}/student/${sid}/learning-information`,
           {
             headers: {
               token: `Bearer ${token}`,
@@ -45,13 +65,12 @@ export default function Home() {
     }
   };
 
-  const fetchSemesterResults = async () => {
+  const fetchSemesterResults = async (sid) => {
     const token = localStorage.getItem("token");
 
-    if (token) {
-      const decodedToken = jwtDecode(token);
+    if (token && sid) {
       try {
-        const res = await axios.get(`${BASE_URL}/grade/${decodedToken.id}`, {
+        const res = await axios.get(`${BASE_URL}/grade/${sid}`, {
           headers: {
             token: `Bearer ${token}`,
           },
@@ -64,14 +83,13 @@ export default function Home() {
     }
   };
 
-  const fetchTuitionFee = async () => {
+  const fetchTuitionFee = async (sid) => {
     const token = localStorage.getItem("token");
 
-    if (token) {
-      const decodedToken = jwtDecode(token);
+    if (token && sid) {
       try {
         const res = await axios.get(
-          `${BASE_URL}/student/${decodedToken.id}/tuition-fee`,
+          `${BASE_URL}/student/${sid}/tuition-fee`,
           {
             headers: {
               token: `Bearer ${token}`,
@@ -86,14 +104,13 @@ export default function Home() {
     }
   };
 
-  const fetchTimeTable = async () => {
+  const fetchTimeTable = async (sid) => {
     const token = localStorage.getItem("token");
 
-    if (token) {
-      const decodedToken = jwtDecode(token);
+    if (token && sid) {
       try {
         const res = await axios.get(
-          `${BASE_URL}/student/${decodedToken.id}/time-table`,
+          `${BASE_URL}/student/${sid}/time-table`,
           {
             headers: {
               token: `Bearer ${token}`,
@@ -108,14 +125,13 @@ export default function Home() {
     }
   };
 
-  const fetchCutRice = async () => {
+  const fetchCutRice = async (sid) => {
     const token = localStorage.getItem("token");
 
-    if (token) {
+    if (token && sid) {
       try {
-        const decodedToken = jwtDecode(token);
         const res = await axios.get(
-          `${BASE_URL}/student/${decodedToken.id}/cut-rice`,
+          `${BASE_URL}/student/${sid}/cut-rice`,
           {
             headers: {
               token: `Bearer ${token}`,
@@ -135,12 +151,11 @@ export default function Home() {
     }
   };
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (sid) => {
     const token = localStorage.getItem("token");
-    if (token) {
+    if (token && sid) {
       try {
-        const decodedToken = jwtDecode(token);
-        const res = await axios.get(`${BASE_URL}/student/${decodedToken.id}`, {
+        const res = await axios.get(`${BASE_URL}/student/${sid}`, {
           headers: {
             token: `Bearer ${token}`,
           },
@@ -156,14 +171,13 @@ export default function Home() {
 
   // Removed: fetchVacationSchedule function
 
-  const fetchAchievement = async () => {
+  const fetchAchievement = async (sid) => {
     const token = localStorage.getItem("token");
 
-    if (token) {
+    if (token && sid) {
       try {
-        const decodedToken = jwtDecode(token);
         const res = await axios.get(
-          `${BASE_URL}/achievement/${decodedToken.id}`,
+          `${BASE_URL}/achievement/${sid}`,
           {
             headers: {
               token: `Bearer ${token}`,
@@ -219,16 +233,20 @@ export default function Home() {
   const refreshAllData = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([
-        fetchLearningResult(),
-        fetchSemesterResults(),
-        fetchTuitionFee(),
-        fetchTimeTable(),
-        fetchCutRice(),
-        fetchAchievement(),
-        fetchSchedule(),
-        fetchProfile(),
-      ]);
+      // Get studentId first if not available
+      const sid = studentId || await fetchStudentId();
+      if (sid) {
+        await Promise.all([
+          fetchLearningResult(sid),
+          fetchSemesterResults(sid),
+          fetchTuitionFee(sid),
+          fetchTimeTable(sid),
+          fetchCutRice(sid),
+          fetchAchievement(sid),
+          fetchSchedule(),
+          fetchProfile(sid),
+        ]);
+      }
     } catch (error) {
       console.error("Error refreshing data:", error);
     } finally {
@@ -240,16 +258,20 @@ export default function Home() {
     setIsLoading(true);
     try {
       await withLoading(async () => {
-        await Promise.all([
-          fetchLearningResult(),
-          fetchSemesterResults(),
-          fetchTuitionFee(),
-          fetchTimeTable(),
-          fetchCutRice(),
-          fetchAchievement(),
-          fetchSchedule(),
-          fetchProfile(),
-        ]);
+        // Get studentId first
+        const sid = await fetchStudentId();
+        if (sid) {
+          await Promise.all([
+            fetchLearningResult(sid),
+            fetchSemesterResults(sid),
+            fetchTuitionFee(sid),
+            fetchTimeTable(sid),
+            fetchCutRice(sid),
+            fetchAchievement(sid),
+            fetchSchedule(),
+            fetchProfile(sid),
+          ]);
+        }
       });
     } catch (error) {
       console.error("Error loading data:", error);

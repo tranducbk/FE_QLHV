@@ -97,8 +97,18 @@ const SideBarContent = () => {
 
           setUserDetail(res.data);
         } else {
+          // Get studentId from userId first
+          const studentRes = await axios.get(
+            `${BASE_URL}/student/by-user/${decodedToken.id}`,
+            {
+              headers: {
+                token: `Bearer ${token}`,
+              },
+            }
+          );
+
           const res = await axios.get(
-            `${BASE_URL}/student/${decodedToken.id}`,
+            `${BASE_URL}/student/${studentRes.data.id}`,
             {
               headers: {
                 token: `Bearer ${token}`,
@@ -118,16 +128,18 @@ const SideBarContent = () => {
   const updateSelectedKeys = () => {
     const currentPath = pathname;
 
-    // User: map tab to submenu keys
-    if (currentPath === "/users/learning-information") {
-      const tab = searchParams?.get("tab") || "time-table";
-      const key = `/users/learning-information?tab=${tab}`;
-      setSelectedKeys([key]);
+    setSelectedKeys([currentPath]);
+
+    // User: open learning submenu for semester-results, time-table, tuition-fee, yearly-statistics
+    if (
+      currentPath.startsWith("/users/semester-results") ||
+      currentPath.startsWith("/users/time-table") ||
+      currentPath.startsWith("/users/tuition-fee") ||
+      currentPath === "/users/yearly-statistics"
+    ) {
       setOpenKeys(["learning-user"]);
       return;
     }
-
-    setSelectedKeys([currentPath]);
 
     // User: open training submenu for physical results/violations
     if (
@@ -135,12 +147,6 @@ const SideBarContent = () => {
       currentPath.startsWith("/users/violations")
     ) {
       setOpenKeys(["training-user"]);
-      return;
-    }
-
-    // User: open learning submenu for yearly statistics
-    if (currentPath === "/users/yearly-statistics") {
-      setOpenKeys(["learning-user"]);
       return;
     }
 
@@ -388,14 +394,11 @@ const SideBarContent = () => {
                 icon={<BookOutlined />}
                 title="Học tập"
               >
-                <Menu.Item
-                  key="/users/learning-information?tab=time-table"
-                  icon={<ScheduleOutlined />}
-                >
+                <Menu.Item key="/users/time-table" icon={<ScheduleOutlined />}>
                   Thời khóa biểu
                 </Menu.Item>
                 <Menu.Item
-                  key="/users/learning-information?tab=results"
+                  key="/users/semester-results"
                   icon={<TrophyOutlined />}
                 >
                   Kết quả học tập
@@ -406,10 +409,7 @@ const SideBarContent = () => {
                 >
                   Thống kê theo năm
                 </Menu.Item>
-                <Menu.Item
-                  key="/users/learning-information?tab=tuition-fee"
-                  icon={<DollarOutlined />}
-                >
+                <Menu.Item key="/users/tuition-fee" icon={<DollarOutlined />}>
                   Học phí
                 </Menu.Item>
               </SubMenu>

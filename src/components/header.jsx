@@ -122,8 +122,18 @@ const Header = () => {
 
           setUserDetail(res.data);
         } else {
+          // Get studentId from userId first
+          const studentRes = await axios.get(
+            `${BASE_URL}/student/by-user/${decodedToken.id}`,
+            {
+              headers: {
+                token: `Bearer ${token}`,
+              },
+            }
+          );
+
           const res = await axios.get(
-            `${BASE_URL}/student/${decodedToken.id}`,
+            `${BASE_URL}/student/${studentRes.data.id}`,
             {
               headers: {
                 token: `Bearer ${token}`,
@@ -229,9 +239,7 @@ const Header = () => {
       label: (
         <Link
           href={
-            user?.isAdmin === true
-              ? `/admin/${user?._id}`
-              : `/users/${user?._id}`
+            user?.isAdmin === true ? `/admin/${user?.id}` : `/users/${user?.id}`
           }
           className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 block w-full"
         >
@@ -355,9 +363,7 @@ const Header = () => {
       label: (
         <Link
           href={
-            user?.isAdmin === true
-              ? `/admin/${user?._id}`
-              : `/users/${user?._id}`
+            user?.isAdmin === true ? `/admin/${user?.id}` : `/users/${user?.id}`
           }
           onClick={() => setMobileMenuOpen(false)}
           className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 block w-full"

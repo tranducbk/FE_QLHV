@@ -28,6 +28,9 @@ const Statictical = () => {
   const [selectedYear, setSelectedYear] = useState("");
   const [filterUnits, setFilterUnits] = useState([]);
   const [filterTrainingRating, setFilterTrainingRating] = useState([]);
+  const [selectedSemester, setSelectedSemester] = useState("all");
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState("all");
+  const [selectedUnit, setSelectedUnit] = useState("all");
 
   const fetchLearningClassification = async () => {
     const token = localStorage.getItem("token");
@@ -78,9 +81,12 @@ const Statictical = () => {
       const years = yearsRes.data?.years || [];
       setAvailableSchoolYears(years);
       const latestYear = years[0] || null;
-      if (!selectedYear && latestYear) setSelectedYear(latestYear);
+      if (!selectedYear && latestYear) {
+        setSelectedYear(latestYear);
+      }
       if (!latestYear) {
         setLearningResultByYear({ schoolYear: null, data: [] });
+        setTopStudentsLatestYear({ schoolYear: null, topStudents: [] });
         return;
       }
 
@@ -405,14 +411,14 @@ const Statictical = () => {
                 <canvas id="acquisitions2" width="450" height="395"></canvas>
                 <div className="text-sm font-bold text-red-600 dark:text-red-400 pt-2 pb-1">
                   Biểu đồ thống kê kết quả học tập theo năm học{" "}
-                  {learningResultByYear?.schoolYear || "-"}
+                  {learningResultByYear?.schoolYear || "(Chưa có dữ liệu)"}
                 </div>
               </div>
               <div className="text-center ml-8">
                 <canvas id="acquisitions3" width="450" height="395"></canvas>
                 <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 pt-2 pb-1">
                   Biểu đồ thống kê số lượng theo đơn vị năm{" "}
-                  {classStatsByYear?.schoolYear || "-"}
+                  {classStatsByYear?.schoolYear || "(Chưa có dữ liệu)"}
                 </div>
               </div>
             </div>
@@ -420,7 +426,7 @@ const Statictical = () => {
             <div className="my-2 mx-5 pb-6">
               <div className="font-bold text-gray-900 dark:text-white mb-3">
                 Danh sách đề xuất khen thưởng học viên - Năm học{" "}
-                {topStudentsLatestYear?.schoolYear || "-"}
+                {topStudentsLatestYear?.schoolYear || "(Chưa có dữ liệu)"}
               </div>
               <div className="flex items-center gap-3 flex-wrap mb-3">
                 <div>

@@ -7,8 +7,10 @@ import "core-js/stable/atob";
 import axios from "axios";
 import Link from "next/link";
 import { BASE_URL } from "@/configs";
-import { Menu, ConfigProvider, theme } from "antd";
+import { Menu, ConfigProvider, theme, Layout } from "antd";
 import { useThemeContext } from "./ThemeProvider";
+
+const { Sider } = Layout;
 import {
   HomeOutlined,
   CalendarOutlined,
@@ -191,9 +193,23 @@ const SideBarContent = () => {
 
   if (token?.admin) {
     return (
-      <div className="h-full fixed shadow-xl">
-        <div className="h-full bg-white hidden pt-20 hs-overlay hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform z-40 w-64 border-gray-200 overflow-y-auto lg:block lg:translate-x-0 lg:end-auto lg:bottom-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-slate-700 dark:[&::-webkit-scrollbar-thumb]:bg-slate-500 dark:bg-gray-800 dark:border-gray-700">
-          <ConfigProvider
+      <Sider
+        width={256}
+        collapsedWidth={0}
+        breakpoint="lg"
+        className="h-screen fixed left-0 top-0 pt-16 shadow-xl overflow-y-auto z-40
+          [&::-webkit-scrollbar]:w-2
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          [&::-webkit-scrollbar-track]:bg-gray-100
+          [&::-webkit-scrollbar-thumb]:bg-gray-300
+          dark:[&::-webkit-scrollbar-track]:bg-slate-700
+          dark:[&::-webkit-scrollbar-thumb]:bg-slate-500"
+        style={{
+          backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
+          borderRight: `1px solid ${theme === "dark" ? "#374151" : "#e5e7eb"}`,
+        }}
+      >
+        <ConfigProvider
             theme={{
               algorithm:
                 theme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -345,14 +361,27 @@ const SideBarContent = () => {
               </Menu.Item>
             </Menu>
           </ConfigProvider>
-        </div>
-      </div>
+      </Sider>
     );
   } else {
     return (
-      <div className="h-screen fixed shadow-xl">
-        <div className="h-screen hidden pt-20 hs-overlay hs-overlay-open:translate-x-0 -translate-x-full transition-all duration-300 transform z-40 w-64 bg-white border-gray-200 pb-10 overflow-y-auto lg:block lg:translate-x-0 lg:end-auto lg:bottom-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-track]:bg-slate-700 dark:[&::-webkit-scrollbar-thumb]:bg-slate-500 dark:bg-gray-800 dark:border-gray-700">
-          <ConfigProvider
+      <Sider
+        width={256}
+        collapsedWidth={0}
+        breakpoint="lg"
+        className="h-screen fixed left-0 top-0 pt-16 shadow-xl overflow-y-auto z-40 pb-10
+          [&::-webkit-scrollbar]:w-2
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          [&::-webkit-scrollbar-track]:bg-gray-100
+          [&::-webkit-scrollbar-thumb]:bg-gray-300
+          dark:[&::-webkit-scrollbar-track]:bg-slate-700
+          dark:[&::-webkit-scrollbar-thumb]:bg-slate-500"
+        style={{
+          backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
+          borderRight: `1px solid ${theme === "dark" ? "#374151" : "#e5e7eb"}`,
+        }}
+      >
+        <ConfigProvider
             theme={{
               algorithm:
                 theme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -468,8 +497,7 @@ const SideBarContent = () => {
               </Menu.Item>
             </Menu>
           </ConfigProvider>
-        </div>
-      </div>
+      </Sider>
     );
   }
 };

@@ -215,7 +215,11 @@ const SemesterResults = () => {
     const schoolYear = findSchoolYearById(gradeSemesterCode);
 
     if (!term || !schoolYear) {
-      handleNotify("warning", "Thiếu thông tin", GRADE_MESSAGES.SELECT_SEMESTER);
+      handleNotify(
+        "warning",
+        "Thiếu thông tin",
+        GRADE_MESSAGES.SELECT_SEMESTER
+      );
       return;
     }
 
@@ -231,11 +235,7 @@ const SemesterResults = () => {
     );
 
     if (validSubjects.length === 0) {
-      handleNotify(
-        "warning",
-        "Thiếu dữ liệu",
-        GRADE_MESSAGES.MISSING_DATA
-      );
+      handleNotify("warning", "Thiếu dữ liệu", GRADE_MESSAGES.MISSING_DATA);
       return;
     }
 
@@ -503,11 +503,17 @@ const SemesterResults = () => {
     const loadData = async () => {
       await withLoading(async () => {
         await fetchStudentId();
-        await fetchLearningResult();
       });
     };
     loadData();
   }, [withLoading]);
+
+  // Fetch learning result when studentId is available
+  useEffect(() => {
+    if (studentId) {
+      fetchLearningResult();
+    }
+  }, [studentId]);
 
   // fetch danh sách học kỳ cho user
   useEffect(() => {
@@ -1520,14 +1526,6 @@ const SemesterResults = () => {
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     CPA (Hệ 10)
-                  </div>
-                </div>
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {viewingSemester.subjects?.length || 0}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    Số môn học
                   </div>
                 </div>
               </div>

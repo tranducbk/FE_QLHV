@@ -38,14 +38,11 @@ export default function HomePage() {
             setIsLoggedIn(true);
             setUserType("admin");
           } else {
-            await axios.get(
-              `${BASE_URL}/student/by-user/${decodedToken.id}`,
-              {
-                headers: {
-                  token: `Bearer ${token}`,
-                },
-              }
-            );
+            await axios.get(`${BASE_URL}/student/by-user/${decodedToken.id}`, {
+              headers: {
+                token: `Bearer ${token}`,
+              },
+            });
             setIsLoggedIn(true);
             setUserType("student");
           }

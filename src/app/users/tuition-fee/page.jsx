@@ -261,11 +261,17 @@ const TuitionFee = () => {
     const loadData = async () => {
       await withLoading(async () => {
         await fetchStudentId();
-        await fetchTuitionFee();
       });
     };
     loadData();
   }, [withLoading]);
+
+  // Fetch tuition fee when studentId is available
+  useEffect(() => {
+    if (studentId) {
+      fetchTuitionFee();
+    }
+  }, [studentId]);
 
   // fetch danh sách học kỳ cho user
   useEffect(() => {

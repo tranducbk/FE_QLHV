@@ -506,7 +506,6 @@ const ListUser = () => {
           }
         );
 
-
         setFormData({
           studentId: res.data.studentId || "",
           fullName: res.data.fullName || "",
@@ -534,7 +533,6 @@ const ListUser = () => {
             : null,
           university: res.data.university || "Đại học Bách Khoa Hà Nội",
           positionParty: res.data.positionParty || "Không",
-
           hometown: res.data.hometown || "",
           ethnicity: res.data.ethnicity || "",
           religion: res.data.religion || "",
@@ -572,41 +570,38 @@ const ListUser = () => {
         if (foundUniversity) {
           setSelectedUniversity(foundUniversity);
 
-          // Gọi API để load organizations, education levels, và classes
-          try {
-            // Load organizations
-            const organizations = await fetchOrganizations(foundUniversity.id);
-            setOrganizations(organizations);
+          const organizations = await fetchOrganizations(foundUniversity.id);
+          setOrganizations(organizations);
 
-            // Tìm organization đã chọn
-            let selectedOrgId = null;
-            if (
-              res.data.organization &&
-              typeof res.data.organization === "object" &&
-              res.data.organization.id
-            ) {
-              // Ưu tiên sử dụng organization object từ API
-              selectedOrgId = res.data.organization.id;
-            } else if (res.data.organizationId) {
-              // Fallback: sử dụng organizationId
-              selectedOrgId = res.data.organizationId;
-            } else if (
-              res.data.organization &&
-              typeof res.data.organization === "string"
-            ) {
-              // Fallback: tìm theo tên
-              const selectedOrg = organizations.find(
-                (org) => org.organizationName === res.data.organization
-              );
-              selectedOrgId = selectedOrg?.id;
-            }
+          // Tìm organization đã chọn
+          let selectedOrgId = null;
+          if (
+            res.data.organization &&
+            typeof res.data.organization === "object" &&
+            res.data.organization.id
+          ) {
+            // Ưu tiên sử dụng organization object từ API
+            selectedOrgId = res.data.organization.id;
+          } else if (res.data.organizationId) {
+            // Fallback: sử dụng organizationId
+            selectedOrgId = res.data.organizationId;
+          } else if (
+            res.data.organization &&
+            typeof res.data.organization === "string"
+          ) {
+            // Fallback: tìm theo tên
+            const selectedOrg = organizations.find(
+              (org) => org.organizationName === res.data.organization
+            );
+            selectedOrgId = selectedOrg?.id;
+          }
 
-            if (selectedOrgId) {
-              setSelectedOrganization(selectedOrgId);
+          if (selectedOrgId) {
+            setSelectedOrganization(selectedOrgId);
 
-              // Load education levels
-              const educationLevels = await fetchEducationLevels(selectedOrgId);
-              setEducationLevels(educationLevels);
+            // Load education levels
+            const educationLevels = await fetchEducationLevels(selectedOrgId);
+            setEducationLevels(educationLevels);
 
               // Tìm education level đã chọn
               let selectedLevelId = null;
@@ -617,15 +612,9 @@ const ListUser = () => {
               ) {
                 // Ưu tiên sử dụng education_level object từ API
                 selectedLevelId = res.data.education_level.id;
-                  "✅ Education level from API:",
-                  res.data.education_level
-                );
               } else if (res.data.educationLevelId) {
                 // Fallback: sử dụng educationLevelId
                 selectedLevelId = res.data.educationLevelId;
-                  "✅ Education level from educationLevelId:",
-                  selectedLevelId
-                );
               } else if (
                 res.data.educationLevel &&
                 typeof res.data.educationLevel === "object"
@@ -676,12 +665,6 @@ const ListUser = () => {
                 }
               }
             }
-          } catch (error) {
-            console.error("Error loading cascading data:", error);
-          }
-
-        } else {
-        }
 
         // Load thông tin gia đình và yếu tố nước ngoài vào state
         if (res.data.familyMembers && Array.isArray(res.data.familyMembers)) {
@@ -695,9 +678,6 @@ const ListUser = () => {
             })
           );
           setFamilyMembers(formattedFamilyMembers);
-            "Loaded family members for edit:",
-            formattedFamilyMembers
-          );
         } else {
           setFamilyMembers([]);
         }
@@ -718,9 +698,6 @@ const ListUser = () => {
             })
           );
           setForeignRelations(formattedForeignRelations);
-            "Loaded foreign relations for edit:",
-            formattedForeignRelations
-          );
         } else {
           setForeignRelations([]);
         }
@@ -1206,9 +1183,6 @@ const ListUser = () => {
               res.data.educationLevel.length === 24
             ) {
               try {
-                  "Fetching education level:",
-                  res.data.educationLevel
-                );
                 const educationLevelRes = await axios.get(
                   `${BASE_URL}/university/education-levels/${res.data.educationLevel}`,
                   {

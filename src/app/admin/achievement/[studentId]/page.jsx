@@ -72,7 +72,7 @@ const StudentAchievement = () => {
           setRecommendations({ suggestions: [] });
         }
       } catch (error) {
-        console.log(error);
+        // Handle error silently
         handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu học viên");
       } finally {
         setLoading(false);
@@ -110,12 +110,12 @@ const StudentAchievement = () => {
     }
   };
 
-  const handleUpdateYearlyAchievement = async (e, year) => {
+  const handleUpdateYearlyAchievement = async (e, achievementId) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
     try {
       await axios.put(
-        `${BASE_URL}/achievement/admin/${studentId}/${year}`,
+        `${BASE_URL}/achievement/admin/${achievementId}`,
         editFormData,
         {
           headers: { token: `Bearer ${token}` },
@@ -134,10 +134,10 @@ const StudentAchievement = () => {
     }
   };
 
-  const handleDeleteYearlyAchievement = async (year) => {
+  const handleDeleteYearlyAchievement = async (achievementId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`${BASE_URL}/achievement/admin/${studentId}/${year}`, {
+      await axios.delete(`${BASE_URL}/achievement/admin/${achievementId}`, {
         headers: { token: `Bearer ${token}` },
       });
       handleNotify("success", "Thành công!", "Xóa khen thưởng thành công");
@@ -482,40 +482,40 @@ const StudentAchievement = () => {
                     Thống kê khen thưởng
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                    <div className="text-center p-3 bg-green-50 dark:bg-green-900 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    <div className="text-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {achievement.totalAdvancedSoldier}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Chiến sĩ tiên tiến
                       </div>
                     </div>
-                    <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
-                      <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                    <div className="text-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {achievement.totalCompetitiveSoldier}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Chiến sĩ thi đua
                       </div>
                     </div>
-                    <div className="text-center p-3 bg-purple-50 dark:bg-purple-900 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    <div className="text-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {achievement.totalScientificTopics}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Đề tài khoa học
                       </div>
                     </div>
-                    <div className="text-center p-3 bg-indigo-50 dark:bg-indigo-900 rounded-lg">
-                      <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                    <div className="text-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {achievement.totalScientificInitiatives}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Sáng kiến khoa học
                       </div>
                     </div>
-                    <div className="text-center p-3 bg-red-50 dark:bg-red-900 rounded-lg">
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                    <div className="text-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {hasMinistryRewardAchieved
                           ? "🏆"
                           : achievement.eligibleForMinistryReward
@@ -530,8 +530,8 @@ const StudentAchievement = () => {
                           : "Chưa đủ điều kiện BK BQP"}
                       </div>
                     </div>
-                    <div className="text-center p-3 bg-orange-50 dark:bg-orange-900 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    <div className="text-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
                         {hasNationalRewardAchieved
                           ? "🥇"
                           : achievement.eligibleForNationalReward
@@ -628,7 +628,7 @@ const StudentAchievement = () => {
                                   </button>
                                   <button
                                     onClick={() =>
-                                      handleDeleteYearlyAchievement(ya.year)
+                                      handleDeleteYearlyAchievement(ya.id)
                                     }
                                     className="text-red-600 hover:text-red-800 p-1"
                                   >
@@ -1134,7 +1134,7 @@ const StudentAchievement = () => {
                 </div>
                 <form
                   onSubmit={(e) =>
-                    handleUpdateYearlyAchievement(e, editFormData.year)
+                    handleUpdateYearlyAchievement(e, editFormData.id)
                   }
                   className="p-4"
                 >

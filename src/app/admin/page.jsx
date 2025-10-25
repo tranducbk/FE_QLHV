@@ -44,7 +44,7 @@ export default function Home() {
           router.push("/supper_admin");
         }
       } catch (error) {
-        console.error("Error decoding token:", error);
+        // Handle token decoding error
       }
     }
   }, [router]);
@@ -84,7 +84,7 @@ export default function Home() {
 
         setLearningResult(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -102,7 +102,7 @@ export default function Home() {
 
         setStudent(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -120,7 +120,7 @@ export default function Home() {
 
         setCutRice(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -138,7 +138,7 @@ export default function Home() {
 
         setAchievement(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -156,7 +156,7 @@ export default function Home() {
 
         setTrainingRatings(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
         setTrainingRatings([]);
       }
     }
@@ -175,7 +175,7 @@ export default function Home() {
 
         setSemesters(res.data || []);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
         setSemesters([]);
       }
     }
@@ -223,7 +223,7 @@ export default function Home() {
 
         setDetailedLearningResults(res.data || []);
       } catch (error) {
-        console.log("Error fetching detailed learning results:", error);
+        // Handle error silently
         setDetailedLearningResults([]);
       }
     }
@@ -260,10 +260,7 @@ export default function Home() {
                 organizations: hierarchyRes.data.organizations || [],
               };
             } catch (error) {
-              console.log(
-                `Error fetching hierarchy for ${university.id}:`,
-                error
-              );
+              // Handle error silently
               return {
                 ...university,
                 organizations: [],
@@ -274,7 +271,7 @@ export default function Home() {
 
         setClasses(universitiesWithHierarchy);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
         setClasses([]);
       }
     }

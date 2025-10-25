@@ -37,7 +37,7 @@ export default function Home() {
         setStudentId(res.data.id);
         return res.data.id;
       } catch (error) {
-        console.error("Error fetching studentId:", error);
+        // Handle error silently
         return null;
       }
     }
@@ -60,7 +60,7 @@ export default function Home() {
 
         setSemesterResults(res.data.semesterResults || []);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -78,7 +78,7 @@ export default function Home() {
 
         setTuitionFee(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -96,7 +96,7 @@ export default function Home() {
 
         setTimeTable(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -118,7 +118,7 @@ export default function Home() {
           setCutRice(null);
         }
       } catch (error) {
-        console.log(error);
+        // Handle error silently
         setCutRice(null);
       }
     }
@@ -135,7 +135,7 @@ export default function Home() {
         });
         setProfile(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -157,7 +157,7 @@ export default function Home() {
 
         setAchievement(res.data);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -194,7 +194,7 @@ export default function Home() {
 
         setCommanderDutySchedule(currentSchedule);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
         setCommanderDutySchedule(null);
       }
     }
@@ -217,7 +217,7 @@ export default function Home() {
         ]);
       }
     } catch (error) {
-      console.error("Error refreshing data:", error);
+      // Handle error silently
     } finally {
       setIsRefreshing(false);
     }
@@ -242,7 +242,7 @@ export default function Home() {
         }
       });
     } catch (error) {
-      console.error("Error loading data:", error);
+      // Handle error silently
     } finally {
       setIsLoading(false);
     }
@@ -601,7 +601,7 @@ export default function Home() {
           {/* Các module chính */}
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {/* Học tập */}
-            <Link href="/users/learning-information" className="group">
+            <Link href="/users/semester-results" className="group">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 shadow-lg border border-blue-200 dark:border-blue-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
@@ -751,10 +751,7 @@ export default function Home() {
             </Link>
 
             {/* Thời khóa biểu hôm nay */}
-            <Link
-              href="/users/learning-information?tab=time-table"
-              className="group"
-            >
+            <Link href="/users/time-table" className="group">
               <div className="bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl p-6 shadow-lg border border-emerald-200 dark:border-emerald-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">

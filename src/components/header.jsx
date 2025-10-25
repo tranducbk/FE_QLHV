@@ -112,7 +112,7 @@ const Header = () => {
         setDocuments([]);
       }
     } catch (error) {
-      console.log(error);
+      // Handle error silently
       setDocuments([]);
     }
   };
@@ -175,7 +175,7 @@ const Header = () => {
           setUserDetail(res.data);
         }
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -193,9 +193,9 @@ const Header = () => {
         });
 
         setUser(res.data);
-        console.log(res.data);
+        // Response received
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -213,7 +213,7 @@ const Header = () => {
         localStorage.removeItem("token");
         router.push("/login");
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -406,7 +406,7 @@ const Header = () => {
 
         router.push(targetUrl);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -677,10 +677,17 @@ const Header = () => {
         <div className="flex items-center">
           <Link
             href={`/${checkIsAdmin() ? "admin" : "users"}`}
-            className="flex items-center"
+            className="flex items-center hover:cursor-pointer transition-all duration-200 hover:opacity-80"
           >
-            <img src="/image.png" className="h-8 md:h-10 mr-3" alt="H5 Logo" />
-            <Title level={4} className="theme-title mt-3 ">
+            <img
+              src="/image.png"
+              className="h-8 md:h-10 mr-3 hover:cursor-pointer transition-all duration-200 hover:scale-105"
+              alt="H5 Logo"
+            />
+            <Title
+              level={4}
+              className="theme-title mt-3 hover:cursor-pointer transition-all duration-200 hover:text-blue-600 dark:hover:text-blue-400"
+            >
               HỆ HỌC VIÊN 5
             </Title>
           </Link>

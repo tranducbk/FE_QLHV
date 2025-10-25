@@ -122,7 +122,7 @@ const SideBarContent = () => {
         }
       } catch (error) {
         router.push("/login");
-        console.log(error);
+        // Handle error silently
       }
     }
   };

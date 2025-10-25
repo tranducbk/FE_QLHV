@@ -40,14 +40,11 @@ const ChangePassword = () => {
             setIsLoggedIn(true);
             setUserType("admin");
           } else {
-            await axios.get(
-              `${BASE_URL}/student/by-user/${decodedToken.id}`,
-              {
-                headers: {
-                  token: `Bearer ${token}`,
-                },
-              }
-            );
+            await axios.get(`${BASE_URL}/student/by-user/${decodedToken.id}`, {
+              headers: {
+                token: `Bearer ${token}`,
+              },
+            });
             setIsLoggedIn(true);
             setUserType("student");
           }
@@ -126,15 +123,15 @@ const ChangePassword = () => {
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div
-                className="flex items-center space-x-2 cursor-pointer"
+                className="flex items-center space-x-2 hover:cursor-pointer transition-all duration-300 hover:opacity-80"
                 onClick={() => router.push("/")}
               >
                 <img
                   src="/logo-msa.png"
                   alt="Logo"
-                  className="h-12 my-1 transition-all duration-300"
+                  className="h-12 my-1 transition-all duration-300 hover:scale-105 hover:cursor-pointer"
                 />
-                <span className="text-xl font-bold text-white">
+                <span className="text-xl font-bold text-white hover:cursor-pointer transition-all duration-300 hover:text-blue-200">
                   HỌC VIỆN KHOA HỌC QUÂN SỰ
                 </span>
               </div>

@@ -17,6 +17,7 @@ const Achievement = () => {
   const [students, setStudents] = useState([]);
   const [achievements, setAchievements] = useState({});
   const [filterYear, setFilterYear] = useState("");
+  const [availableYears, setAvailableYears] = useState([]);
   const [filterStudentId, setFilterStudentId] = useState("");
   const [filterStudentKeyword, setFilterStudentKeyword] = useState("");
   const [filterClassId, setFilterClassId] = useState("");
@@ -35,23 +36,27 @@ const Achievement = () => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
-        // Sử dụng API đúng cho admin
-        const res = await axios.get(`${BASE_URL}/achievement/admin/students`, {
+        // Lấy danh sách students từ API commander
+        const res = await axios.get(`${BASE_URL}/commander/students`, {
           headers: { token: `Bearer ${token}` },
         });
 
         // Đảm bảo res.data là mảng
         const studentsData = Array.isArray(res.data) ? res.data : [];
-        console.log("Students data:", studentsData); // Debug log
         setStudents(studentsData);
 
-        // Sử dụng achievement đã được populate từ API
+        // Fetch achievement cho TỪNG student
         const achievementsData = {};
         for (const student of studentsData) {
-          console.log("Student with achievement:", student);
-          if (student.achievement) {
-            achievementsData[student.id] = student.achievement;
-          } else {
+          try {
+            const achievementRes = await axios.get(
+              `${BASE_URL}/achievement/admin/${student.id}`,
+              {
+                headers: { token: `Bearer ${token}` },
+              }
+            );
+            achievementsData[student.id] = achievementRes.data;
+          } catch (error) {
             // If no achievement exists, create default structure
             achievementsData[student.id] = {
               studentId: student.id,
@@ -71,27 +76,17 @@ const Achievement = () => {
 
         // Fetch recommendations for each student in parallel
         const recommendationsData = {};
-        console.log(
-          "Fetching recommendations for students:",
-          studentsData.length
-        );
 
         const recommendationPromises = studentsData.map(async (student) => {
           try {
-            console.log(`Fetching recommendations for student: ${student.id}`);
             const recRes = await axios.get(
               `${BASE_URL}/achievement/admin/${student.id}/recommendations`,
               {
                 headers: { token: `Bearer ${token}` },
               }
             );
-            console.log(`Recommendations for ${student.id}:`, recRes.data);
             return { studentId: student.id, data: recRes.data };
           } catch (error) {
-            console.log(
-              `Error fetching recommendations for student ${student.id}:`,
-              error
-            );
             return { studentId: student.id, data: { suggestions: [] } };
           }
         });
@@ -101,10 +96,28 @@ const Achievement = () => {
           recommendationsData[studentId] = data;
         });
 
-        console.log("Final recommendations data:", recommendationsData);
         setRecommendations(recommendationsData);
+
+        // Lấy danh sách các năm học có trong DB (không trùng)
+        const yearsSet = new Set();
+        Object.values(achievementsData).forEach((ach) => {
+          if (ach && Array.isArray(ach.yearlyAchievements)) {
+            ach.yearlyAchievements.forEach((ya) => {
+              if (ya.year) {
+                yearsSet.add(ya.year);
+              }
+            });
+          }
+        });
+        const sortedYears = Array.from(yearsSet)
+          .sort((a, b) => b - a) // Sắp xếp giảm dần (mới nhất trước)
+          .map((year) => ({
+            value: year,
+            label: `${year}-${year + 1}`,
+          }));
+        setAvailableYears(sortedYears);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
       }
     }
   };
@@ -118,19 +131,12 @@ const Achievement = () => {
 
   useEffect(() => {
     if (showFormAdd) {
-      console.log(
-        "Form opened, selectedStudentForForm:",
-        selectedStudentForForm
-      );
-      console.log("Current addFormData:", addFormData);
+      // Form opened
     }
   }, [showFormAdd, selectedStudentForForm, addFormData]);
 
   const handleAddYearlyAchievement = async (e) => {
     e.preventDefault();
-    console.log("Form submitted!");
-    console.log("Selected student:", selectedStudentForForm);
-    console.log("Form data:", addFormData);
 
     if (!selectedStudentForForm) {
       handleNotify("danger", "Lỗi!", "Vui lòng chọn học viên");
@@ -160,9 +166,6 @@ const Achievement = () => {
 
     const token = localStorage.getItem("token");
     try {
-      console.log("Adding achievement for student:", selectedStudentForForm.id);
-      console.log("Form data:", addFormData);
-
       const response = await axios.post(
         `${BASE_URL}/achievement/admin/${selectedStudentForForm.id}`,
         addFormData,
@@ -170,7 +173,6 @@ const Achievement = () => {
           headers: { token: `Bearer ${token}` },
         }
       );
-      console.log("Response:", response.data);
       const message = response.data.message || "Thêm khen thưởng thành công";
       handleNotify("success", "Thành công!", message);
       setShowFormAdd(false);
@@ -189,12 +191,12 @@ const Achievement = () => {
     }
   };
 
-  const handleUpdateYearlyAchievement = async (e, studentId, year) => {
+  const handleUpdateYearlyAchievement = async (e, achievementId) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
     try {
       await axios.put(
-        `${BASE_URL}/achievement/admin/${studentId}/${year}`,
+        `${BASE_URL}/achievement/admin/${achievementId}`,
         editFormData,
         {
           headers: { token: `Bearer ${token}` },
@@ -213,10 +215,10 @@ const Achievement = () => {
     }
   };
 
-  const handleDeleteYearlyAchievement = async (studentId, year) => {
+  const handleDeleteYearlyAchievement = async (achievementId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`${BASE_URL}/achievement/admin/${studentId}/${year}`, {
+      await axios.delete(`${BASE_URL}/achievement/admin/${achievementId}`, {
         headers: { token: `Bearer ${token}` },
       });
       handleNotify("success", "Thành công!", "Xóa khen thưởng thành công");
@@ -275,7 +277,7 @@ const Achievement = () => {
   };
 
   const getRewardsDisplay = (achievement) => {
-    if (!achievement) return "-";
+    if (!achievement) return "";
 
     const rewards = [];
 
@@ -634,15 +636,18 @@ const Achievement = () => {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                        Tìm theo năm
+                        Tìm theo năm học
                       </label>
-                      <input
-                        type="number"
+                      <Select
                         value={filterYear}
-                        onChange={(e) => setFilterYear(e.target.value)}
-                        placeholder="VD: 2024"
-                        className="w-40 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        style={{ height: 36 }}
+                        onChange={setFilterYear}
+                        placeholder="Chọn năm học"
+                        style={{ width: 160, height: 36 }}
+                        allowClear
+                        options={[
+                          { value: "", label: "Tất cả năm" },
+                          ...availableYears,
+                        ]}
                       />
                     </div>
                     <div>
@@ -903,10 +908,6 @@ const Achievement = () => {
                                 <tbody>
                                   {rows && rows.length > 0 ? (
                                     rows.map((ya, index) => {
-                                      console.log(
-                                        "Rendering yearly achievement:",
-                                        ya
-                                      );
                                       return (
                                         <tr
                                           key={index}
@@ -989,8 +990,7 @@ const Achievement = () => {
                                               <button
                                                 onClick={() =>
                                                   handleDeleteYearlyAchievement(
-                                                    student.id,
-                                                    ya.year
+                                                    ya.id
                                                   )
                                                 }
                                                 className="text-red-600 hover:text-red-800 p-1"
@@ -1016,30 +1016,14 @@ const Achievement = () => {
                                     })
                                   ) : (
                                     <tr>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
                                     </tr>
                                   )}
                                 </tbody>
@@ -1048,10 +1032,6 @@ const Achievement = () => {
 
                             {/* Hiển thị suggestions */}
                             {(() => {
-                              console.log(
-                                `Checking suggestions for student ${student.id}:`,
-                                recommendations[student.id]
-                              );
                               return recommendations[student.id]?.suggestions &&
                                 recommendations[student.id].suggestions.length >
                                   0 ? (
@@ -1630,11 +1610,7 @@ const Achievement = () => {
                 </div>
                 <form
                   onSubmit={(e) =>
-                    handleUpdateYearlyAchievement(
-                      e,
-                      selectedStudentForForm.id,
-                      editFormData.year
-                    )
+                    handleUpdateYearlyAchievement(e, editFormData.id)
                   }
                   className="p-4"
                 >

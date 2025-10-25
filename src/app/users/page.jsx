@@ -24,7 +24,7 @@ export default function Home() {
   const { loading, withLoading } = useLoading(true);
   const [studentId, setStudentId] = useState(null);
 
-  // Helper function to get studentId from userId
+  // Helper function to get userId and studentId from token
   const fetchStudentId = async () => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -35,7 +35,8 @@ export default function Home() {
           { headers: { token: `Bearer ${token}` } }
         );
         setStudentId(res.data.id);
-        return res.data.id;
+        // Return both userId and studentId
+        return { userId: decodedToken.id, studentId: res.data.id };
       } catch (error) {
         // Handle error silently
         return null;
@@ -47,12 +48,12 @@ export default function Home() {
   // Removed: fetchLearningResult - API không tồn tại
   // Dữ liệu learning result đã có trong semesterResults
 
-  const fetchSemesterResults = async (sid) => {
+  const fetchSemesterResults = async (userId) => {
     const token = localStorage.getItem("token");
 
-    if (token && sid) {
+    if (token && userId) {
       try {
-        const res = await axios.get(`${BASE_URL}/grade/${sid}`, {
+        const res = await axios.get(`${BASE_URL}/grade/${userId}`, {
           headers: {
             token: `Bearer ${token}`,
           },
@@ -203,21 +204,21 @@ export default function Home() {
   const refreshAllData = async () => {
     setIsRefreshing(true);
     try {
-      // Get studentId first if not available
-      const sid = studentId || (await fetchStudentId());
-      if (sid) {
+      // Get userId and studentId
+      const ids = await fetchStudentId();
+      if (ids) {
         await Promise.all([
-          fetchSemesterResults(sid),
-          fetchTuitionFee(sid),
-          fetchTimeTable(sid),
-          fetchCutRice(sid),
-          fetchAchievement(sid),
+          fetchSemesterResults(ids.userId), // Sử dụng userId cho grade API
+          fetchTuitionFee(ids.studentId),
+          fetchTimeTable(ids.studentId),
+          fetchCutRice(ids.studentId),
+          fetchAchievement(ids.studentId),
           fetchSchedule(),
-          fetchProfile(sid),
+          fetchProfile(ids.studentId),
         ]);
       }
     } catch (error) {
-      // Handle error silently
+      console.error("❌ [REFRESH] Error refreshing data:", error);
     } finally {
       setIsRefreshing(false);
     }
@@ -227,22 +228,23 @@ export default function Home() {
     setIsLoading(true);
     try {
       await withLoading(async () => {
-        // Get studentId first
-        const sid = await fetchStudentId();
-        if (sid) {
+        // Get userId and studentId
+        const ids = await fetchStudentId();
+
+        if (ids) {
           await Promise.all([
-            fetchSemesterResults(sid),
-            fetchTuitionFee(sid),
-            fetchTimeTable(sid),
-            fetchCutRice(sid),
-            fetchAchievement(sid),
+            fetchSemesterResults(ids.userId), // Sử dụng userId cho grade API
+            fetchTuitionFee(ids.studentId),
+            fetchTimeTable(ids.studentId),
+            fetchCutRice(ids.studentId),
+            fetchAchievement(ids.studentId),
             fetchSchedule(),
-            fetchProfile(sid),
+            fetchProfile(ids.studentId),
           ]);
         }
       });
     } catch (error) {
-      // Handle error silently
+      console.error("❌ [INIT] Error in initial load:", error);
     } finally {
       setIsLoading(false);
     }
@@ -253,15 +255,19 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Chỉ chạy 1 lần khi component mount
 
-  // Tính toán thống kê
+  // Tính toán thống kê - Lấy CPA (Cumulative) từ học kỳ gần nhất
   const getLatestSemester = () => {
     if (semesterResults.length > 0) {
       const latest = semesterResults[semesterResults.length - 1];
       return {
         semester: latest.semester,
-        gpa4: latest.averageGrade4?.toFixed(2) || "0.00",
-        gpa10: latest.averageGrade10?.toFixed(2) || "0.00",
-        credits: latest.totalCredits || 0,
+        // Sử dụng CPA (cumulative) thay vì GPA học kỳ
+        cpa4: latest.cumulativeGrade4?.toFixed(2) || "0.00",
+        cpa10: latest.cumulativeGrade10?.toFixed(2) || "0.00",
+        cumulativeCredits: latest.cumulativeCredits || 0,
+        // Giữ lại thông tin học kỳ để dự phòng
+        semesterGpa4: latest.averageGrade4?.toFixed(2) || "0.00",
+        semesterCredits: latest.totalCredits || 0,
         subjects: latest.subjects?.length || 0,
       };
     }
@@ -395,34 +401,55 @@ export default function Home() {
   };
 
   const getLatestSchoolYearStats = () => {
-    if (!semesterResults || semesterResults.length === 0) return null;
+    if (!semesterResults || semesterResults.length === 0) {
+      return null;
+    }
+
     const valid = semesterResults.filter(
       (s) => s && s.schoolYear && typeof s.totalCredits === "number"
     );
-    if (valid.length === 0) return null;
+
+    if (valid.length === 0) {
+      return null;
+    }
+
     const years = [...new Set(valid.map((s) => s.schoolYear))];
+
     if (years.length === 0) return null;
+
     const latestYear = years.sort((a, b) => b.localeCompare(a))[0];
+
     const inYear = valid.filter((s) => s.schoolYear === latestYear);
+
+    // Tính GPA năm học từ TỪNG MÔN HỌC (không phải từ GPA học kỳ)
     let totalCredits = 0;
     let totalGradePoints4 = 0;
     let totalGradePoints10 = 0;
     let totalSubjects = 0;
-    inYear.forEach((s) => {
-      const credits = s.totalCredits || 0;
-      const g4 = s.averageGrade4 || 0;
-      const g10 = s.averageGrade10 || 0;
-      totalCredits += credits;
-      totalGradePoints4 += g4 * credits;
-      totalGradePoints10 += g10 * credits;
-      totalSubjects += s.subjects?.length || 0;
+
+    inYear.forEach((semester) => {
+      const subjects = semester.subjects || [];
+      totalSubjects += subjects.length;
+
+      // Cộng dồn grade points từ TỪNG MÔN HỌC
+      subjects.forEach((subject) => {
+        const credits = subject.credits || 0;
+        const gradePoint4 = subject.gradePoint4 || 0;
+        const gradePoint10 = subject.gradePoint10 || 0;
+
+        totalCredits += credits;
+        totalGradePoints4 += gradePoint4 * credits;
+        totalGradePoints10 += gradePoint10 * credits;
+      });
     });
+
     const gpa4 =
       totalCredits > 0 ? (totalGradePoints4 / totalCredits).toFixed(2) : "0.00";
     const gpa10 =
       totalCredits > 0
         ? (totalGradePoints10 / totalCredits).toFixed(2)
         : "0.00";
+
     return {
       schoolYear: latestYear,
       gpa4,
@@ -505,10 +532,10 @@ export default function Home() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    GPA hiện tại
+                    CPA hiện tại
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {latestSemester ? latestSemester.gpa4 : "0.00"}
+                    {latestSemester ? latestSemester.cpa4 : "0.00"}
                   </p>
                 </div>
               </div>
@@ -536,7 +563,7 @@ export default function Home() {
                     Tín chỉ tích lũy
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {latestSemester ? latestSemester.credits : 0}
+                    {latestSemester ? latestSemester.cumulativeCredits : 0}
                   </p>
                 </div>
               </div>
@@ -649,7 +676,7 @@ export default function Home() {
                               {latestYear
                                 ? latestYear.gpa4
                                 : latestSemester
-                                ? latestSemester.gpa4
+                                ? latestSemester.semesterGpa4
                                 : "Chưa có dữ liệu"}
                             </span>
                           </div>
@@ -667,7 +694,7 @@ export default function Home() {
                               {latestYear
                                 ? latestYear.credits
                                 : latestSemester
-                                ? latestSemester.credits
+                                ? latestSemester.semesterCredits
                                 : "Chưa có dữ liệu"}
                             </span>
                           </div>

@@ -15,6 +15,10 @@ import {
   ArrowRight,
   CheckCircle,
   Star,
+  FileText,
+  Clock,
+  Trophy,
+  MessageSquare,
 } from "lucide-react";
 import { BASE_URL } from "@/configs";
 
@@ -123,13 +127,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-white">
-              <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
-                Nền tảng Quản lý
+              <h1 className="text-3xl md:text-5xl font-bold leading-tight mb-6">
+                Nền tảng Quản lý{" "}
                 <span className="bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
-                  {" "}
-                  Sinh viên
-                </span>{" "}
-                Thông minh
+                  Học viên
+                </span>
+                <br />
+                <span className="text-white">Thông minh</span>
               </h1>
               <p className="text-xl text-white/90 mb-8 leading-relaxed">
                 Giải pháp công nghệ tiên tiến cho việc quản lý sinh viên toàn
@@ -205,45 +209,45 @@ export default function HomePage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
                 {
-                  icon: Users,
-                  title: "Quản lý hồ sơ sinh viên",
+                  icon: FileText,
+                  title: "Quản lý hồ sơ học viên",
                   description:
-                    "Hệ thống lưu trữ và quản lý thông tin sinh viên toàn diện với bảo mật cao và khả năng truy xuất nhanh chóng.",
+                    "Hệ thống lưu trữ và quản lý thông tin học viên toàn diện với bảo mật cao và khả năng truy xuất nhanh chóng.",
                   color: "bg-blue-600",
                 },
                 {
                   icon: BarChart3,
-                  title: "Theo dõi học tập & đánh giá",
+                  title: "Quản lý kết quả học tập",
                   description:
-                    "Giám sát tiến độ học tập, quản lý kết quả đánh giá với hệ thống báo cáo chi tiết và phân tích chuyên sâu.",
+                    "Theo dõi điểm số, xếp loại học tập và quản lý kết quả theo kỳ, năm học với hệ thống báo cáo chi tiết.",
                   color: "bg-emerald-600",
                 },
                 {
-                  icon: Calendar,
-                  title: "Quản lý lịch trình học tập",
+                  icon: Clock,
+                  title: "Quản lý thời khóa biểu",
                   description:
-                    "Tối ưu hóa việc sắp xếp thời khóa biểu, quản lý hoạt động học thuật và ngoại khóa một cách khoa học.",
+                    "Sắp xếp và quản lý thời khóa biểu học tập, lịch thi, hoạt động ngoại khóa một cách khoa học và hiệu quả.",
                   color: "bg-violet-600",
                 },
                 {
                   icon: TrendingUp,
-                  title: "Phân tích & báo cáo thông minh",
+                  title: "Thống kê & báo cáo",
                   description:
-                    "Tạo lập báo cáo đa chiều và phân tích dữ liệu chuyên sâu để hỗ trợ ra quyết định chiến lược.",
+                    "Tạo lập báo cáo thống kê đa chiều về tình hình học tập, khen thưởng và phân tích dữ liệu chuyên sâu.",
                   color: "bg-amber-600",
                 },
                 {
-                  icon: AlertTriangle,
-                  title: "Quản lý kỷ luật & vi phạm",
+                  icon: Trophy,
+                  title: "Quản lý khen thưởng",
                   description:
-                    "Theo dõi, xử lý các vấn đề kỷ luật một cách minh bạch, công bằng và tuân thủ quy định.",
+                    "Theo dõi và quản lý các danh hiệu khen thưởng, thành tích học tập và hoạt động của học viên.",
                   color: "bg-red-600",
                 },
                 {
-                  icon: Bell,
-                  title: "Hệ thống thông báo tự động",
+                  icon: MessageSquare,
+                  title: "Hệ thống thông báo",
                   description:
-                    "Cơ chế thông báo thông minh, đảm bảo truyền tải thông tin kịp thời và chính xác đến mọi đối tượng.",
+                    "Gửi thông báo tự động về kết quả học tập, lịch thi, thay đổi thời khóa biểu đến học viên và phụ huynh.",
                   color: "bg-indigo-600",
                 },
               ].map((feature, index) => (

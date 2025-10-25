@@ -56,8 +56,15 @@ const AdminManagement = () => {
         },
       });
 
-      // Response received
-      setUsers(response.data.users || []);
+      // Sắp xếp: SUPER_ADMIN > ADMIN > USER
+      const sortedUsers = (response.data.users || []).sort((a, b) => {
+        const roleOrder = { SUPER_ADMIN: 1, ADMIN: 2, USER: 3 };
+        const orderA = roleOrder[a.role] || 4;
+        const orderB = roleOrder[b.role] || 4;
+        return orderA - orderB;
+      });
+
+      setUsers(sortedUsers);
       setTotalPages(response.data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -293,6 +300,7 @@ const AdminManagement = () => {
                   <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                     <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                       <tr>
+                        <th className="px-6 py-3 text-center">STT</th>
                         <th className="px-6 py-3">Avatar</th>
                         <th className="px-6 py-3">Username</th>
                         <th className="px-6 py-3">Họ tên</th>
@@ -305,18 +313,21 @@ const AdminManagement = () => {
                       {users.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="6"
+                            colSpan="7"
                             className="px-6 py-8 text-center text-gray-500"
                           >
                             Không có tài khoản nào
                           </td>
                         </tr>
                       ) : (
-                        users.map((user) => (
+                        users.map((user, index) => (
                           <tr
                             key={user.id}
                             className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                           >
+                            <td className="px-6 py-4 text-center font-medium text-gray-900 dark:text-white">
+                              {index + 1}
+                            </td>
                             <td className="px-6 py-4">
                               <img
                                 src={

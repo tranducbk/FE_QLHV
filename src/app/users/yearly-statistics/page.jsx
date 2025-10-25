@@ -181,6 +181,7 @@ const YearlyStatistics = () => {
       });
 
       const semesterResults = gradeRes.data.semesterResults || [];
+      // User semester results loaded
 
       // Lấy danh sách các năm học có dữ liệu kết quả học tập
       const yearsWithData = [
@@ -199,6 +200,7 @@ const YearlyStatistics = () => {
         setSelectedSchoolYear("all");
       }
     } catch (error) {
+      // Handle error silently
       setSchoolYears([]);
       setSelectedSchoolYear("");
     }
@@ -337,6 +339,7 @@ const YearlyStatistics = () => {
       setYearlyResults(finalResults);
       setAvailableUnits([]); // Không cần đơn vị cho user view
     } catch (error) {
+      // Handle error silently
       setYearlyResults([]);
     }
   };
@@ -379,6 +382,7 @@ const YearlyStatistics = () => {
         setStudentDetail(data);
       }
     } catch (error) {
+      // Handle error silently
       handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm của sinh viên");
     }
   };
@@ -427,6 +431,7 @@ const YearlyStatistics = () => {
           setStudentDetail(combinedData);
         }
       } catch (error) {
+        // Handle error silently
         handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm");
       }
     }
@@ -579,7 +584,7 @@ const YearlyStatistics = () => {
                   </p>
                 </div>
                 <Link
-                  href="/users/learning-information?tab=results"
+                  href="/users/semester-results"
                   className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 border border-blue-500 hover:border-blue-600 rounded-lg transition-colors duration-200 flex items-center"
                 >
                   <svg

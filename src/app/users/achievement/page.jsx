@@ -61,6 +61,7 @@ const AchievementContent = () => {
           setRecommendations({ suggestions: [] });
         }
       } catch (error) {
+        // Handle error silently
       }
     }
   };
@@ -216,17 +217,17 @@ const AchievementContent = () => {
                             {item.year}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.decisionNumber || "-"}
+                            {item.decisionNumber || "Không có dữ liệu"}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
                             {item.decisionDate
                               ? new Date(item.decisionDate).toLocaleDateString(
                                   "vi-VN"
                                 )
-                              : "-"}
+                              : "Không có dữ liệu"}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.title || "-"}
+                            {item.title || "Không có dữ liệu"}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
                             {item.scientific?.topics?.length > 0
@@ -251,16 +252,16 @@ const AchievementContent = () => {
                                     ? "Từ chối"
                                     : "Chờ duyệt"
                                 })`
-                              : "-"}
+                              : "Chưa có NCKH"}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.hasMinistryReward ? "✓" : "-"}
+                            {item.hasMinistryReward ? "✓" : ""}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.hasNationalReward ? "✓" : "-"}
+                            {item.hasNationalReward ? "✓" : ""}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.notes || "-"}
+                            {item.notes || ""}
                           </td>
                         </tr>
                       ))

@@ -17,6 +17,7 @@ const Achievement = () => {
   const [students, setStudents] = useState([]);
   const [achievements, setAchievements] = useState({});
   const [filterYear, setFilterYear] = useState("");
+  const [availableYears, setAvailableYears] = useState([]);
   const [filterStudentId, setFilterStudentId] = useState("");
   const [filterStudentKeyword, setFilterStudentKeyword] = useState("");
   const [filterClassId, setFilterClassId] = useState("");
@@ -35,8 +36,8 @@ const Achievement = () => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
-        // Sử dụng API đúng cho admin
-        const res = await axios.get(`${BASE_URL}/achievement/admin/students`, {
+        // Lấy danh sách students từ API commander
+        const res = await axios.get(`${BASE_URL}/commander/students`, {
           headers: { token: `Bearer ${token}` },
         });
 
@@ -44,12 +45,18 @@ const Achievement = () => {
         const studentsData = Array.isArray(res.data) ? res.data : [];
         setStudents(studentsData);
 
-        // Sử dụng achievement đã được populate từ API
+        // Fetch achievement cho TỪNG student
         const achievementsData = {};
         for (const student of studentsData) {
-          if (student.achievement) {
-            achievementsData[student.id] = student.achievement;
-          } else {
+          try {
+            const achievementRes = await axios.get(
+              `${BASE_URL}/achievement/admin/${student.id}`,
+              {
+                headers: { token: `Bearer ${token}` },
+              }
+            );
+            achievementsData[student.id] = achievementRes.data;
+          } catch (error) {
             // If no achievement exists, create default structure
             achievementsData[student.id] = {
               studentId: student.id,
@@ -69,9 +76,6 @@ const Achievement = () => {
 
         // Fetch recommendations for each student in parallel
         const recommendationsData = {};
-          "Fetching recommendations for students:",
-          studentsData.length
-        );
 
         const recommendationPromises = studentsData.map(async (student) => {
           try {
@@ -83,9 +87,6 @@ const Achievement = () => {
             );
             return { studentId: student.id, data: recRes.data };
           } catch (error) {
-              `Error fetching recommendations for student ${student.id}:`,
-              error
-            );
             return { studentId: student.id, data: { suggestions: [] } };
           }
         });
@@ -96,7 +97,27 @@ const Achievement = () => {
         });
 
         setRecommendations(recommendationsData);
+
+        // Lấy danh sách các năm học có trong DB (không trùng)
+        const yearsSet = new Set();
+        Object.values(achievementsData).forEach((ach) => {
+          if (ach && Array.isArray(ach.yearlyAchievements)) {
+            ach.yearlyAchievements.forEach((ya) => {
+              if (ya.year) {
+                yearsSet.add(ya.year);
+              }
+            });
+          }
+        });
+        const sortedYears = Array.from(yearsSet)
+          .sort((a, b) => b - a) // Sắp xếp giảm dần (mới nhất trước)
+          .map((year) => ({
+            value: year,
+            label: `${year}-${year + 1}`,
+          }));
+        setAvailableYears(sortedYears);
       } catch (error) {
+        // Handle error silently
       }
     }
   };
@@ -110,9 +131,7 @@ const Achievement = () => {
 
   useEffect(() => {
     if (showFormAdd) {
-        "Form opened, selectedStudentForForm:",
-        selectedStudentForForm
-      );
+      // Form opened
     }
   }, [showFormAdd, selectedStudentForForm, addFormData]);
 
@@ -147,7 +166,6 @@ const Achievement = () => {
 
     const token = localStorage.getItem("token");
     try {
-
       const response = await axios.post(
         `${BASE_URL}/achievement/admin/${selectedStudentForForm.id}`,
         addFormData,
@@ -173,12 +191,12 @@ const Achievement = () => {
     }
   };
 
-  const handleUpdateYearlyAchievement = async (e, studentId, year) => {
+  const handleUpdateYearlyAchievement = async (e, achievementId) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
     try {
       await axios.put(
-        `${BASE_URL}/achievement/admin/${studentId}/${year}`,
+        `${BASE_URL}/achievement/admin/${achievementId}`,
         editFormData,
         {
           headers: { token: `Bearer ${token}` },
@@ -197,10 +215,10 @@ const Achievement = () => {
     }
   };
 
-  const handleDeleteYearlyAchievement = async (studentId, year) => {
+  const handleDeleteYearlyAchievement = async (achievementId) => {
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`${BASE_URL}/achievement/admin/${studentId}/${year}`, {
+      await axios.delete(`${BASE_URL}/achievement/admin/${achievementId}`, {
         headers: { token: `Bearer ${token}` },
       });
       handleNotify("success", "Thành công!", "Xóa khen thưởng thành công");
@@ -259,7 +277,7 @@ const Achievement = () => {
   };
 
   const getRewardsDisplay = (achievement) => {
-    if (!achievement) return "-";
+    if (!achievement) return "";
 
     const rewards = [];
 
@@ -618,15 +636,18 @@ const Achievement = () => {
                   <div className="flex items-end gap-2">
                     <div>
                       <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                        Tìm theo năm
+                        Tìm theo năm học
                       </label>
-                      <input
-                        type="number"
+                      <Select
                         value={filterYear}
-                        onChange={(e) => setFilterYear(e.target.value)}
-                        placeholder="VD: 2024"
-                        className="w-40 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        style={{ height: 36 }}
+                        onChange={setFilterYear}
+                        placeholder="Chọn năm học"
+                        style={{ width: 160, height: 36 }}
+                        allowClear
+                        options={[
+                          { value: "", label: "Tất cả năm" },
+                          ...availableYears,
+                        ]}
                       />
                     </div>
                     <div>
@@ -887,9 +908,6 @@ const Achievement = () => {
                                 <tbody>
                                   {rows && rows.length > 0 ? (
                                     rows.map((ya, index) => {
-                                        "Rendering yearly achievement:",
-                                        ya
-                                      );
                                       return (
                                         <tr
                                           key={index}
@@ -972,8 +990,7 @@ const Achievement = () => {
                                               <button
                                                 onClick={() =>
                                                   handleDeleteYearlyAchievement(
-                                                    student.id,
-                                                    ya.year
+                                                    ya.id
                                                   )
                                                 }
                                                 className="text-red-600 hover:text-red-800 p-1"
@@ -999,30 +1016,14 @@ const Achievement = () => {
                                     })
                                   ) : (
                                     <tr>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
-                                      <td className="border px-3 py-2 text-center text-gray-400">
-                                        -
-                                      </td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
+                                      <td className="border px-3 py-2 text-center text-gray-400"></td>
                                     </tr>
                                   )}
                                 </tbody>
@@ -1031,9 +1032,6 @@ const Achievement = () => {
 
                             {/* Hiển thị suggestions */}
                             {(() => {
-                                `Checking suggestions for student ${student.id}:`,
-                                recommendations[student.id]
-                              );
                               return recommendations[student.id]?.suggestions &&
                                 recommendations[student.id].suggestions.length >
                                   0 ? (
@@ -1612,11 +1610,7 @@ const Achievement = () => {
                 </div>
                 <form
                   onSubmit={(e) =>
-                    handleUpdateYearlyAchievement(
-                      e,
-                      selectedStudentForForm.id,
-                      editFormData.year
-                    )
+                    handleUpdateYearlyAchievement(e, editFormData.id)
                   }
                   className="p-4"
                 >

@@ -44,7 +44,7 @@ export default function Home() {
           router.push("/supper_admin");
         }
       } catch (error) {
-        console.error("Error decoding token:", error);
+        // Handle token decoding error
       }
     }
   }, [router]);
@@ -253,10 +253,7 @@ export default function Home() {
                 organizations: hierarchyRes.data.organizations || [],
               };
             } catch (error) {
-              console.log(
-                `Error fetching hierarchy for ${university.id}:`,
-                error
-              );
+              // Handle error silently
               return {
                 ...university,
                 organizations: [],
@@ -267,7 +264,7 @@ export default function Home() {
 
         setClasses(universitiesWithHierarchy);
       } catch (error) {
-        console.log(error);
+        // Handle error silently
         setClasses([]);
       }
     }

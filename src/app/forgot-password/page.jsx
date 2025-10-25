@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
@@ -8,16 +8,11 @@ import Link from "next/link";
 import {
   MailOutlined,
   ArrowLeftOutlined,
-  CheckCircleOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import { BASE_URL } from "@/configs";
 
 const ForgotPassword = () => {
-  const [email, setEmail] = useState("");
-  const [correct, setCorrect] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -34,42 +29,21 @@ const ForgotPassword = () => {
             });
             router.push("/admin");
           } else {
-            await axios.get(
-              `${BASE_URL}/student/by-user/${decodedToken.id}`,
-              {
-                headers: {
-                  token: `Bearer ${token}`,
-                },
-              }
-            );
+            await axios.get(`${BASE_URL}/student/by-user/${decodedToken.id}`, {
+              headers: {
+                token: `Bearer ${token}`,
+              },
+            });
             router.push("/users");
           }
         } catch (error) {
+          // Handle token validation error
         }
       }
     };
 
     checkToken();
   }, []);
-
-  const handleForgotPassword = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await axios.post(`${BASE_URL}/user/forgot-password`, {
-        email,
-      });
-      setCorrect(true);
-    } catch (error) {
-      if (error.response) {
-        setError(error.response.data);
-      } else {
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div
@@ -87,15 +61,15 @@ const ForgotPassword = () => {
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 hover:cursor-pointer transition-all duration-300 hover:opacity-80"
               onClick={() => router.push("/")}
             >
               <img
                 src="/logo-msa.png"
                 alt="Logo"
-                className="h-12 my-1 transition-all duration-300"
+                className="h-12 my-1 transition-all duration-300 hover:scale-105 hover:cursor-pointer"
               />
-              <span className="text-xl font-bold text-white">
+              <span className="text-xl font-bold text-white hover:cursor-pointer transition-all duration-300 hover:text-blue-200">
                 HỌC VIỆN KHOA HỌC QUÂN SỰ
               </span>
             </div>
@@ -132,18 +106,6 @@ const ForgotPassword = () => {
       {/* Main container */}
       <div className="flex min-h-screen flex-col justify-center px-6 py-16 lg:px-8 pt-28">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          {/* Loading overlay */}
-          {loading && (
-            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="bg-white rounded-lg p-6 shadow-xl">
-                <div className="flex items-center space-x-3">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  <span className="text-gray-700">Đang gửi email...</span>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Card */}
           <div className="bg-gradient-to-br from-white/95 via-blue-50/90 to-indigo-50/95 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 p-8">
             {/* Header */}
@@ -155,73 +117,62 @@ const ForgotPassword = () => {
                 Quên mật khẩu
               </h2>
               <p className="text-gray-600">
-                Nhập email của bạn để nhận link đặt lại mật khẩu
+                Vui lòng liên hệ với phòng CNTT của HVKHQS để được cấp lại mật
+                khẩu
               </p>
             </div>
 
-            {/* Form */}
-            <form className="space-y-6" onSubmit={handleForgotPassword}>
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Địa chỉ email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 w-10 flex items-center justify-center pointer-events-none">
-                    <MailOutlined className="h-5 w-5 text-gray-400" />
+            {/* Contact Information */}
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
+                      <MailOutlined className="h-5 w-5 text-blue-600" />
+                    </div>
                   </div>
-                  <input
-                    id="email"
-                    name="email"
-                    readOnly={correct}
-                    type="email"
-                    autoComplete="email"
-                    required
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="example@email.com"
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                  <div className="ml-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Thông tin liên hệ
+                    </h3>
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <p>
+                        <strong>Phòng CNTT - HVKHQS</strong>
+                      </p>
+                      <p>📧 Email: cntt@hvkhqs.edu.vn</p>
+                      <p>📞 Điện thoại: (024) 1234-5678</p>
+                      <p>📍 Địa chỉ: Phòng 101, Tầng 1, Tòa nhà A</p>
+                      <p>🕒 Giờ làm việc: 8:00 - 17:00 (Thứ 2 - Thứ 6)</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Error message */}
-              {error && (
-                <div className="flex items-center p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-lg">
-                  <ExclamationCircleOutlined className="mr-2 text-red-500" />
-                  {error}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <ExclamationCircleOutlined className="h-5 w-5 text-yellow-600 mt-0.5 mr-3" />
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-800 mb-1">
+                      Lưu ý quan trọng
+                    </h4>
+                    <p className="text-sm text-yellow-700">
+                      Khi liên hệ, vui lòng cung cấp thông tin: Họ tên, Mã học
+                      viên, Email đăng ký để được hỗ trợ nhanh chóng.
+                    </p>
+                  </div>
                 </div>
-              )}
-
-              {/* Success message */}
-              {correct && (
-                <div className="flex items-center p-4 text-sm text-green-800 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircleOutlined className="mr-2 text-green-500" />
-                  Vui lòng kiểm tra email của bạn và làm theo hướng dẫn!
-                </div>
-              )}
-
-              {/* Submit button */}
-              <div>
-                {!correct && (
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-                  >
-                    {loading ? (
-                      <div className="flex items-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Đang gửi...
-                      </div>
-                    ) : (
-                      "Gửi link đặt lại mật khẩu"
-                    )}
-                  </button>
-                )}
               </div>
-            </form>
+            </div>
+
+            {/* Contact Button */}
+            <div className="mt-6">
+              <a
+                href="mailto:cntt@hvkhqs.edu.vn?subject=Yêu cầu cấp lại mật khẩu&body=Xin chào phòng CNTT,%0D%0A%0D%0ATôi là học viên của HVKHQS và cần được cấp lại mật khẩu.%0D%0A%0D%0AThông tin của tôi:%0D%0A- Họ tên: %0D%0A- Mã học viên: %0D%0A- Email đăng ký: %0D%0A%0D%0AXin cảm ơn!"
+                className="w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                📧 Liên hệ ngay với phòng CNTT
+              </a>
+            </div>
 
             {/* Back to login */}
             <div className="mt-6 text-center">

@@ -20,6 +20,7 @@ const AchievementStatistics = () => {
   const [addFormData, setAddFormData] = useState({});
   const [selectedStudentForForm, setSelectedStudentForForm] = useState(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState("");
   const [statistics, setStatistics] = useState({
     totalStudents: 0,
@@ -117,9 +118,39 @@ const AchievementStatistics = () => {
           eligibleForNationalReward,
         });
 
+        // Lấy danh sách các năm học có trong DB (không trùng)
+        const yearsSet = new Set();
+        Object.values(achievementsData).forEach((ach) => {
+          if (ach && Array.isArray(ach.yearlyAchievements)) {
+            ach.yearlyAchievements.forEach((ya) => {
+              if (ya.year) {
+                yearsSet.add(ya.year);
+              }
+            });
+          }
+        });
+        const sortedYears = Array.from(yearsSet)
+          .sort((a, b) => b - a) // Sắp xếp giảm dần (mới nhất trước)
+          .map((year) => ({
+            value: year,
+            label: `${year}-${year + 1}`,
+          }));
+        setAvailableYears(sortedYears);
+
+        // Tự động chọn năm mới nhất nếu chưa có trong danh sách
+        if (sortedYears.length > 0) {
+          const currentSelectedYearExists = sortedYears.some(
+            (y) => y.value === selectedYear
+          );
+          if (!currentSelectedYearExists) {
+            setSelectedYear(sortedYears[0].value); // Chọn năm đầu tiên (mới nhất)
+          }
+        }
+
         // Tính thống kê theo năm được chọn
         computeYearStats(achievementsData, selectedYear);
       } catch (error) {
+        // Handle error silently
         handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu");
       } finally {
         setLoading(false);
@@ -152,6 +183,41 @@ const AchievementStatistics = () => {
       });
     });
     setYearStats({ advancedCount, competitiveCount, bkBqpCount, cstdTqCount });
+  };
+
+  // Helper: Tính achievement cho 1 học viên theo năm cụ thể
+  const getStudentYearStats = (studentId, year) => {
+    const ach = achievements[studentId];
+    if (!ach || !Array.isArray(ach.yearlyAchievements)) {
+      return {
+        advancedCount: 0,
+        competitiveCount: 0,
+        hasMinistryReward: false,
+        hasNationalReward: false,
+      };
+    }
+
+    const y = parseInt(year);
+    let advancedCount = 0;
+    let competitiveCount = 0;
+    let hasMinistryReward = false;
+    let hasNationalReward = false;
+
+    ach.yearlyAchievements.forEach((ya) => {
+      if (parseInt(ya.year) === y) {
+        if (ya.title === "Chiến sĩ tiên tiến") advancedCount += 1;
+        if (ya.title === "Chiến sĩ thi đua") competitiveCount += 1;
+        if (ya.hasMinistryReward) hasMinistryReward = true;
+        if (ya.hasNationalReward) hasNationalReward = true;
+      }
+    });
+
+    return {
+      advancedCount,
+      competitiveCount,
+      hasMinistryReward,
+      hasNationalReward,
+    };
   };
 
   const computeOverallStats = (studentsList, achievementsData) => {
@@ -600,14 +666,14 @@ const AchievementStatistics = () => {
                   <div className="mb-6 flex items-end gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                        Chọn năm
+                        Chọn năm học
                       </label>
-                      <input
-                        type="number"
+                      <Select
                         value={selectedYear}
-                        onChange={(e) => setSelectedYear(e.target.value)}
-                        className="w-40 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        style={{ height: 36 }}
+                        onChange={setSelectedYear}
+                        placeholder="Chọn năm học"
+                        style={{ width: 160, height: 36 }}
+                        options={availableYears}
                       />
                     </div>
                     <div>
@@ -642,7 +708,7 @@ const AchievementStatistics = () => {
                         }}
                         className="h-9 px-4 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium"
                       >
-                        Xóa bộ lọc
+                        Đặt lại
                       </button>
                     </div>
                   </div>
@@ -651,83 +717,83 @@ const AchievementStatistics = () => {
                     Thống kê tổng quan
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {statistics.totalStudents}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Tổng học viên
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-green-50 dark:bg-green-900 rounded-lg">
-                      <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {statistics.studentsWithAchievements}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Có khen thưởng
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
-                      <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {yearStats.advancedCount}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Tổng CSTT ({selectedYear})
+                        Tổng CSTT ({selectedYear}-{selectedYear + 1})
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-purple-50 dark:bg-purple-900 rounded-lg">
-                      <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {yearStats.competitiveCount}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Tổng CSTĐ ({selectedYear})
+                        Tổng CSTĐ ({selectedYear}-{selectedYear + 1})
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-indigo-50 dark:bg-indigo-900 rounded-lg">
-                      <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {yearStats.bkBqpCount}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        BK BQP ({selectedYear})
+                        BK BQP ({selectedYear}-{selectedYear + 1})
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-teal-50 dark:bg-teal-900 rounded-lg">
-                      <div className="text-3xl font-bold text-teal-600 dark:text-teal-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {yearStats.cstdTqCount}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        CSTĐ TQ ({selectedYear})
+                        CSTĐ TQ ({selectedYear}-{selectedYear + 1})
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div className="text-center p-4 bg-pink-50 dark:bg-pink-900 rounded-lg">
-                      <div className="text-3xl font-bold text-pink-600 dark:text-pink-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {statistics.totalScientificTopics}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Đề tài khoa học
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-orange-50 dark:bg-orange-900 rounded-lg">
-                      <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {statistics.totalScientificInitiatives}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Sáng kiến khoa học
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-red-50 dark:bg-red-900 rounded-lg">
-                      <div className="text-3xl font-bold text-red-600 dark:text-red-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {statistics.eligibleForMinistryReward}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         Đủ điều kiện BK BQP
                       </div>
                     </div>
-                    <div className="text-center p-4 bg-teal-50 dark:bg-teal-900 rounded-lg">
-                      <div className="text-3xl font-bold text-teal-600 dark:text-teal-400">
+                    <div className="text-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
                         {statistics.eligibleForNationalReward}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -826,22 +892,22 @@ const AchievementStatistics = () => {
                               Đơn vị
                             </th>
                             <th className="border px-3 py-2 text-center">
-                              Trạng thái khen thưởng
-                            </th>
-                            <th className="border px-3 py-2 text-center">
                               Thao tác
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           {(() => {
-                            // Chỉ hiển thị học viên có khen thưởng
+                            // Chỉ hiển thị học viên có khen thưởng trong năm đã chọn
                             let list = students.filter((student) => {
-                              const achievement = achievements[student.id];
-                              const hasAchievements =
-                                achievement &&
-                                achievement.yearlyAchievements.length > 0;
-                              return hasAchievements;
+                              const yearStats = getStudentYearStats(
+                                student.id,
+                                selectedYear
+                              );
+                              const hasAchievementInYear =
+                                yearStats.advancedCount > 0 ||
+                                yearStats.competitiveCount > 0;
+                              return hasAchievementInYear;
                             });
 
                             // Lọc theo đơn vị nếu được chọn
@@ -880,11 +946,6 @@ const AchievementStatistics = () => {
 
                             return sortedList && sortedList.length > 0 ? (
                               sortedList.map((student) => {
-                                const achievement = achievements[student.id];
-                                const hasAchievements =
-                                  achievement &&
-                                  achievement.yearlyAchievements.length > 0;
-
                                 return (
                                   <tr
                                     key={student.id}
@@ -898,19 +959,6 @@ const AchievementStatistics = () => {
                                     </td>
                                     <td className="border px-3 py-2 text-center">
                                       {student.unit || "Không có đơn vị"}
-                                    </td>
-                                    <td className="border px-3 py-2 text-center">
-                                      <span
-                                        className={`px-2 py-1 rounded text-xs ${
-                                          hasAchievements
-                                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-                                        }`}
-                                      >
-                                        {hasAchievements
-                                          ? "Có khen thưởng"
-                                          : "Chưa có khen thưởng"}
-                                      </span>
                                     </td>
                                     <td className="border px-3 py-2 text-center">
                                       <div className="flex flex-col space-y-2 w-48 mx-auto">
@@ -964,9 +1012,10 @@ const AchievementStatistics = () => {
                               <tr>
                                 <td
                                   className="border px-3 py-2 text-center text-gray-400"
-                                  colSpan="5"
+                                  colSpan="4"
                                 >
-                                  Không có học viên nào có khen thưởng
+                                  Không có học viên nào có khen thưởng trong năm
+                                  này
                                 </td>
                               </tr>
                             );
@@ -1023,11 +1072,15 @@ const AchievementStatistics = () => {
                                   student.unit !== selectedUnit
                                 )
                                   return false;
-                                const achievement = achievements[student.id];
-                                return (
-                                  achievement &&
-                                  achievement.yearlyAchievements.length > 0
+                                // Lọc học viên có khen thưởng trong năm đã chọn
+                                const yearStats = getStudentYearStats(
+                                  student.id,
+                                  selectedYear
                                 );
+                                const hasAchievementInYear =
+                                  yearStats.advancedCount > 0 ||
+                                  yearStats.competitiveCount > 0;
+                                return hasAchievementInYear;
                               }
                             );
 
@@ -1063,7 +1116,13 @@ const AchievementStatistics = () => {
 
                             if (sortedStudents.length > 0) {
                               return sortedStudents.map((student) => {
-                                const achievement = achievements[student.id];
+                                const yearStats = getStudentYearStats(
+                                  student.id,
+                                  selectedYear
+                                );
+                                const totalForYear =
+                                  yearStats.advancedCount +
+                                  yearStats.competitiveCount;
                                 return (
                                   <tr
                                     key={student.id}
@@ -1079,23 +1138,23 @@ const AchievementStatistics = () => {
                                       {student.unit}
                                     </td>
                                     <td className="border px-3 py-2 text-center font-bold">
-                                      {achievement.totalYears}
+                                      {totalForYear}
                                     </td>
                                     <td className="border px-3 py-2 text-center">
-                                      {achievement.totalAdvancedSoldier}
+                                      {yearStats.advancedCount}
                                     </td>
                                     <td className="border px-3 py-2 text-center">
-                                      {achievement.totalCompetitiveSoldier}
+                                      {yearStats.competitiveCount}
                                     </td>
                                     <td className="border px-3 py-2 text-center">
                                       <span
                                         className={`px-2 py-1 rounded text-xs ${
-                                          achievement.eligibleForMinistryReward
+                                          yearStats.hasMinistryReward
                                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                                             : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                                         }`}
                                       >
-                                        {achievement.eligibleForMinistryReward
+                                        {yearStats.hasMinistryReward
                                           ? "✓"
                                           : "✗"}
                                       </span>
@@ -1103,12 +1162,12 @@ const AchievementStatistics = () => {
                                     <td className="border px-3 py-2 text-center">
                                       <span
                                         className={`px-2 py-1 rounded text-xs ${
-                                          achievement.eligibleForNationalReward
+                                          yearStats.hasNationalReward
                                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                                             : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                                         }`}
                                       >
-                                        {achievement.eligibleForNationalReward
+                                        {yearStats.hasNationalReward
                                           ? "✓"
                                           : "✗"}
                                       </span>

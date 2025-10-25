@@ -45,11 +45,7 @@ const AdminManagement = () => {
       setIsLoading(true);
       const token =
         localStorage.getItem("token") || localStorage.getItem("accessToken");
-      console.log("🔍 Fetching users...", {
-        BASE_URL,
-        page: currentPage,
-        search: searchTerm,
-      });
+      // Fetching users
 
       const response = await axios.get(`${BASE_URL}/user/admin-users/list`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -60,7 +56,7 @@ const AdminManagement = () => {
         },
       });
 
-      console.log("✅ Response:", response.data);
+      // Response received
       setUsers(response.data.users || []);
       setTotalPages(response.data.totalPages || 1);
     } catch (error) {
@@ -116,7 +112,7 @@ const AdminManagement = () => {
       await axios.delete(`${BASE_URL}/user/admin-users/${userToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      handleNotify("success", "Thành công!", "Xóa admin user thành công");
+      handleNotify("success", "Thành công!", "Xóa tài khoản thành công");
       setShowConfirm(false);
       setUserToDelete(null);
       fetchUsers();
@@ -125,7 +121,7 @@ const AdminManagement = () => {
       handleNotify(
         "danger",
         "Lỗi!",
-        error.response?.data?.message || "Không thể xóa admin user"
+        error.response?.data?.message || "Không thể xóa tài khoản"
       );
     } finally {
       setIsLoading(false);
@@ -162,27 +158,19 @@ const AdminManagement = () => {
           requestData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        handleNotify(
-          "success",
-          "Thành công!",
-          "Cập nhật admin user thành công"
-        );
+        handleNotify("success", "Thành công!", "Cập nhật tài khoản thành công");
       } else {
         await axios.post(`${BASE_URL}/user/admin-users`, requestData, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        handleNotify("success", "Thành công!", "Tạo admin user thành công");
+        handleNotify("success", "Thành công!", "Tạo tài khoản thành công");
       }
 
       setShowForm(false);
       fetchUsers();
     } catch (error) {
-      console.error("Error saving user:", error);
-      handleNotify(
-        "danger",
-        "Lỗi!",
-        error.response?.data?.message || "Không thể lưu admin user"
-      );
+      console.error("Lỗi lưu tài khoản:", error);
+      handleNotify("danger", "Lỗi!", error.response?.data?.message || "Lỗi!");
     } finally {
       setIsLoading(false);
     }

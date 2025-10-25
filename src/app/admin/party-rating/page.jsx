@@ -430,7 +430,7 @@ const PartyRating = () => {
               <div className="font-bold p-5 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
                 <div className="text-gray-900 dark:text-white">
                   <h1 className="text-2xl font-bold">
-                    XẾP LOẠI Đảng viên THEO NĂM
+                    XẾP LOẠI ĐẢNG VIÊN THEO NĂM
                   </h1>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Quản lý và xem xếp loại Đảng viên

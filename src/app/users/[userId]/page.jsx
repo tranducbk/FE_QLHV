@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import Link from "next/link";
+import { jwtDecode } from "jwt-decode";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import SideBar from "../../../components/sidebar";
@@ -313,39 +314,39 @@ const UserProfile = ({ params }) => {
           console.error("Error loading cascading data:", error);
         }
       }
-    }
 
-    // Load existing family members and foreign relations
-    if (profile.familyMembers && Array.isArray(profile.familyMembers)) {
-      const formattedFamilyMembers = profile.familyMembers.map(
-        (member, index) => ({
-          id: member.id || `temp-${Date.now()}-${index}`,
-          relationship: member.relationship || "",
-          fullName: member.fullName || "",
-          birthday: member.birthday ? new Date(member.birthday) : null,
-          occupation: member.occupation || "",
-        })
-      );
-      setFamilyMembers(formattedFamilyMembers);
-    } else {
-      setFamilyMembers([]);
-    }
+      // Load existing family members and foreign relations
+      if (profile.familyMembers && Array.isArray(profile.familyMembers)) {
+        const formattedFamilyMembers = profile.familyMembers.map(
+          (member, index) => ({
+            id: member.id || `temp-${Date.now()}-${index}`,
+            relationship: member.relationship || "",
+            fullName: member.fullName || "",
+            birthday: member.birthday ? new Date(member.birthday) : null,
+            occupation: member.occupation || "",
+          })
+        );
+        setFamilyMembers(formattedFamilyMembers);
+      } else {
+        setFamilyMembers([]);
+      }
 
-    if (profile.foreignRelations && Array.isArray(profile.foreignRelations)) {
-      const formattedForeignRelations = profile.foreignRelations.map(
-        (relation, index) => ({
-          id: relation.id || `temp-${Date.now()}-${index}`,
-          relationship: relation.relationship || "",
-          fullName: relation.fullName || "",
-          birthday: relation.birthday ? new Date(relation.birthday) : null,
-          country: relation.country || "",
-          reason: relation.reason || "",
-          nationality: relation.nationality || "",
-        })
-      );
-      setForeignRelations(formattedForeignRelations);
-    } else {
-      setForeignRelations([]);
+      if (profile.foreignRelations && Array.isArray(profile.foreignRelations)) {
+        const formattedForeignRelations = profile.foreignRelations.map(
+          (relation, index) => ({
+            id: relation.id || `temp-${Date.now()}-${index}`,
+            relationship: relation.relationship || "",
+            fullName: relation.fullName || "",
+            birthday: relation.birthday ? new Date(relation.birthday) : null,
+            country: relation.country || "",
+            reason: relation.reason || "",
+            nationality: relation.nationality || "",
+          })
+        );
+        setForeignRelations(formattedForeignRelations);
+      } else {
+        setForeignRelations([]);
+      }
     }
 
     setShowForm(true);
@@ -402,23 +403,44 @@ const UserProfile = ({ params }) => {
     }
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      await withLoading(fetchProfile);
-    };
-    loadData();
-  }, [withLoading]);
-
   const fetchProfile = async () => {
     const token = localStorage.getItem("token");
 
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/student/${params.userId}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
+    if (!token) {
+      console.error("No token found in localStorage");
+      handleNotify("Vui lòng đăng nhập để xem thông tin", "error");
+      return;
+    }
+
+    try {
+      // Decode token để lấy thông tin user
+      const decoded = jwtDecode(token);
+      console.log("Decoded token:", decoded);
+
+      // Tự động tìm user ID từ các field phổ biến trong token
+      const userId =
+        decoded.id ||          // Ưu tiên id (UUID của user)
+        decoded.sub ||         // Hoặc sub (JWT standard)
+        decoded.userId ||      // Hoặc userId
+        decoded._id;           // Hoặc _id (MongoDB)
+
+      if (!userId) {
+        console.error("No user ID found in token. Token payload:", decoded);
+        handleNotify("Không tìm thấy thông tin người dùng trong token", "error");
+        return;
+      }
+
+      console.log("Fetching student profile for user ID:", userId);
+
+      // Sử dụng endpoint by-user để lấy student từ user ID
+      const apiUrl = `${BASE_URL}/student/by-user/${userId}`;
+      console.log("API URL:", apiUrl);
+
+      const res = await axios.get(apiUrl, {
+        headers: {
+          token: `Bearer ${token}`,
+        },
+      });
 
         setProfile(res.data);
       } catch (error) {

@@ -51,10 +51,13 @@ const LearningResults = () => {
   }, []);
 
   useEffect(() => {
-    const loadSemesters = async () => {
-      await withLoading(fetchSemesters);
+    const loadData = async () => {
+      await withLoading(async () => {
+        await fetchSemesters();
+        await fetchLearningResults(); // Gọi luôn để load dữ liệu ban đầu
+      });
     };
-    loadSemesters();
+    loadData();
   }, [withLoading]);
 
   useEffect(() => {
@@ -92,12 +95,19 @@ const LearningResults = () => {
 
   const fetchLearningResults = async () => {
     const token = localStorage.getItem("token");
-    if (!token || selectedSemesters.length === 0) return;
+    if (!token) return;
 
     try {
-      // Xử lý khi chọn "Tất cả học kỳ"
+      // Xử lý khi chọn "Tất cả học kỳ" hoặc chưa chọn gì
       let semesterData = [];
-      if (selectedSemesters.includes("all")) {
+
+      if (selectedSemesters.length === 0) {
+        // Nếu chưa chọn gì, lấy tất cả
+        semesterData = semesters.map((semester) => ({
+          semester: semester.code,
+          schoolYear: semester.schoolYear || "2024-2025",
+        }));
+      } else if (selectedSemesters.includes("all")) {
         // Nếu chọn "Tất cả học kỳ", lấy tất cả semesters
         semesterData = semesters.map((semester) => ({
           semester: semester.code,
@@ -114,23 +124,29 @@ const LearningResults = () => {
         });
       }
 
-      // Tách riêng semester và schoolYear để gửi lên API
-      const semesterParam = semesterData.map((item) => item.semester).join(",");
-      const schoolYearParam = semesterData
-        .map((item) => item.schoolYear)
-        .join(",");
+      // Nếu không có semesterData, gọi API không có params để lấy tất cả
+      let url = `${BASE_URL}/commander/allStudentsGrades`;
 
-        semesterParam,
-        schoolYearParam,
+      if (semesterData.length > 0) {
+        // Tách riêng semester và schoolYear để gửi lên API
+        const semesterParam = semesterData.map((item) => item.semester).join(",");
+        const schoolYearParam = semesterData
+          .map((item) => item.schoolYear)
+          .join(",");
+
+        console.log("Fetching with semester and schoolYear:", {
+          semesterParam,
+          schoolYearParam,
+        });
+
+        url = `${BASE_URL}/commander/allStudentsGrades?semester=${semesterParam}&schoolYear=${schoolYearParam}`;
+      }
+
+      const res = await axios.get(url, {
+        headers: { token: `Bearer ${token}` },
       });
 
-      const res = await axios.get(
-        `${BASE_URL}/commander/allStudentsGrades?semester=${semesterParam}&schoolYear=${schoolYearParam}`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
-      );
-
+      console.log("Learning results data:", res.data);
       setLearningResults(res.data || []);
 
       // Lấy danh sách các đơn vị có sẵn từ dữ liệu

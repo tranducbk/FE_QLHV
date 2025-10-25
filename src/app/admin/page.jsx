@@ -13,8 +13,17 @@ import {
   UserOutlined,
   TrophyOutlined,
   ClockCircleOutlined,
-  TeamOutlined,
   BookOutlined,
+  RiseOutlined,
+  FallOutlined,
+  StarOutlined,
+  BellOutlined,
+  BankOutlined,
+  ReadOutlined,
+  CoffeeOutlined,
+  SafetyOutlined,
+  CrownOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
@@ -28,6 +37,7 @@ export default function Home() {
   const [semesters, setSemesters] = useState([]);
   const [detailedLearningResults, setDetailedLearningResults] = useState([]);
   const [dataIsLoaded, setDataIsLoaded] = useState(false);
+  const [classes, setClasses] = useState([]);
   const { loading, withLoading } = useLoading(true);
 
   const currentDate = new Date();
@@ -193,6 +203,57 @@ export default function Home() {
     }
   };
 
+  const fetchUniversitiesAndOrganizations = async () => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      try {
+        // Lấy danh sách tất cả universities
+        const universitiesRes = await axios.get(`${BASE_URL}/university/`, {
+          headers: {
+            token: `Bearer ${token}`,
+          },
+        });
+
+        const universities = universitiesRes.data || [];
+
+        // Lấy hierarchy cho mỗi university
+        const universitiesWithHierarchy = await Promise.all(
+          universities.map(async (university) => {
+            try {
+              const hierarchyRes = await axios.get(
+                `${BASE_URL}/university/${university.id}/hierarchy`,
+                {
+                  headers: {
+                    token: `Bearer ${token}`,
+                  },
+                }
+              );
+              return {
+                ...university,
+                organizations: hierarchyRes.data.organizations || [],
+              };
+            } catch (error) {
+              console.log(
+                `Error fetching hierarchy for ${university.id}:`,
+                error
+              );
+              return {
+                ...university,
+                organizations: [],
+              };
+            }
+          })
+        );
+
+        setClasses(universitiesWithHierarchy);
+      } catch (error) {
+        console.log(error);
+        setClasses([]);
+      }
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       await withLoading(async () => {
@@ -204,6 +265,7 @@ export default function Home() {
           fetchTrainingRatings(),
           fetchSemesters(),
           fetchDetailedLearningResults(),
+          fetchUniversitiesAndOrganizations(),
         ]);
         setDataIsLoaded(true);
       });
@@ -271,7 +333,7 @@ export default function Home() {
       const gpa =
         parseFloat(student.GPA) || parseFloat(student.averageGrade4) || 0;
       const hasDebt = student.failedSubjects > 0 || student.debtCredits > 0;
-        
+
       if (hasDebt) {
         stats.debt++;
       } else if (gpa >= 3.6) {
@@ -338,6 +400,101 @@ export default function Home() {
   const trainingStats = getTrainingRatingStats();
   const latestSchoolYear = getLatestSchoolYear();
 
+  // Lấy top 5 sinh viên có GPA cao nhất và GPA > 3.2
+  const getTopStudents = () => {
+    if (!detailedLearningResults || detailedLearningResults.length === 0) {
+      return [];
+    }
+
+    return [...detailedLearningResults]
+      .filter((student) => {
+        const gpa =
+          parseFloat(student.GPA) || parseFloat(student.averageGrade4) || 0;
+        return gpa > 3.2;
+      })
+      .sort((a, b) => {
+        const gpaA = parseFloat(a.GPA) || parseFloat(a.averageGrade4) || 0;
+        const gpaB = parseFloat(b.GPA) || parseFloat(b.averageGrade4) || 0;
+        return gpaB - gpaA;
+      })
+      .slice(0, 5);
+  };
+
+  const topStudents = getTopStudents();
+
+  // Thống kê theo trường và khoa/viện
+  const getUniversityStats = () => {
+    if (!student || student.length === 0 || !classes || classes.length === 0) {
+      return {
+        totalUniversities: 0,
+        totalOrganizations: 0,
+        totalEducationLevels: 0,
+        universities: [],
+      };
+    }
+
+    // Đếm số lượng organizations (khoa/viện) cho mỗi university
+    const universityMap = {};
+
+    classes.forEach((university) => {
+      if (!universityMap[university.id]) {
+        universityMap[university.id] = {
+          id: university.id,
+          name: university.universityName,
+          code: university.universityCode,
+          studentCount: 0,
+          organizationCount: university.organizations
+            ? university.organizations.length
+            : 0,
+          educationLevelCount: 0,
+          organizations: [],
+        };
+      }
+    });
+
+    // Đếm số sinh viên cho mỗi trường
+    student.forEach((s) => {
+      if (s.universityId && universityMap[s.universityId]) {
+        universityMap[s.universityId].studentCount++;
+      }
+    });
+
+    // Tính tổng số education levels
+    classes.forEach((university) => {
+      if (university.organizations) {
+        university.organizations.forEach((org) => {
+          if (universityMap[university.id]) {
+            universityMap[university.id].educationLevelCount +=
+              org.educationLevels ? org.educationLevels.length : 0;
+            universityMap[university.id].organizations.push({
+              name: org.organizationName,
+              studentCount: org.totalStudents || 0,
+            });
+          }
+        });
+      }
+    });
+
+    const universitiesArray = Object.values(universityMap);
+
+    return {
+      totalUniversities: universitiesArray.length,
+      totalOrganizations: universitiesArray.reduce(
+        (sum, u) => sum + u.organizationCount,
+        0
+      ),
+      totalEducationLevels: universitiesArray.reduce(
+        (sum, u) => sum + u.educationLevelCount,
+        0
+      ),
+      universities: universitiesArray.sort(
+        (a, b) => b.studentCount - a.studentCount
+      ),
+    };
+  };
+
+  const universityStats = getUniversityStats();
+
   if (loading) {
     return <Loader text="Đang tải dữ liệu dashboard..." />;
   }
@@ -365,7 +522,7 @@ export default function Home() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <TeamOutlined className="text-white text-lg" />
+                    <SafetyOutlined className="text-white text-lg" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
@@ -419,7 +576,7 @@ export default function Home() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <BookOutlined className="text-white text-lg" />
+                      <ReadOutlined className="text-white text-lg" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
@@ -838,112 +995,466 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Row 3: Thống kê khen thưởng - Cùng grid layout */}
-          <div className="grid grid-cols-1 gap-4 mt-4">
-            <Link href="/admin/achievement" className="block">
+          {/* Row 2: Additional Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+            {/* Card 5: Top học viên */}
+            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <CrownOutlined className="text-white text-lg" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                      Học viên xuất sắc
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-xs">
+                      Top 5 GPA cao nhất (GPA &gt; 3.2)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {topStudents.length > 0 ? (
+                  topStudents.map((student, index) => {
+                    const gpa =
+                      parseFloat(student.GPA) ||
+                      parseFloat(student.averageGrade4) ||
+                      0;
+                    return (
+                      <div
+                        key={index}
+                        className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-2 flex items-center justify-between hover:bg-white/70 dark:hover:bg-slate-700/70 transition-all transform hover:scale-[1.02]"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-md ${
+                              index === 0
+                                ? "bg-gradient-to-br from-yellow-400 to-amber-500 text-white animate-pulse"
+                                : index === 1
+                                ? "bg-gradient-to-br from-slate-300 to-slate-400 text-slate-700"
+                                : index === 2
+                                ? "bg-gradient-to-br from-orange-400 to-amber-600 text-white"
+                                : "bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300"
+                            }`}
+                          >
+                            {index + 1}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                              {student.studentName || "N/A"}
+                            </p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400">
+                              {student.className || "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                            {gpa.toFixed(2)}
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            GPA
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-full flex items-center justify-center mb-3">
+                      <CrownOutlined className="text-3xl text-amber-400 dark:text-amber-500" />
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-400 font-medium">
+                      Chưa có học viên đạt tiêu chuẩn
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+                      (GPA &gt; 3.2)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Card 6: Thống kê trường và khoa/viện */}
+            <Link href="/admin/universities" className="block">
               <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <TrophyOutlined className="text-white text-lg" />
+                    <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                      <BankOutlined className="text-white text-lg" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                        Thống kê khen thưởng
+                        Cơ sở đào tạo
                       </h3>
                       <p className="text-slate-600 dark:text-slate-400 text-xs">
-                        Tổng hợp thành tích học viên
+                        Trường, khoa/viện gửi đào tạo
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-black text-amber-600 dark:text-amber-400">
-                      {achievement?.totalAchievements || 0}
+                </div>
+
+                {/* Tổng quan số liệu */}
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-3 text-center border border-blue-200 dark:border-blue-800">
+                    <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                      {universityStats.totalUniversities}
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-xs">
-                      khen thưởng
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Trường
+                    </p>
+                  </div>
+                  <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 rounded-lg p-3 text-center border border-teal-200 dark:border-teal-800">
+                    <div className="text-2xl font-black text-teal-600 dark:text-teal-400">
+                      {universityStats.totalOrganizations}
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Khoa/Viện
+                    </p>
+                  </div>
+                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg p-3 text-center border border-indigo-200 dark:border-indigo-800">
+                    <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+                      {universityStats.totalEducationLevels}
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      CTĐT
                     </p>
                   </div>
                 </div>
 
-                {/* Achievement Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {/* Chiến sĩ tiên tiến */}
-                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-3 text-center border border-blue-200 dark:border-blue-800">
-                    <div className="text-2xl mb-2">🏅</div>
-                    <div className="text-lg font-black text-blue-600 dark:text-blue-400">
-                      {achievement?.totalAdvancedSoldier || 0}
-                    </div>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                      Chiến sĩ tiên tiến
-                    </p>
+                {/* Danh sách trường */}
+                <div className="relative">
+                  <div className="space-y-2">
+                    {universityStats.universities.length > 0 ? (
+                      <>
+                        {universityStats.universities
+                          .slice(0, 3)
+                          .map((university, index) => (
+                            <div
+                              key={index}
+                              className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-2 hover:bg-white/70 dark:hover:bg-slate-700/70 transition-all"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                    {university.name}
+                                  </p>
+                                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                                    {university.organizationCount} khoa/viện •{" "}
+                                    {university.educationLevelCount} CTĐT
+                                  </p>
+                                </div>
+                                <div className="text-right ml-2">
+                                  <div className="text-lg font-bold text-cyan-600 dark:text-cyan-400">
+                                    {university.studentCount}
+                                  </div>
+                                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                                    HV
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        {universityStats.universities.length > 3 && (
+                          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/80 to-transparent dark:from-slate-800/80 dark:to-transparent pointer-events-none rounded-b-lg" />
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <div className="w-20 h-20 bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-full flex items-center justify-center mb-3">
+                          <BankOutlined className="text-3xl text-cyan-500 dark:text-cyan-400" />
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-400 font-medium">
+                          Chưa có cơ sở đào tạo
+                        </p>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Chiến sĩ thi đua */}
-                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 text-center border border-amber-200 dark:border-amber-800">
-                    <div className="text-2xl mb-2">🏆</div>
-                    <div className="text-lg font-black text-amber-600 dark:text-amber-400">
-                      {achievement?.totalCompetitiveSoldier || 0}
+                  {universityStats.universities.length > 3 && (
+                    <div className="mt-2 text-center">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        +{universityStats.universities.length - 3} trường khác
+                      </p>
                     </div>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                      Chiến sĩ thi đua
-                    </p>
+                  )}
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* Row 3: Wide Cards */}
+          <div className="grid grid-cols-1 gap-4 mt-4">
+            {/* Card 7: Xu hướng học tập */}
+            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <RiseOutlined className="text-white text-lg" />
                   </div>
-
-                  {/* Bằng khen BQP */}
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-3 text-center border border-purple-200 dark:border-purple-800">
-                    <div className="text-2xl mb-2">🎖️</div>
-                    <div className="text-lg font-black text-purple-600 dark:text-purple-400">
-                      {achievement?.totalMinistryRewards || 0}
-                    </div>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                      Bằng khen BQP
-                    </p>
-                  </div>
-
-                  {/* CSTĐ Toàn Quân */}
-                  <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-3 text-center border border-red-200 dark:border-red-800">
-                    <div className="text-2xl mb-2">🥇</div>
-                    <div className="text-lg font-black text-red-600 dark:text-red-400">
-                      {achievement?.totalNationalRewards || 0}
-                    </div>
-                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                      CSTĐ Toàn Quân
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                      Tổng quan hiệu suất
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-400 text-xs">
+                      Phân tích hiệu suất học tập và rèn luyện
                     </p>
                   </div>
                 </div>
+              </div>
 
-                {/* Scientific Research */}
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                          {achievement?.totalScientificTopics || 0}
-                        </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          Đề tài NCKH
-                        </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Hiệu suất học tập */}
+                <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Hiệu suất học tập
+                    </h4>
+                    {learningStats.total > 0 && (
+                      <div className="flex items-center space-x-1">
+                        {(learningStats.excellent + learningStats.good) /
+                          learningStats.total >=
+                        0.5 ? (
+                          <RiseOutlined className="text-green-500 text-xs" />
+                        ) : (
+                          <FallOutlined className="text-orange-500 text-xs" />
+                        )}
+                        <span
+                          className={`text-xs font-bold ${
+                            (learningStats.excellent + learningStats.good) /
+                              learningStats.total >=
+                            0.5
+                              ? "text-green-500"
+                              : "text-orange-500"
+                          }`}
+                        >
+                          {(
+                            ((learningStats.excellent + learningStats.good) /
+                              learningStats.total) *
+                            100
+                          ).toFixed(0)}
+                          %
+                        </span>
                       </div>
-                      <div className="text-2xl">📚</div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        Giỏi/Xuất sắc
+                      </span>
+                      <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        {learningStats.excellent + learningStats.good}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        Khá
+                      </span>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        {learningStats.fair}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        TB/Yếu
+                      </span>
+                      <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                        {learningStats.average + learningStats.poor}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        Nợ môn
+                      </span>
+                      <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                        {learningStats.debt}
+                      </span>
                     </div>
                   </div>
-                  <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-lg font-bold text-slate-800 dark:text-slate-200">
-                          {achievement?.totalScientificInitiatives || 0}
-                        </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          Sáng kiến KH
-                        </p>
+                </div>
+
+                {/* Hiệu suất rèn luyện */}
+                <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Hiệu suất rèn luyện
+                    </h4>
+                    {trainingStats.totalStudents > 0 && (
+                      <div className="flex items-center space-x-1">
+                        {trainingStats.good / trainingStats.totalStudents >=
+                        0.5 ? (
+                          <RiseOutlined className="text-green-500 text-xs" />
+                        ) : (
+                          <FallOutlined className="text-orange-500 text-xs" />
+                        )}
+                        <span
+                          className={`text-xs font-bold ${
+                            trainingStats.good / trainingStats.totalStudents >=
+                            0.5
+                              ? "text-green-500"
+                              : "text-orange-500"
+                          }`}
+                        >
+                          {(
+                            (trainingStats.good / trainingStats.totalStudents) *
+                            100
+                          ).toFixed(0)}
+                          %
+                        </span>
                       </div>
-                      <div className="text-2xl">💡</div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        Tốt
+                      </span>
+                      <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        {trainingStats.good}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        Khá
+                      </span>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                        {trainingStats.fair}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        Trung bình
+                      </span>
+                      <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                        {trainingStats.average}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-600 dark:text-slate-400">
+                        Yếu
+                      </span>
+                      <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                        {trainingStats.poor}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tỷ lệ hoàn thành */}
+                <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Tỷ lệ hoàn thành
+                    </h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                          Kết quả học tập
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {learningStats.total > 0
+                            ? (
+                                (learningStats.total / totalStudents) *
+                                100
+                              ).toFixed(0)
+                            : 0}
+                          %
+                        </span>
+                      </div>
+                      <div className="bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${
+                              learningStats.total > 0
+                                ? (
+                                    (learningStats.total / totalStudents) *
+                                    100
+                                  ).toFixed(0)
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                          Đánh giá rèn luyện
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {trainingStats.totalStudents > 0
+                            ? (
+                                (trainingStats.total /
+                                  trainingStats.totalStudents) *
+                                100
+                              ).toFixed(0)
+                            : 0}
+                          %
+                        </span>
+                      </div>
+                      <div className="bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${
+                              trainingStats.totalStudents > 0
+                                ? (
+                                    (trainingStats.total /
+                                      trainingStats.totalStudents) *
+                                    100
+                                  ).toFixed(0)
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs text-slate-600 dark:text-slate-400">
+                          Cắt cơm hôm nay
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {totalStudents > 0
+                            ? (
+                                (((cutRice?.breakfast || 0) +
+                                  (cutRice?.lunch || 0) +
+                                  (cutRice?.dinner || 0)) /
+                                  (totalStudents * 3)) *
+                                100
+                              ).toFixed(0)
+                            : 0}
+                          %
+                        </span>
+                      </div>
+                      <div className="bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-rose-500 to-pink-500 h-2 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${
+                              totalStudents > 0
+                                ? (
+                                    (((cutRice?.breakfast || 0) +
+                                      (cutRice?.lunch || 0) +
+                                      (cutRice?.dinner || 0)) /
+                                      (totalStudents * 3)) *
+                                    100
+                                  ).toFixed(0)
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </Link>
+            </div>
           </div>
         </div>
       </div>

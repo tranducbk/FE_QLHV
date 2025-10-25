@@ -423,17 +423,11 @@ export default function Universities() {
                           scope="col"
                           className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
                         >
-                          THỜI GIAN DI CHUYỂN
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
-                        >
                           CHƯƠNG TRÌNH ĐÀO TẠO
                         </th>
                         <th
                           scope="col"
-                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
+                          className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap w-1/5"
                         >
                           LỚP
                         </th>
@@ -601,7 +595,7 @@ export default function Universities() {
                               );
                             }
 
-                            // Organization Column
+                            // Organization Column (bao gồm cả thời gian di chuyển)
                             if (row.isOrganizationStart) {
                               cells.push(
                                 <td
@@ -615,37 +609,15 @@ export default function Universities() {
                                         {row.organization.organizationName}
                                       </div>
                                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                                        {
-                                          row.organization.educationLevels
-                                            .length
-                                        }{" "}
-                                        chương trình đào tạo
+                                        {row.organization.educationLevels.length} chương trình đào tạo
+                                      </div>
+                                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                                        Thời gian di chuyển: {row.organization.travelTime || 45} phút
                                       </div>
                                     </div>
                                   ) : (
                                     <div className="text-gray-400 dark:text-gray-500 text-sm italic">
                                       Chưa có khoa/viện
-                                    </div>
-                                  )}
-                                </td>
-                              );
-                            }
-
-                            // Travel Time Column
-                            if (row.isOrganizationStart) {
-                              cells.push(
-                                <td
-                                  key="travelTime"
-                                  rowSpan={row.organizationRowSpan}
-                                  className="px-4 py-4 text-center border-r border-gray-200 dark:border-gray-600"
-                                >
-                                  {row.organization ? (
-                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                      {row.organization.travelTime || 45} phút
-                                    </div>
-                                  ) : (
-                                    <div className="text-gray-400 dark:text-gray-500 text-sm italic">
-                                      Chưa có thời gian di chuyển
                                     </div>
                                   )}
                                 </td>
@@ -682,11 +654,16 @@ export default function Universities() {
                             cells.push(
                               <td
                                 key="class"
-                                className="px-4 py-4 text-center border-r border-gray-200 dark:border-gray-600"
+                                className="px-6 py-4 text-center border-r border-gray-200 dark:border-gray-600 w-1/5"
                               >
                                 {row.class ? (
-                                  <div className="font-medium text-gray-900 dark:text-white">
-                                    {row.class.className}
+                                  <div>
+                                    <div className="font-medium text-gray-900 dark:text-white">
+                                      {row.class.className}
+                                    </div>
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                      {row.class.studentCount || 0} học viên
+                                    </div>
                                   </div>
                                 ) : (
                                   <div className="text-gray-400 dark:text-gray-500 text-sm italic">
@@ -748,7 +725,7 @@ export default function Universities() {
                       ) : (
                         <tr>
                           <td
-                            colSpan="6"
+                            colSpan="5"
                             className="px-6 py-4 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
                           >
                             <div className="flex flex-col items-center">

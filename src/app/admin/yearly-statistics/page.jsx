@@ -7,7 +7,19 @@ import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { BASE_URL } from "@/configs";
-import { TreeSelect, ConfigProvider, theme, Input, Select } from "antd";
+import {
+  TreeSelect,
+  ConfigProvider,
+  theme,
+  Input,
+  Select,
+  Row,
+  Col,
+  Card as AntCard,
+  Table,
+  Space,
+  Button,
+} from "antd";
 import { useState as useThemeState } from "react";
 
 const YearlyStatistics = () => {
@@ -425,8 +437,8 @@ const YearlyStatistics = () => {
   return (
     <>
       <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="flex-1">
-          <div className="w-full pt-20 pl-5">
+        <div className="flex-1 mx-6">
+          <div className="w-full pt-20 px-4 md:px-6">
             <nav className="flex" aria-label="Breadcrumb">
               <ol className="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
                 <li className="inline-flex items-center">
@@ -472,14 +484,14 @@ const YearlyStatistics = () => {
             </nav>
           </div>
 
-          <div className="w-full pt-8 pb-5 pl-5 pr-6 mb-5">
+          <div className="w-full pt-8 pb-5 mb-5">
             <div className="bg-white dark:bg-gray-800 rounded-lg w-full shadow-lg">
-              <div className="font-bold p-5 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+              <div className="font-bold p-4 md:p-5 flex flex-col md:flex-row justify-between md:items-center gap-3 border-b border-gray-200 dark:border-gray-700">
                 <div className="text-gray-900 dark:text-white">
-                  <h1 className="text-2xl font-bold">
+                  <h1 className="text-xl md:text-2xl font-bold">
                     THỐNG KÊ KẾT QUẢ HỌC TẬP THEO NĂM
                   </h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1">
                     Quản lý và xem kết quả học tập của tất cả học viên
                   </p>
                 </div>
@@ -507,13 +519,13 @@ const YearlyStatistics = () => {
                 </div> */}
               </div>
 
-              <div className="w-full p-5">
+              <div className="w-full p-4 md:p-5">
                 <div className="mb-4">
-                  <form className="flex items-end gap-3 flex-wrap">
-                    <div>
+                  <Row gutter={[12, 12]} align="bottom">
+                    <Col xs={24} sm={12} md={8} lg={6}>
                       <label
                         htmlFor="schoolYear"
-                        className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300"
+                        className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
                       >
                         Chọn năm học
                       </label>
@@ -533,14 +545,14 @@ const YearlyStatistics = () => {
                           value={selectedSchoolYear}
                           onChange={handleSchoolYearChange}
                           placeholder="Chọn năm học"
-                          style={{ width: 180, height: 36 }}
+                          style={{ width: "100%", height: 36 }}
                           options={schoolYearOptions}
                         />
                       </ConfigProvider>
-                    </div>
+                    </Col>
 
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Col xs={24} sm={12} md={8} lg={6}>
+                      <label className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                         Đơn vị
                       </label>
                       <ConfigProvider
@@ -558,7 +570,7 @@ const YearlyStatistics = () => {
                         <Select
                           value={selectedUnit}
                           onChange={setSelectedUnit}
-                          style={{ width: 180, height: 36 }}
+                          style={{ width: "100%", height: 36 }}
                           options={[
                             { value: "all", label: "Tất cả đơn vị" },
                             { value: "L1 - H5", label: "L1 - H5" },
@@ -570,9 +582,9 @@ const YearlyStatistics = () => {
                           ]}
                         />
                       </ConfigProvider>
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    </Col>
+                    <Col xs={24} sm={12} md={8} lg={6}>
+                      <label className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                         Tìm kiếm
                       </label>
                       <input
@@ -581,14 +593,11 @@ const YearlyStatistics = () => {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Tên hoặc mã sinh viên..."
-                        className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
-                        style={{ width: 250, height: 36 }}
+                        className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
+                        style={{ height: 36 }}
                       />
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300 opacity-0">
-                        &nbsp;
-                      </label>
+                    </Col>
+                    <Col xs={12} sm={6} md={4} lg={3}>
                       <button
                         onClick={() => {
                           setSearchTerm("");
@@ -596,18 +605,18 @@ const YearlyStatistics = () => {
                           setSelectedSchoolYear("all");
                           withLoading(fetchInitialData);
                         }}
-                        className="h-9 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm px-4 transition-colors duration-200"
+                        className="w-full h-9 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-xs md:text-sm px-2 md:px-4 transition-colors duration-200"
                       >
                         Xóa bộ lọc
                       </button>
-                    </div>
-                    <div className="self-end">
+                    </Col>
+                    <Col xs={12} sm={6} md={4} lg={3}>
                       <Link
                         href="/admin/semester-management"
-                        className="h-9 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center"
+                        className="w-full h-9 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-xs md:text-sm px-2 md:px-4 transition-colors duration-200 flex items-center justify-center"
                       >
                         <svg
-                          className="w-4 h-4 mr-2"
+                          className="w-4 h-4 mr-1 md:mr-2"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -619,668 +628,709 @@ const YearlyStatistics = () => {
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
-                        Quản lý học kỳ
+                        <span className="hidden md:inline">Quản lý học kỳ</span>
+                        <span className="md:hidden">Học kỳ</span>
                       </Link>
-                    </div>
-                  </form>
+                    </Col>
+                  </Row>
                 </div>
 
                 {/* Thống kê tổng quan */}
                 {!loading && yearlyResults.length > 0 && (
-                  <div
-                    className={`grid grid-cols-1 gap-4 mb-6 ${
-                      selectedSchoolYear === "all"
-                        ? "md:grid-cols-4"
-                        : "md:grid-cols-6"
-                    }`}
-                  >
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {getFilteredResults().length}
+                  <Row gutter={[12, 12]} className="mb-6">
+                    <Col
+                      xs={12}
+                      sm={8}
+                      md={6}
+                      lg={selectedSchoolYear === "all" ? 6 : 4}
+                    >
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 md:p-4 rounded-lg h-full">
+                        <div className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {getFilteredResults().length}
+                        </div>
+                        <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                          {selectedSchoolYear === "all"
+                            ? "Tổng số kết quả"
+                            : "Tổng số sinh viên"}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedSchoolYear === "all"
-                          ? "Tổng số kết quả"
-                          : "Tổng số sinh viên"}
-                      </div>
-                    </div>
-                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0) return "0.00";
+                    </Col>
+                    <Col
+                      xs={12}
+                      sm={8}
+                      md={6}
+                      lg={selectedSchoolYear === "all" ? 6 : 4}
+                    >
+                      <div className="bg-green-50 dark:bg-green-900/20 p-3 md:p-4 rounded-lg h-full">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0) return "0.00";
 
-                          const totalGPA = results.reduce((sum, item) => {
-                            return sum + (parseFloat(item.yearlyGPA) || 0);
-                          }, 0);
+                            const totalGPA = results.reduce((sum, item) => {
+                              return sum + (parseFloat(item.yearlyGPA) || 0);
+                            }, 0);
 
-                          return (totalGPA / results.length).toFixed(2);
-                        })()}
+                            return (totalGPA / results.length).toFixed(2);
+                          })()}
+                        </div>
+                        <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                          {selectedSchoolYear === "all"
+                            ? "GPA trung bình tất cả năm"
+                            : "GPA trung bình năm"}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedSchoolYear === "all"
-                          ? "GPA trung bình tất cả năm"
-                          : "GPA trung bình năm"}
-                      </div>
-                    </div>
+                    </Col>
 
                     {/* CPA >= 3.2 */}
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-teal-50 dark:bg-teal-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-teal-600 dark:text-teal-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            const uniqueStudents = new Set();
+                            const cpaGoodStudents = new Set(); // CPA >= 3.2
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (!uniqueStudents.has(studentKey)) {
+                                uniqueStudents.add(studentKey);
+                                const cpa = parseFloat(item.cumulativeGPA) || 0;
+                                if (cpa >= 3.2) {
+                                  cpaGoodStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalUnique = uniqueStudents.size;
+                            const cpaGoodCount = cpaGoodStudents.size;
+
                             return (
-                              <div className="text-sm font-bold text-teal-600 dark:text-teal-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-teal-600 dark:text-teal-400">
+                                {cpaGoodCount}/{totalUnique}
                               </div>
                             );
-
-                          const uniqueStudents = new Set();
-                          const cpaGoodStudents = new Set(); // CPA >= 3.2
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (!uniqueStudents.has(studentKey)) {
-                              uniqueStudents.add(studentKey);
-                              const cpa = parseFloat(item.cumulativeGPA) || 0;
-                              if (cpa >= 3.2) {
-                                cpaGoodStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalUnique = uniqueStudents.size;
-                          const cpaGoodCount = cpaGoodStudents.size;
-
-                          return (
-                            <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                              {cpaGoodCount}/{totalUnique}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          CPA ≥3.2
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            CPA ≥3.2
+                          </div>
                         </div>
-                      </div>
+                      </Col>
                     )}
                     {/* Xuất sắc - GPA >= 3.6 */}
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            const uniqueStudents = new Set();
+                            const excellentStudents = new Set(); // GPA >= 3.6
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (!uniqueStudents.has(studentKey)) {
+                                uniqueStudents.add(studentKey);
+                                const gpa = parseFloat(item.yearlyGPA) || 0;
+                                if (gpa >= 3.6) {
+                                  excellentStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalUnique = uniqueStudents.size;
+                            const excellentCount = excellentStudents.size;
+
                             return (
-                              <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                                {excellentCount}/{totalUnique}
                               </div>
                             );
-
-                          const uniqueStudents = new Set();
-                          const excellentStudents = new Set(); // GPA >= 3.6
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (!uniqueStudents.has(studentKey)) {
-                              uniqueStudents.add(studentKey);
-                              const gpa = parseFloat(item.yearlyGPA) || 0;
-                              if (gpa >= 3.6) {
-                                excellentStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalUnique = uniqueStudents.size;
-                          const excellentCount = excellentStudents.size;
-
-                          return (
-                            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                              {excellentCount}/{totalUnique}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Xuất sắc (≥3.6)
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            Xuất sắc (≥3.6)
+                          </div>
                         </div>
-                      </div>
+                      </Col>
                     )}
 
                     {/* Giỏi - GPA >= 3.2 */}
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            const uniqueStudents = new Set();
+                            const goodStudents = new Set(); // GPA >= 3.2
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (!uniqueStudents.has(studentKey)) {
+                                uniqueStudents.add(studentKey);
+                                const gpa = parseFloat(item.yearlyGPA) || 0;
+                                if (gpa >= 3.2) {
+                                  goodStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalUnique = uniqueStudents.size;
+                            const goodCount = goodStudents.size;
+
                             return (
-                              <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                                {goodCount}/{totalUnique}
                               </div>
                             );
-
-                          const uniqueStudents = new Set();
-                          const goodStudents = new Set(); // GPA >= 3.2
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (!uniqueStudents.has(studentKey)) {
-                              uniqueStudents.add(studentKey);
-                              const gpa = parseFloat(item.yearlyGPA) || 0;
-                              if (gpa >= 3.2) {
-                                goodStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalUnique = uniqueStudents.size;
-                          const goodCount = goodStudents.size;
-
-                          return (
-                            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                              {goodCount}/{totalUnique}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Giỏi (≥3.2)
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            Giỏi (≥3.2)
+                          </div>
                         </div>
-                      </div>
+                      </Col>
                     )}
 
                     {/* Khá - GPA >= 2.5 */}
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            const uniqueStudents = new Set();
+                            const averageStudents = new Set(); // GPA >= 2.5
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (!uniqueStudents.has(studentKey)) {
+                                uniqueStudents.add(studentKey);
+                                const gpa = parseFloat(item.yearlyGPA) || 0;
+                                if (gpa >= 2.5) {
+                                  averageStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalUnique = uniqueStudents.size;
+                            const averageCount = averageStudents.size;
+
                             return (
-                              <div className="text-sm font-bold text-yellow-600 dark:text-yellow-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                                {averageCount}/{totalUnique}
                               </div>
                             );
-
-                          const uniqueStudents = new Set();
-                          const averageStudents = new Set(); // GPA >= 2.5
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (!uniqueStudents.has(studentKey)) {
-                              uniqueStudents.add(studentKey);
-                              const gpa = parseFloat(item.yearlyGPA) || 0;
-                              if (gpa >= 2.5) {
-                                averageStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalUnique = uniqueStudents.size;
-                          const averageCount = averageStudents.size;
-
-                          return (
-                            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                              {averageCount}/{totalUnique}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Khá (≥2.5)
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            Khá (≥2.5)
+                          </div>
                         </div>
-                      </div>
+                      </Col>
                     )}
 
                     {/* Tổng tín chỉ tất cả năm (khi chọn "all") */}
                     {selectedSchoolYear === "all" && (
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          const totalCredits = results.reduce(
-                            (sum, item) => sum + (item.totalCredits || 0),
-                            0
-                          );
-                          return (
-                            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                              {totalCredits}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Tổng tín chỉ tất cả năm
-                        </div>
-                      </div>
-                    )}
-                    <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                        {selectedSchoolYear === "all"
-                          ? getFilteredResults().reduce(
-                              (sum, item) => sum + (item.debtCredits || 0),
+                      <Col xs={12} sm={8} md={6} lg={6}>
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            const totalCredits = results.reduce(
+                              (sum, item) => sum + (item.totalCredits || 0),
                               0
-                            )
-                          : getFilteredResults().reduce(
-                              (sum, item) => sum + (item.failedSubjects || 0),
-                              0
-                            )}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedSchoolYear === "all"
-                          ? "Tổng tín chỉ nợ tất cả năm"
-                          : "Tổng số môn nợ năm"}
-                      </div>
-                    </div>
-                    {selectedSchoolYear !== "all" && (
-                      <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                            );
                             return (
-                              <div className="text-sm font-bold text-purple-600 dark:text-purple-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                                {totalCredits}
                               </div>
                             );
-
-                          // Đếm số sinh viên có rèn luyện tốt
-                          const uniqueStudents = new Set();
-                          const goodTrainingStudents = new Set();
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (!uniqueStudents.has(studentKey)) {
-                              uniqueStudents.add(studentKey);
-                              if (item.trainingRating === "Tốt") {
-                                goodTrainingStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalUnique = uniqueStudents.size;
-                          const displayText = `${goodTrainingStudents.size}/${totalUnique}`;
-
-                          return (
-                            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                              {displayText}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Rèn luyện tốt
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            Tổng tín chỉ tất cả năm
+                          </div>
+                        </div>
+                      </Col>
+                    )}
+                    <Col
+                      xs={12}
+                      sm={8}
+                      md={6}
+                      lg={selectedSchoolYear === "all" ? 6 : 4}
+                    >
+                      <div className="bg-red-50 dark:bg-red-900/20 p-3 md:p-4 rounded-lg h-full">
+                        <div className="text-xl md:text-2xl font-bold text-red-600 dark:text-red-400">
+                          {selectedSchoolYear === "all"
+                            ? getFilteredResults().reduce(
+                                (sum, item) => sum + (item.debtCredits || 0),
+                                0
+                              )
+                            : getFilteredResults().reduce(
+                                (sum, item) => sum + (item.failedSubjects || 0),
+                                0
+                              )}
+                        </div>
+                        <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                          {selectedSchoolYear === "all"
+                            ? "Tổng tín chỉ nợ tất cả năm"
+                            : "Tổng số môn nợ năm"}
                         </div>
                       </div>
-                    )}
+                    </Col>
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-purple-50 dark:bg-purple-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-purple-600 dark:text-purple-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            // Đếm số sinh viên có rèn luyện tốt
+                            const uniqueStudents = new Set();
+                            const goodTrainingStudents = new Set();
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (!uniqueStudents.has(studentKey)) {
+                                uniqueStudents.add(studentKey);
+                                if (item.trainingRating === "Tốt") {
+                                  goodTrainingStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalUnique = uniqueStudents.size;
+                            const displayText = `${goodTrainingStudents.size}/${totalUnique}`;
+
                             return (
-                              <div className="text-sm font-bold text-orange-600 dark:text-orange-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-purple-600 dark:text-purple-400">
+                                {displayText}
                               </div>
                             );
-
-                          // Đếm số Đảng viên và không phải Đảng viên (unique students)
-                          const uniqueStudents = new Set();
-                          const partyMembers = new Set();
-                          const nonPartyMembers = new Set();
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (!uniqueStudents.has(studentKey)) {
-                              uniqueStudents.add(studentKey);
-                              if (item.positionParty !== "Không") {
-                                partyMembers.add(item.studentId);
-                              } else {
-                                nonPartyMembers.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalUnique =
-                            partyMembers.size + nonPartyMembers.size;
-                          const displayText = `${partyMembers.size}/${totalUnique}`;
-
-                          return (
-                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                              {displayText}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Đảng viên
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            Rèn luyện tốt
+                          </div>
                         </div>
-                      </div>
+                      </Col>
+                    )}
+                    {selectedSchoolYear !== "all" && (
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-orange-600 dark:text-orange-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            // Đếm số Đảng viên và không phải Đảng viên (unique students)
+                            const uniqueStudents = new Set();
+                            const partyMembers = new Set();
+                            const nonPartyMembers = new Set();
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (!uniqueStudents.has(studentKey)) {
+                                uniqueStudents.add(studentKey);
+                                if (item.positionParty !== "Không") {
+                                  partyMembers.add(item.studentId);
+                                } else {
+                                  nonPartyMembers.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalUnique =
+                              partyMembers.size + nonPartyMembers.size;
+                            const displayText = `${partyMembers.size}/${totalUnique}`;
+
+                            return (
+                              <div className="text-xl md:text-2xl font-bold text-orange-600 dark:text-orange-400">
+                                {displayText}
+                              </div>
+                            );
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            Đảng viên
+                          </div>
+                        </div>
+                      </Col>
                     )}
 
                     {/* HTXSNV - Học bổng xuất sắc nghiệp vụ */}
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-green-50 dark:bg-green-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-green-600 dark:text-green-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            const partyMembers = new Set();
+                            const htxsnvStudents = new Set();
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (item.positionParty !== "Không") {
+                                partyMembers.add(studentKey);
+                                if (item.partyRating?.rating === "HTXSNV") {
+                                  htxsnvStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalPartyMembers = partyMembers.size;
+                            const htxsnvCount = htxsnvStudents.size;
+
                             return (
-                              <div className="text-sm font-bold text-green-600 dark:text-green-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
+                                {htxsnvCount}/{totalPartyMembers}
                               </div>
                             );
-
-                          const partyMembers = new Set();
-                          const htxsnvStudents = new Set();
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (item.positionParty !== "Không") {
-                              partyMembers.add(studentKey);
-                              if (item.partyRating?.rating === "HTXSNV") {
-                                htxsnvStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalPartyMembers = partyMembers.size;
-                          const htxsnvCount = htxsnvStudents.size;
-
-                          return (
-                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                              {htxsnvCount}/{totalPartyMembers}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          HTXSNV
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            HTXSNV
+                          </div>
                         </div>
-                      </div>
+                      </Col>
                     )}
 
                     {/* HTTNV - Học bổng tài năng nghiệp vụ */}
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-blue-600 dark:text-blue-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            const partyMembers = new Set();
+                            const httnvStudents = new Set();
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (item.positionParty !== "Không") {
+                                partyMembers.add(studentKey);
+                                if (item.partyRating?.rating === "HTTNV") {
+                                  httnvStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalPartyMembers = partyMembers.size;
+                            const httnvCount = httnvStudents.size;
+
                             return (
-                              <div className="text-sm font-bold text-blue-600 dark:text-blue-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                {httnvCount}/{totalPartyMembers}
                               </div>
                             );
-
-                          const partyMembers = new Set();
-                          const httnvStudents = new Set();
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (item.positionParty !== "Không") {
-                              partyMembers.add(studentKey);
-                              if (item.partyRating?.rating === "HTTNV") {
-                                httnvStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalPartyMembers = partyMembers.size;
-                          const httnvCount = httnvStudents.size;
-
-                          return (
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                              {httnvCount}/{totalPartyMembers}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          HTTNV
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            HTTNV
+                          </div>
                         </div>
-                      </div>
+                      </Col>
                     )}
 
                     {/* HTNV - Học bổng nghiệp vụ */}
                     {selectedSchoolYear !== "all" && (
-                      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
-                        {(() => {
-                          const results = getFilteredResults();
-                          if (results.length === 0)
+                      <Col xs={12} sm={8} md={6} lg={4}>
+                        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 md:p-4 rounded-lg h-full">
+                          {(() => {
+                            const results = getFilteredResults();
+                            if (results.length === 0)
+                              return (
+                                <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 flex items-center justify-center h-8">
+                                  Không có dữ liệu
+                                </div>
+                              );
+
+                            const partyMembers = new Set();
+                            const htnvStudents = new Set();
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (item.positionParty !== "Không") {
+                                partyMembers.add(studentKey);
+                                if (item.partyRating?.rating === "HTNV") {
+                                  htnvStudents.add(item.studentId);
+                                }
+                              }
+                            });
+
+                            const totalPartyMembers = partyMembers.size;
+                            const htnvCount = htnvStudents.size;
+
                             return (
-                              <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 flex items-center justify-center h-8">
-                                Không có dữ liệu
+                              <div className="text-xl md:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                {htnvCount}/{totalPartyMembers}
                               </div>
                             );
-
-                          const partyMembers = new Set();
-                          const htnvStudents = new Set();
-
-                          results.forEach((item) => {
-                            const studentKey = `${item.studentId}-${item.schoolYear}`;
-                            if (item.positionParty !== "Không") {
-                              partyMembers.add(studentKey);
-                              if (item.partyRating?.rating === "HTNV") {
-                                htnvStudents.add(item.studentId);
-                              }
-                            }
-                          });
-
-                          const totalPartyMembers = partyMembers.size;
-                          const htnvCount = htnvStudents.size;
-
-                          return (
-                            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                              {htnvCount}/{totalPartyMembers}
-                            </div>
-                          );
-                        })()}
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          HTNV
+                          })()}
+                          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                            HTNV
+                          </div>
                         </div>
-                      </div>
+                      </Col>
                     )}
-                  </div>
+                  </Row>
                 )}
 
-                <div className="overflow-x-auto">
-                  <table className="table-auto w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          ĐƠN VỊ
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          HỌ VÀ TÊN
-                        </th>
-
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          NĂM HỌC
-                        </th>
-
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          GPA
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          CPA
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          TỔNG TÍN CHỈ NĂM
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          MÔN NỢ
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                          THAO TÁC
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {getFilteredResults().length > 0 ? (
-                        getFilteredResults().map((item) => (
-                          <tr
-                            key={`${item.id}-${item.schoolYear}`}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                            onClick={() => handleViewDetail(item)}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.unit || "Chưa có đơn vị"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div>
-                                <div className="font-medium">
-                                  {item.fullName}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Mã: {item.studentCode || "Chưa có mã SV"}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Lớp: {item.className || "Chưa có lớp"}
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div>
-                                <div className="font-medium">
-                                  {item.schoolYear}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {item.semesterCount || 0} học kỳ
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div className="font-medium text-blue-600 dark:text-blue-400">
-                                {item.yearlyGPA &&
-                                !isNaN(parseFloat(item.yearlyGPA))
-                                  ? parseFloat(item.yearlyGPA).toFixed(2)
-                                  : "0.00"}
-                              </div>
-                              <div className="font-medium text-purple-600 dark:text-purple-400">
-                                {item.yearlyGrade10 &&
-                                !isNaN(parseFloat(item.yearlyGrade10))
-                                  ? parseFloat(item.yearlyGrade10).toFixed(2)
-                                  : "0.00"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div className="flex flex-col">
-                                <div className="font-medium text-green-600 dark:text-green-400">
-                                  {item.cumulativeGPA &&
-                                  !isNaN(parseFloat(item.cumulativeGPA))
-                                    ? parseFloat(item.cumulativeGPA).toFixed(2)
-                                    : item.cumulativeGrade4 &&
-                                      !isNaN(parseFloat(item.cumulativeGrade4))
-                                    ? parseFloat(item.cumulativeGrade4).toFixed(
-                                        2
-                                      )
-                                    : "Chưa có điểm"}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {item.cumulativeGrade10 &&
-                                  !isNaN(parseFloat(item.cumulativeGrade10))
-                                    ? parseFloat(
-                                        item.cumulativeGrade10
-                                      ).toFixed(2)
-                                    : "0.00"}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div className="font-medium">
-                                {item.totalCredits || 0} tín chỉ
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Năm {item.studentLevel || 1}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div className="font-medium text-red-600 dark:text-red-400">
-                                {item.failedSubjects || 0}
-                              </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                                TC nợ: {item.debtCredits || 0}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-center">
-                              <div className="flex justify-center space-x-2">
-                                <button
-                                  className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-                                  title="Xem chi tiết"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleViewDetail(item);
-                                  }}
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                    />
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                    />
-                                  </svg>
-                                </button>
-                                <button
-                                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                  title="Cập nhật xếp loại"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleUpdateRating(item);
-                                  }}
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                    />
-                                  </svg>
-                                </button>
-                              </div>
-                            </td>
+                <div className="overflow-x-auto -mx-4 md:mx-0 shadow-md rounded-lg">
+                  <div className="inline-block min-w-full align-middle">
+                    <div className="overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
+                          <tr>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              ĐƠN VỊ
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              HỌ VÀ TÊN
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              NĂM HỌC
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              GPA
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              CPA
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              TÍN CHỈ
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              MÔN NỢ
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                              THAO TÁC
+                            </th>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan="9"
-                            className="text-center py-8 text-gray-500 dark:text-gray-400"
-                          >
-                            <div className="flex flex-col items-center">
-                              <svg
-                                className="w-12 h-12 mb-4 text-gray-300 dark:text-gray-600"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {getFilteredResults().length > 0 ? (
+                            getFilteredResults().map((item) => (
+                              <tr
+                                key={`${item.id}-${item.schoolYear}`}
+                                className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                                onClick={() => handleViewDetail(item)}
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                />
-                              </svg>
-                              <p className="text-lg font-medium">
-                                Không có dữ liệu
-                              </p>
-                              <p className="text-sm">
-                                Không tìm thấy kết quả học tập nào cho học kỳ
-                                này
-                              </p>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  {item.unit || "Chưa có đơn vị"}
+                                </td>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  <div>
+                                    <div className="font-medium text-xs md:text-sm">
+                                      {item.fullName}
+                                    </div>
+                                    <div className="text-[10px] md:text-xs text-gray-500">
+                                      Mã: {item.studentCode || "N/A"}
+                                    </div>
+                                    <div className="text-[10px] md:text-xs text-gray-500">
+                                      {item.className || "N/A"}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  <div>
+                                    <div className="font-medium text-xs md:text-sm">
+                                      {item.schoolYear}
+                                    </div>
+                                    <div className="text-[10px] md:text-xs text-gray-500">
+                                      {item.semesterCount || 0} HK
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  <div className="font-medium text-xs md:text-sm text-blue-600 dark:text-blue-400">
+                                    {item.yearlyGPA &&
+                                    !isNaN(parseFloat(item.yearlyGPA))
+                                      ? parseFloat(item.yearlyGPA).toFixed(2)
+                                      : "0.00"}
+                                  </div>
+                                  <div className="text-[10px] md:text-xs text-purple-600 dark:text-purple-400">
+                                    {item.yearlyGrade10 &&
+                                    !isNaN(parseFloat(item.yearlyGrade10))
+                                      ? parseFloat(item.yearlyGrade10).toFixed(
+                                          2
+                                        )
+                                      : "0.00"}
+                                  </div>
+                                </td>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  <div className="flex flex-col">
+                                    <div className="font-medium text-xs md:text-sm text-green-600 dark:text-green-400">
+                                      {item.cumulativeGPA &&
+                                      !isNaN(parseFloat(item.cumulativeGPA))
+                                        ? parseFloat(
+                                            item.cumulativeGPA
+                                          ).toFixed(2)
+                                        : item.cumulativeGrade4 &&
+                                          !isNaN(
+                                            parseFloat(item.cumulativeGrade4)
+                                          )
+                                        ? parseFloat(
+                                            item.cumulativeGrade4
+                                          ).toFixed(2)
+                                        : "N/A"}
+                                    </div>
+                                    <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
+                                      {item.cumulativeGrade10 &&
+                                      !isNaN(parseFloat(item.cumulativeGrade10))
+                                        ? parseFloat(
+                                            item.cumulativeGrade10
+                                          ).toFixed(2)
+                                        : "0.00"}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  <div className="font-medium text-xs md:text-sm">
+                                    {item.totalCredits || 0}
+                                  </div>
+                                  <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
+                                    Năm {item.studentLevel || 1}
+                                  </div>
+                                </td>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  <div className="font-medium text-xs md:text-sm text-red-600 dark:text-red-400">
+                                    {item.failedSubjects || 0}
+                                  </div>
+                                  <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
+                                    TC: {item.debtCredits || 0}
+                                  </div>
+                                </td>
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white text-center">
+                                  <div className="flex justify-center space-x-1 md:space-x-2">
+                                    <button
+                                      className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-1"
+                                      title="Xem chi tiết"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewDetail(item);
+                                      }}
+                                    >
+                                      <svg
+                                        className="w-3 h-3 md:w-4 md:h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                        />
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                        />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                                      title="Cập nhật xếp loại"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleUpdateRating(item);
+                                      }}
+                                    >
+                                      <svg
+                                        className="w-3 h-3 md:w-4 md:h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                        />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan="8"
+                                className="text-center py-6 md:py-8 text-gray-500 dark:text-gray-400"
+                              >
+                                <div className="flex flex-col items-center">
+                                  <svg
+                                    className="w-8 h-8 md:w-12 md:h-12 mb-2 md:mb-4 text-gray-300 dark:text-gray-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                    />
+                                  </svg>
+                                  <p className="text-sm md:text-lg font-medium">
+                                    Không có dữ liệu
+                                  </p>
+                                  <p className="text-xs md:text-sm">
+                                    Không tìm thấy kết quả
+                                  </p>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -2,7 +2,6 @@
 
 import axios from "axios";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
@@ -63,11 +62,7 @@ const TimeTable = () => {
         const endTime = new Date(`2000-01-01T${editedTimeTable.endTime}:00`);
 
         if (startTime >= endTime) {
-          handleNotify(
-            "danger",
-            "Lỗi!",
-            TIMETABLE_MESSAGES.INVALID_TIME
-          );
+          handleNotify("danger", "Lỗi!", TIMETABLE_MESSAGES.INVALID_TIME);
           return;
         }
       }
@@ -151,11 +146,7 @@ const TimeTable = () => {
       const endTime = new Date(`2000-01-01T${addFormDataTimeTable.endTime}:00`);
 
       if (startTime >= endTime) {
-        handleNotify(
-          "danger",
-          "Lỗi!",
-          TIMETABLE_MESSAGES.INVALID_TIME
-        );
+        handleNotify("danger", "Lỗi!", TIMETABLE_MESSAGES.INVALID_TIME);
         return;
       }
     }
@@ -383,11 +374,17 @@ const TimeTable = () => {
     const loadData = async () => {
       await withLoading(async () => {
         await fetchStudentId();
-        await fetchTimeTable();
       });
     };
     loadData();
   }, [withLoading]);
+
+  // Fetch time table when studentId is available
+  useEffect(() => {
+    if (studentId) {
+      fetchTimeTable();
+    }
+  }, [studentId]);
 
   if (loading) {
     return <Loader text="Đang tải thông tin học tập..." />;

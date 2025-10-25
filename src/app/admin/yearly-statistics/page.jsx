@@ -86,9 +86,7 @@ const YearlyStatistics = () => {
         headers: { token: `Bearer ${token}` },
       });
 
-      console.log("Yearly results data:", res.data);
-
-      // Xử lý dữ liệu từ API - đảm bảo có failedSubjects/debtCredits
+      // Tính toán từ subjects
       const processedData = (res.data || []).map((item) => {
         const subjects = Array.isArray(item.subjects) ? item.subjects : [];
         const failedSubjectsCalc = subjects.filter(
@@ -98,12 +96,43 @@ const YearlyStatistics = () => {
           const isDebt = s.letterGrade === "F" || s.gradePoint4 === 0;
           return sum + (isDebt ? s.credits || 0 : 0);
         }, 0);
+
+        // Tính tổng tín chỉ từ subjects
+        const totalCreditsCalc = subjects.reduce(
+          (sum, s) => sum + (s.credits || 0),
+          0
+        );
+
+        // Tính GPA từ subjects
+        const totalGradePoints = subjects.reduce(
+          (sum, s) => sum + s.gradePoint4 * (s.credits || 0),
+          0
+        );
+        const averageGrade4Calc =
+          totalCreditsCalc > 0 ? totalGradePoints / totalCreditsCalc : 0;
+
+        // Tính GPA thang 10 từ subjects
+        const totalGradePoints10 = subjects.reduce(
+          (sum, s) => sum + s.gradePoint10 * (s.credits || 0),
+          0
+        );
+        const averageGrade10Calc =
+          totalCreditsCalc > 0 ? totalGradePoints10 / totalCreditsCalc : 0;
+
         return {
           ...item,
           failedSubjects: item.failedSubjects ?? failedSubjectsCalc,
           debtCredits: item.debtCredits ?? debtCreditsCalc,
+          totalCredits: item.totalCredits || totalCreditsCalc,
+          GPA: item.GPA || averageGrade4Calc.toFixed(2),
+          semesterGPA: item.semesterGPA || averageGrade4Calc.toFixed(2),
+          semesterGPA10: item.semesterGPA10 || averageGrade10Calc.toFixed(2),
+          averageGrade10: item.averageGrade10 || averageGrade10Calc.toFixed(2),
         };
       });
+
+      console.log("Yearly results data (processed):", processedData);
+      console.log("Sample yearly item:", processedData[0]);
 
       // Lấy danh sách năm học từ dữ liệu
       const allSchoolYears = new Set();
@@ -168,7 +197,7 @@ const YearlyStatistics = () => {
       );
 
       console.log(`Yearly results data for ${year}:`, res.data);
-      // Đảm bảo có failedSubjects/debtCredits
+      // Tính toán từ subjects
       const normalized = (res.data || []).map((item) => {
         const subjects = Array.isArray(item.subjects) ? item.subjects : [];
         const failedSubjectsCalc = subjects.filter(
@@ -178,10 +207,38 @@ const YearlyStatistics = () => {
           const isDebt = s.letterGrade === "F" || s.gradePoint4 === 0;
           return sum + (isDebt ? s.credits || 0 : 0);
         }, 0);
+
+        // Tính tổng tín chỉ từ subjects
+        const totalCreditsCalc = subjects.reduce(
+          (sum, s) => sum + (s.credits || 0),
+          0
+        );
+
+        // Tính GPA từ subjects
+        const totalGradePoints = subjects.reduce(
+          (sum, s) => sum + s.gradePoint4 * (s.credits || 0),
+          0
+        );
+        const averageGrade4Calc =
+          totalCreditsCalc > 0 ? totalGradePoints / totalCreditsCalc : 0;
+
+        // Tính GPA thang 10 từ subjects
+        const totalGradePoints10 = subjects.reduce(
+          (sum, s) => sum + s.gradePoint10 * (s.credits || 0),
+          0
+        );
+        const averageGrade10Calc =
+          totalCreditsCalc > 0 ? totalGradePoints10 / totalCreditsCalc : 0;
+
         return {
           ...item,
           failedSubjects: item.failedSubjects ?? failedSubjectsCalc,
           debtCredits: item.debtCredits ?? debtCreditsCalc,
+          totalCredits: item.totalCredits || totalCreditsCalc,
+          GPA: item.GPA || averageGrade4Calc.toFixed(2),
+          semesterGPA: item.semesterGPA || averageGrade4Calc.toFixed(2),
+          semesterGPA10: item.semesterGPA10 || averageGrade10Calc.toFixed(2),
+          averageGrade10: item.averageGrade10 || averageGrade10Calc.toFixed(2),
         };
       });
       setYearlyResults(normalized);
@@ -530,7 +587,7 @@ const YearlyStatistics = () => {
               <div className="w-full p-4 md:p-5">
                 <div className="mb-4">
                   <Row gutter={[12, 12]} align="bottom">
-                    <Col xs={24} sm={12} md={8} lg={6}>
+                    <Col xs={24} sm={12} md={6} lg={4}>
                       <label
                         htmlFor="schoolYear"
                         className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300"
@@ -559,7 +616,7 @@ const YearlyStatistics = () => {
                       </ConfigProvider>
                     </Col>
 
-                    <Col xs={24} sm={12} md={8} lg={6}>
+                    <Col xs={24} sm={12} md={4} lg={3}>
                       <label className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                         Đơn vị
                       </label>
@@ -591,7 +648,7 @@ const YearlyStatistics = () => {
                         />
                       </ConfigProvider>
                     </Col>
-                    <Col xs={24} sm={12} md={8} lg={6}>
+                    <Col xs={24} sm={12} md={6} lg={5}>
                       <label className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
                         Tìm kiếm
                       </label>
@@ -618,7 +675,7 @@ const YearlyStatistics = () => {
                         Xóa bộ lọc
                       </button>
                     </Col>
-                    <Col xs={12} sm={6} md={4} lg={3}>
+                    <Col xs={12} sm={6} md={4} lg={4}>
                       <Link
                         href="/admin/semester-management"
                         className="w-full h-9 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-xs md:text-sm px-2 md:px-4 transition-colors duration-200 flex items-center justify-center"
@@ -673,18 +730,37 @@ const YearlyStatistics = () => {
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                           {(() => {
                             const results = getFilteredResults();
-                            if (results.length === 0) return "0.00";
+                            if (results.length === 0) return "0";
 
-                            const totalGPA = results.reduce((sum, item) => {
-                              return sum + (parseFloat(item.yearlyGPA) || 0);
-                            }, 0);
+                            if (selectedSchoolYear === "all") {
+                              // Đếm số sinh viên GPA >= 3.2
+                              const uniqueStudents = new Set();
+                              const studentsGPA32 = new Set();
 
-                            return (totalGPA / results.length).toFixed(2);
+                              results.forEach((item) => {
+                                const studentKey = `${item.studentId}-${item.schoolYear}`;
+                                if (!uniqueStudents.has(studentKey)) {
+                                  uniqueStudents.add(studentKey);
+                                  const gpa = parseFloat(item.yearlyGPA) || 0;
+                                  if (gpa >= 3.2) {
+                                    studentsGPA32.add(item.studentId);
+                                  }
+                                }
+                              });
+
+                              return studentsGPA32.size;
+                            } else {
+                              // GPA trung bình năm
+                              const totalGPA = results.reduce((sum, item) => {
+                                return sum + (parseFloat(item.yearlyGPA) || 0);
+                              }, 0);
+                              return (totalGPA / results.length).toFixed(2);
+                            }
                           })()}
                         </div>
                         <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                           {selectedSchoolYear === "all"
-                            ? "GPA trung bình tất cả năm"
+                            ? "Số SV GPA ≥3.2"
                             : "GPA trung bình năm"}
                         </div>
                       </div>
@@ -861,24 +937,34 @@ const YearlyStatistics = () => {
                       </Col>
                     )}
 
-                    {/* Tổng tín chỉ tất cả năm (khi chọn "all") */}
+                    {/* Số sinh viên GPA >= 2.5 (khi chọn "all") */}
                     {selectedSchoolYear === "all" && (
                       <Col xs={12} sm={8} md={6} lg={6}>
                         <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 md:p-4 rounded-lg h-full">
                           {(() => {
                             const results = getFilteredResults();
-                            const totalCredits = results.reduce(
-                              (sum, item) => sum + (item.totalCredits || 0),
-                              0
-                            );
+                            const uniqueStudents = new Set();
+                            const studentsGPA25 = new Set();
+
+                            results.forEach((item) => {
+                              const studentKey = `${item.studentId}-${item.schoolYear}`;
+                              if (!uniqueStudents.has(studentKey)) {
+                                uniqueStudents.add(studentKey);
+                                const gpa = parseFloat(item.yearlyGPA) || 0;
+                                if (gpa >= 2.5) {
+                                  studentsGPA25.add(item.studentId);
+                                }
+                              }
+                            });
+
                             return (
                               <div className="text-xl md:text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                                {totalCredits}
+                                {studentsGPA25.size}
                               </div>
                             );
                           })()}
                           <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                            Tổng tín chỉ tất cả năm
+                            Số SV GPA ≥2.5
                           </div>
                         </div>
                       </Col>
@@ -1237,7 +1323,10 @@ const YearlyStatistics = () => {
                                     {item.totalCredits || 0}
                                   </div>
                                   <div className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">
-                                    Năm {item.studentLevel || 1}
+                                    Tổng TC:{" "}
+                                    {item.cumulativeCredit ||
+                                      item.cumulativeCredits ||
+                                      0}
                                   </div>
                                 </td>
                                 <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
@@ -1350,7 +1439,7 @@ const YearlyStatistics = () => {
       {showDetailModal && selectedStudent && (
         <div className="fixed inset-0 flex items-center justify-center z-50 mt-14 p-4">
           <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden mx-auto">
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden mx-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 Chi tiết điểm năm học {selectedStudent.schoolYear} -{" "}
@@ -1399,7 +1488,7 @@ const YearlyStatistics = () => {
                         {studentDetail.yearlyGPA?.toFixed(2) || "0.00"}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        GPA năm học (Hệ 4)
+                        GPA (Hệ 4)
                       </div>
                     </div>
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
@@ -1407,7 +1496,7 @@ const YearlyStatistics = () => {
                         {studentDetail.yearlyGrade10?.toFixed(2) || "0.00"}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        GPA năm học (Hệ 10)
+                        GPA (Hệ 10)
                       </div>
                     </div>
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg">
@@ -1417,7 +1506,7 @@ const YearlyStatistics = () => {
                           "Chưa có điểm"}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        CPA tích lũy (Hệ 4)
+                        CPA (Hệ 4)
                       </div>
                     </div>
                     <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
@@ -1425,7 +1514,7 @@ const YearlyStatistics = () => {
                         {studentDetail.cumulativeGrade10?.toFixed(2) || "0.00"}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        CPA tích lũy (Hệ 10)
+                        CPA (Hệ 10)
                       </div>
                     </div>
                     <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">

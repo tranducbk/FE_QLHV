@@ -367,101 +367,47 @@ const AchievementStatistics = () => {
   const canSelectMinistryRewardFor = (studentId) => {
     const ach = achievements[studentId];
     if (!ach) return false;
+
+    // Đã nhận rồi thì không cho chọn nữa
     const hasMinistryReward = ach.yearlyAchievements?.some(
       (ya) => ya.hasMinistryReward
     );
     if (hasMinistryReward) return false;
 
-    const competitiveYears =
-      ach.yearlyAchievements
-        ?.filter((ya) => ya.title === "Chiến sĩ thi đua")
-        ?.map((ya) => ya.year)
-        ?.sort((a, b) => a - b) || [];
-    if (competitiveYears.length < 2) return false;
+    // Kiểm tra năm hiện tại có phải là năm thứ 2 liên tiếp không
+    const eligibleYear =
+      ach.nextYearRecommendations?.eligibleYears?.ministryRewardYear;
+    const currentFormYear = addFormData.year;
 
-    let maxConsecutive = 0;
-    let currentConsecutive = 0;
-    let consecutiveStartYear = 0;
-    for (let i = 0; i < competitiveYears.length; i++) {
-      if (i === 0 || competitiveYears[i] === competitiveYears[i - 1] + 1) {
-        if (currentConsecutive === 0)
-          consecutiveStartYear = competitiveYears[i];
-        currentConsecutive++;
-      } else {
-        currentConsecutive = 1;
-        consecutiveStartYear = competitiveYears[i];
-      }
-      if (currentConsecutive > maxConsecutive)
-        maxConsecutive = currentConsecutive;
+    if (eligibleYear && currentFormYear && currentFormYear !== eligibleYear) {
+      return false; // Không phải năm thứ 2 liên tiếp
     }
-    if (maxConsecutive < 2) return false;
 
-    const currentYear = new Date().getFullYear();
-    const secondYearOfStreak = consecutiveStartYear + 1;
-    if (currentYear < secondYearOfStreak) return false;
-
-    let hasApprovedScientific = false;
-    ach.yearlyAchievements?.forEach((ya) => {
-      if (ya.scientific) {
-        if (ya.scientific.topics?.some((t) => t.status === "approved")) {
-          hasApprovedScientific = true;
-        }
-        if (ya.scientific.initiatives?.some((i) => i.status === "approved")) {
-          hasApprovedScientific = true;
-        }
-      }
-    });
-    return hasApprovedScientific;
+    // Sử dụng kết quả từ backend
+    return ach.eligibleForMinistryReward === true;
   };
 
   const canSelectNationalRewardFor = (studentId) => {
     const ach = achievements[studentId];
     if (!ach) return false;
+
+    // Đã nhận rồi thì không cho chọn nữa
     const hasNationalReward = ach.yearlyAchievements?.some(
       (ya) => ya.hasNationalReward
     );
     if (hasNationalReward) return false;
 
-    const competitiveYears =
-      ach.yearlyAchievements
-        ?.filter((ya) => ya.title === "Chiến sĩ thi đua")
-        ?.map((ya) => ya.year)
-        ?.sort((a, b) => a - b) || [];
-    if (competitiveYears.length < 3) return false;
+    // Kiểm tra năm hiện tại có phải là năm thứ 3 liên tiếp không
+    const eligibleYear =
+      ach.nextYearRecommendations?.eligibleYears?.nationalRewardYear;
+    const currentFormYear = addFormData.year;
 
-    let maxConsecutive = 0;
-    let currentConsecutive = 0;
-    let consecutiveStartYear = 0;
-    for (let i = 0; i < competitiveYears.length; i++) {
-      if (i === 0 || competitiveYears[i] === competitiveYears[i - 1] + 1) {
-        if (currentConsecutive === 0)
-          consecutiveStartYear = competitiveYears[i];
-        currentConsecutive++;
-      } else {
-        currentConsecutive = 1;
-        consecutiveStartYear = competitiveYears[i];
-      }
-      if (currentConsecutive > maxConsecutive)
-        maxConsecutive = currentConsecutive;
+    if (eligibleYear && currentFormYear && currentFormYear !== eligibleYear) {
+      return false; // Không phải năm thứ 3 liên tiếp
     }
-    if (maxConsecutive < 3) return false;
 
-    const currentYear = new Date().getFullYear();
-    const thirdYearOfStreak = consecutiveStartYear + 2;
-    if (currentYear < thirdYearOfStreak) return false;
-
-    let hasApprovedScientific = false;
-    ach.yearlyAchievements?.forEach((ya) => {
-      if (ya.scientific) {
-        if (ya.scientific.topics?.some((t) => t.status === "approved")) {
-          hasApprovedScientific = true;
-        }
-        if (ya.scientific.initiatives?.some((i) => i.status === "approved")) {
-          hasApprovedScientific = true;
-        }
-      }
-    });
-    return hasApprovedScientific;
+    // Sử dụng kết quả từ backend
+    return ach.eligibleForNationalReward === true;
   };
 
   if (loading) {
@@ -1384,12 +1330,12 @@ const AchievementStatistics = () => {
                               )
                             }
                           >
-                            🏆 Bằng khen Bộ Quốc Phòng
                             {selectedStudentForForm &&
-                              !canSelectMinistryRewardFor(
-                                selectedStudentForForm.id
-                              ) &&
-                              " (Chưa đủ điều kiện)"}
+                            canSelectMinistryRewardFor(
+                              selectedStudentForForm.id
+                            )
+                              ? "🥇 Bằng khen Bộ Quốc Phòng"
+                              : "🥇 Bằng khen Bộ Quốc Phòng (Chưa đủ điều kiện)"}
                           </option>
                           <option
                             value="CSTĐ Toàn Quân"
@@ -1400,12 +1346,12 @@ const AchievementStatistics = () => {
                               )
                             }
                           >
-                            🥇 CSTĐ Toàn Quân
                             {selectedStudentForForm &&
-                              !canSelectNationalRewardFor(
-                                selectedStudentForForm.id
-                              ) &&
-                              " (Chưa đủ điều kiện)"}
+                            canSelectNationalRewardFor(
+                              selectedStudentForForm.id
+                            )
+                              ? "🎖️ CSTĐ Toàn Quân"
+                              : "🎖️ CSTĐ Toàn Quân (Chưa đủ điều kiện)"}
                           </option>
                         </select>
                       </div>

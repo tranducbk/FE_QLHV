@@ -131,7 +131,9 @@ const LearningResults = () => {
 
       if (semesterData.length > 0) {
         // Tách riêng semester và schoolYear để gửi lên API
-        const semesterParam = semesterData.map((item) => item.semester).join(",");
+        const semesterParam = semesterData
+          .map((item) => item.semester)
+          .join(",");
         const schoolYearParam = semesterData
           .map((item) => item.schoolYear)
           .join(",");
@@ -148,13 +150,66 @@ const LearningResults = () => {
         headers: { token: `Bearer ${token}` },
       });
 
-      console.log("Learning results data:", res.data);
-      setLearningResults(res.data || []);
+      console.log("Learning results data (raw):", res.data);
+
+      // Xử lý dữ liệu để tính toán từ subjects
+      const processedData = (res.data || []).map((item) => {
+        const subjects = Array.isArray(item.subjects) ? item.subjects : [];
+
+        // Tính số môn nợ (điểm F hoặc gradePoint4 = 0)
+        const failedSubjectsCalc = subjects.filter(
+          (s) => s.letterGrade === "F" || s.gradePoint4 === 0
+        ).length;
+
+        // Tính tổng tín chỉ nợ
+        const debtCreditsCalc = subjects.reduce((sum, s) => {
+          const isDebt = s.letterGrade === "F" || s.gradePoint4 === 0;
+          return sum + (isDebt ? s.credits || 0 : 0);
+        }, 0);
+
+        // Tính tổng tín chỉ từ subjects
+        const totalCreditsCalc = subjects.reduce(
+          (sum, s) => sum + (s.credits || 0),
+          0
+        );
+
+        // Tính GPA từ subjects
+        const totalGradePoints = subjects.reduce(
+          (sum, s) => sum + s.gradePoint4 * (s.credits || 0),
+          0
+        );
+        const averageGrade4Calc =
+          totalCreditsCalc > 0 ? totalGradePoints / totalCreditsCalc : 0;
+
+        // Tính GPA thang 10 từ subjects
+        const totalGradePoints10 = subjects.reduce(
+          (sum, s) => sum + s.gradePoint10 * (s.credits || 0),
+          0
+        );
+        const averageGrade10Calc =
+          totalCreditsCalc > 0 ? totalGradePoints10 / totalCreditsCalc : 0;
+
+        return {
+          ...item,
+          failedSubjects: item.failedSubjects ?? failedSubjectsCalc,
+          debtCredits: item.debtCredits ?? debtCreditsCalc,
+          totalCredits: item.totalCredits || totalCreditsCalc,
+          GPA: item.GPA || averageGrade4Calc.toFixed(2),
+          semesterGPA: item.semesterGPA || averageGrade4Calc.toFixed(2),
+          semesterGPA10: item.semesterGPA10 || averageGrade10Calc.toFixed(2),
+          averageGrade10: item.averageGrade10 || averageGrade10Calc.toFixed(2),
+        };
+      });
+
+      console.log("Learning results data (processed):", processedData);
+      console.log("Sample item:", processedData[0]);
+
+      setLearningResults(processedData);
 
       // Lấy danh sách các đơn vị có sẵn từ dữ liệu
       const units = [
         ...new Set(
-          res.data
+          processedData
             .map((item) => item.unit)
             .filter((unit) => unit && unit.trim())
         ),

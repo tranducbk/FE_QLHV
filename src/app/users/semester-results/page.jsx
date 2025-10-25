@@ -390,7 +390,6 @@ const SemesterResults = () => {
     }
   };
 
-
   const handleDeleteLearn = (id) => {
     setLearnId(id);
     setShowConfirmLearn(true);
@@ -446,27 +445,12 @@ const SemesterResults = () => {
             token: `Bearer ${token}`,
           },
         });
-          "DEBUG - fetchLearningResult subjects:",
-          res.data.semesterResults?.map((item) => ({
-            id: item.id,
-            semester: item.semester,
-            schoolYear: item.schoolYear,
-            subjectsCount: item.subjects?.length || 0,
-            subjects: item.subjects,
-          }))
-        );
 
         setLearningResult(res.data.semesterResults || []);
         // Cũng set vào semesterResults để hiển thị
         setSemesterResults(res.data.semesterResults || []);
-      } catch (error) {
-      }
+      } catch (error) {}
     }
-  };
-
-  const fetchSemesterResults = async () => {
-    // Sử dụng fetchLearningResult thay vì API cũ
-    await fetchLearningResult();
   };
 
   // Lấy studentId từ userId
@@ -523,8 +507,7 @@ const SemesterResults = () => {
         setSemesters(list);
         // Mặc định hiển thị "Tất cả học kỳ" khi mới vào
         // Không set selectedSemester để giữ giá trị rỗng
-      } catch (e) {
-      }
+      } catch (e) {}
     };
     fetchSemesters();
   }, []);

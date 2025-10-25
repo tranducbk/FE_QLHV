@@ -173,6 +173,8 @@ const SideBarContent = () => {
       currentPath.startsWith("/admin/universities")
     ) {
       setOpenKeys(["student-management"]);
+    } else if (currentPath.startsWith("/supper_admin")) {
+      setOpenKeys([]);
     } else {
       setOpenKeys([]);
     }
@@ -191,6 +193,66 @@ const SideBarContent = () => {
     router.push(key);
   };
 
+  // Sidebar cho SUPER_ADMIN - chỉ quản lý admin users
+  if (token?.role === "SUPER_ADMIN") {
+    return (
+      <Sider
+        width={256}
+        collapsedWidth={0}
+        breakpoint="lg"
+        className="h-screen fixed left-0 top-0 pt-16 shadow-xl overflow-y-auto z-40
+          [&::-webkit-scrollbar]:w-2
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          [&::-webkit-scrollbar-track]:bg-gray-100
+          [&::-webkit-scrollbar-thumb]:bg-gray-300
+          dark:[&::-webkit-scrollbar-track]:bg-slate-700
+          dark:[&::-webkit-scrollbar-thumb]:bg-slate-500"
+        style={{
+          backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
+          borderRight: `1px solid ${theme === "dark" ? "#374151" : "#e5e7eb"}`,
+        }}
+      >
+        <ConfigProvider
+          theme={{
+            algorithm:
+              theme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
+            token: {
+              colorBgContainer: theme === "dark" ? "#1f2937" : "#ffffff",
+              colorBgElevated: theme === "dark" ? "#374151" : "#ffffff",
+              colorBorder: theme === "dark" ? "#4b5563" : "#e5e7eb",
+              colorText: theme === "dark" ? "#f9fafb" : "#111827",
+              colorTextSecondary: theme === "dark" ? "#d1d5db" : "#6b7280",
+              colorPrimary: "#3b82f6",
+              colorPrimaryHover: "#2563eb",
+              colorPrimaryActive: "#1d4ed8",
+            },
+          }}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={selectedKeys}
+            onClick={handleMenuClick}
+            style={{
+              width: "100%",
+              border: "none",
+              backgroundColor: "transparent",
+            }}
+            theme={theme}
+          >
+            <Menu.Item key={`/admin/${token?.id}`} icon={<UserOutlined />}>
+              Thông tin cá nhân
+            </Menu.Item>
+
+            <Menu.Item key="/supper_admin" icon={<SettingOutlined />}>
+              Quản lý Admin Users
+            </Menu.Item>
+          </Menu>
+        </ConfigProvider>
+      </Sider>
+    );
+  }
+
+  // Sidebar cho ADMIN thường - quản lý hệ thống
   if (token?.admin) {
     return (
       <Sider
@@ -210,114 +272,114 @@ const SideBarContent = () => {
         }}
       >
         <ConfigProvider
-            theme={{
-              algorithm:
-                theme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
-              token: {
-                colorBgContainer: theme === "dark" ? "#1f2937" : "#ffffff",
-                colorBgElevated: theme === "dark" ? "#374151" : "#ffffff",
-                colorBorder: theme === "dark" ? "#4b5563" : "#e5e7eb",
-                colorText: theme === "dark" ? "#f9fafb" : "#111827",
-                colorTextSecondary: theme === "dark" ? "#d1d5db" : "#6b7280",
-                colorPrimary: "#3b82f6",
-                colorPrimaryHover: "#2563eb",
-                colorPrimaryActive: "#1d4ed8",
-              },
+          theme={{
+            algorithm:
+              theme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
+            token: {
+              colorBgContainer: theme === "dark" ? "#1f2937" : "#ffffff",
+              colorBgElevated: theme === "dark" ? "#374151" : "#ffffff",
+              colorBorder: theme === "dark" ? "#4b5563" : "#e5e7eb",
+              colorText: theme === "dark" ? "#f9fafb" : "#111827",
+              colorTextSecondary: theme === "dark" ? "#d1d5db" : "#6b7280",
+              colorPrimary: "#3b82f6",
+              colorPrimaryHover: "#2563eb",
+              colorPrimaryActive: "#1d4ed8",
+            },
+          }}
+        >
+          <Menu
+            mode="inline"
+            openKeys={openKeys}
+            selectedKeys={selectedKeys}
+            onOpenChange={handleOpenChange}
+            onClick={handleMenuClick}
+            style={{
+              width: "100%",
+              border: "none",
+              backgroundColor: "transparent",
             }}
+            theme={theme}
           >
-            <Menu
-              mode="inline"
-              openKeys={openKeys}
-              selectedKeys={selectedKeys}
-              onOpenChange={handleOpenChange}
-              onClick={handleMenuClick}
-              style={{
-                width: "100%",
-                border: "none",
-                backgroundColor: "transparent",
-              }}
-              theme={theme}
+            <Menu.Item key="/admin" icon={<HomeOutlined />}>
+              Tổng quan
+            </Menu.Item>
+
+            <Menu.Item key={`/admin/${token?.id}`} icon={<UserOutlined />}>
+              Thông tin cá nhân
+            </Menu.Item>
+
+            <Menu.Item
+              key="/admin/commander-duty-schedule"
+              icon={<CalendarOutlined />}
             >
-              <Menu.Item key="/admin" icon={<HomeOutlined />}>
-                Tổng quan
-              </Menu.Item>
+              Lịch trực
+            </Menu.Item>
 
-              <Menu.Item key={`/admin/${token?.id}`} icon={<UserOutlined />}>
-                Thông tin cá nhân
+            <SubMenu
+              key="student-management"
+              icon={<TeamOutlined />}
+              title="Quản lý học viên"
+            >
+              <Menu.Item key="/admin/list-user" icon={<TeamOutlined />}>
+                Danh sách học viên
               </Menu.Item>
+              <Menu.Item key="/admin/universities" icon={<BankOutlined />}>
+                Quản lý trường
+              </Menu.Item>
+            </SubMenu>
 
+            <SubMenu
+              key="learning"
+              icon={<BookOutlined />}
+              title="Thông tin học tập"
+            >
+              <Menu.Item key="/admin/time-table" icon={<ScheduleOutlined />}>
+                Lịch học
+              </Menu.Item>
               <Menu.Item
-                key="/admin/commander-duty-schedule"
-                icon={<CalendarOutlined />}
+                key="/admin/learning-results"
+                icon={<TrophyOutlined />}
               >
-                Lịch trực
+                Kết quả học tập
               </Menu.Item>
-
-              <SubMenu
-                key="student-management"
-                icon={<TeamOutlined />}
-                title="Quản lý học viên"
-              >
-                <Menu.Item key="/admin/list-user" icon={<TeamOutlined />}>
-                  Danh sách học viên
-                </Menu.Item>
-                <Menu.Item key="/admin/universities" icon={<BankOutlined />}>
-                  Quản lý trường
-                </Menu.Item>
-              </SubMenu>
-
-              <SubMenu
-                key="learning"
-                icon={<BookOutlined />}
-                title="Thông tin học tập"
-              >
-                <Menu.Item key="/admin/time-table" icon={<ScheduleOutlined />}>
-                  Lịch học
-                </Menu.Item>
-                <Menu.Item
-                  key="/admin/learning-results"
-                  icon={<TrophyOutlined />}
-                >
-                  Kết quả học tập
-                </Menu.Item>
-                <Menu.Item
-                  key="/admin/yearly-statistics"
-                  icon={<BarChartOutlined />}
-                >
-                  Thống kê theo năm
-                </Menu.Item>
-                <Menu.Item key="/admin/party-rating" icon={<StarOutlined />}>
-                  Xếp loại Đảng viên
-                </Menu.Item>
-                <Menu.Item key="/admin/tuition-fees" icon={<DollarOutlined />}>
-                  Học phí
-                </Menu.Item>
-              </SubMenu>
-              <Menu.Item key="/admin/cut-rice" icon={<CheckSquareOutlined />}>
-                Cắt cơm học viên
-              </Menu.Item>
-
               <Menu.Item
-                key="/admin/semester-management"
-                icon={<CalendarOutlined />}
+                key="/admin/yearly-statistics"
+                icon={<BarChartOutlined />}
               >
-                Quản lý các kì học
+                Thống kê theo năm
               </Menu.Item>
+              <Menu.Item key="/admin/party-rating" icon={<StarOutlined />}>
+                Xếp loại Đảng viên
+              </Menu.Item>
+              <Menu.Item key="/admin/tuition-fees" icon={<DollarOutlined />}>
+                Học phí
+              </Menu.Item>
+            </SubMenu>
+            <Menu.Item key="/admin/cut-rice" icon={<CheckSquareOutlined />}>
+              Cắt cơm học viên
+            </Menu.Item>
 
-              {/* <Menu.Item
+            <Menu.Item
+              key="/admin/semester-management"
+              icon={<CalendarOutlined />}
+            >
+              Quản lý các kì học
+            </Menu.Item>
+
+            {/* <Menu.Item
                 key="/admin/vacation-schedules"
                 icon={<CalendarOutlined />}
               >
                 Tranh thủ học viên
               </Menu.Item> */}
 
-              <Menu.Item
-                key="/admin/training-rating"
-                icon={<ThunderboltOutlined />}
-              >
-                Xếp loại rèn luyện
-              </Menu.Item>
-              {/* 
+            <Menu.Item
+              key="/admin/training-rating"
+              icon={<ThunderboltOutlined />}
+            >
+              Xếp loại rèn luyện
+            </Menu.Item>
+            {/* 
               <SubMenu
                 key="training"
                 icon={<TrophyOutlined />}
@@ -341,26 +403,26 @@ const SideBarContent = () => {
                 Danh sách gác đêm
               </Menu.Item> */}
 
-              {/* <Menu.Item key="/admin/list-help-cooking" icon={<FireOutlined />}>
+            {/* <Menu.Item key="/admin/list-help-cooking" icon={<FireOutlined />}>
                 Danh sách giúp bếp
               </Menu.Item> */}
 
-              {/* <Menu.Item
+            {/* <Menu.Item
                 key="/admin/regulatory-documents"
                 icon={<FileTextOutlined />}
               >
                 Văn bản quy định
               </Menu.Item> */}
 
-              <Menu.Item key="/admin/achievement" icon={<CrownOutlined />}>
-                Khen thưởng học viên
-              </Menu.Item>
+            <Menu.Item key="/admin/achievement" icon={<CrownOutlined />}>
+              Khen thưởng học viên
+            </Menu.Item>
 
-              <Menu.Item key="/admin/statistical" icon={<BarChartOutlined />}>
-                Thống kê
-              </Menu.Item>
-            </Menu>
-          </ConfigProvider>
+            <Menu.Item key="/admin/statistical" icon={<BarChartOutlined />}>
+              Thống kê
+            </Menu.Item>
+          </Menu>
+        </ConfigProvider>
       </Sider>
     );
   } else {
@@ -382,72 +444,72 @@ const SideBarContent = () => {
         }}
       >
         <ConfigProvider
-            theme={{
-              algorithm:
-                theme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
-              token: {
-                colorBgContainer: theme === "dark" ? "#1f2937" : "#ffffff",
-                colorBgElevated: theme === "dark" ? "#374151" : "#ffffff",
-                colorBorder: theme === "dark" ? "#4b5563" : "#e5e7eb",
-                colorText: theme === "dark" ? "#f9fafb" : "#111827",
-                colorTextSecondary: theme === "dark" ? "#d1d5db" : "#6b7280",
-                colorPrimary: "#3b82f6",
-                colorPrimaryHover: "#2563eb",
-                colorPrimaryActive: "#1d4ed8",
-              },
+          theme={{
+            algorithm:
+              theme === "dark" ? theme.darkAlgorithm : theme.defaultAlgorithm,
+            token: {
+              colorBgContainer: theme === "dark" ? "#1f2937" : "#ffffff",
+              colorBgElevated: theme === "dark" ? "#374151" : "#ffffff",
+              colorBorder: theme === "dark" ? "#4b5563" : "#e5e7eb",
+              colorText: theme === "dark" ? "#f9fafb" : "#111827",
+              colorTextSecondary: theme === "dark" ? "#d1d5db" : "#6b7280",
+              colorPrimary: "#3b82f6",
+              colorPrimaryHover: "#2563eb",
+              colorPrimaryActive: "#1d4ed8",
+            },
+          }}
+        >
+          <Menu
+            mode="inline"
+            openKeys={openKeys}
+            selectedKeys={selectedKeys}
+            onOpenChange={handleOpenChange}
+            onClick={handleMenuClick}
+            style={{
+              width: "100%",
+              border: "none",
+              backgroundColor: "transparent",
             }}
+            theme={theme}
           >
-            <Menu
-              mode="inline"
-              openKeys={openKeys}
-              selectedKeys={selectedKeys}
-              onOpenChange={handleOpenChange}
-              onClick={handleMenuClick}
-              style={{
-                width: "100%",
-                border: "none",
-                backgroundColor: "transparent",
-              }}
-              theme={theme}
+            <Menu.Item key="/users" icon={<HomeOutlined />}>
+              Tổng quan
+            </Menu.Item>
+
+            <Menu.Item key={`/users/${token?.id}`} icon={<UserOutlined />}>
+              Thông tin cá nhân
+            </Menu.Item>
+
+            <SubMenu
+              key="learning-user"
+              icon={<BookOutlined />}
+              title="Học tập"
             >
-              <Menu.Item key="/users" icon={<HomeOutlined />}>
-                Tổng quan
+              <Menu.Item key="/users/time-table" icon={<ScheduleOutlined />}>
+                Thời khóa biểu
               </Menu.Item>
-
-              <Menu.Item key={`/users/${token?.id}`} icon={<UserOutlined />}>
-                Thông tin cá nhân
-              </Menu.Item>
-
-              <SubMenu
-                key="learning-user"
-                icon={<BookOutlined />}
-                title="Học tập"
+              <Menu.Item
+                key="/users/semester-results"
+                icon={<TrophyOutlined />}
               >
-                <Menu.Item key="/users/time-table" icon={<ScheduleOutlined />}>
-                  Thời khóa biểu
-                </Menu.Item>
-                <Menu.Item
-                  key="/users/semester-results"
-                  icon={<TrophyOutlined />}
-                >
-                  Kết quả học tập
-                </Menu.Item>
-                <Menu.Item
-                  key="/users/yearly-statistics"
-                  icon={<BarChartOutlined />}
-                >
-                  Thống kê theo năm
-                </Menu.Item>
-                <Menu.Item key="/users/tuition-fee" icon={<DollarOutlined />}>
-                  Học phí
-                </Menu.Item>
-              </SubMenu>
-
-              <Menu.Item key="/users/cut-rice" icon={<CalendarOutlined />}>
-                Lịch cắt cơm
+                Kết quả học tập
               </Menu.Item>
+              <Menu.Item
+                key="/users/yearly-statistics"
+                icon={<BarChartOutlined />}
+              >
+                Thống kê theo năm
+              </Menu.Item>
+              <Menu.Item key="/users/tuition-fee" icon={<DollarOutlined />}>
+                Học phí
+              </Menu.Item>
+            </SubMenu>
 
-              {/* <SubMenu
+            <Menu.Item key="/users/cut-rice" icon={<CalendarOutlined />}>
+              Lịch cắt cơm
+            </Menu.Item>
+
+            {/* <SubMenu
                 key="training-user"
                 icon={<HeartOutlined />}
                 title="Rèn luyện"
@@ -474,29 +536,29 @@ const SideBarContent = () => {
                 Giúp bếp
               </Menu.Item> */}
 
-              <Menu.Item
-                key="/users/commander-duty-schedule"
-                icon={<ClockCircleOutlined />}
-              >
-                Lịch trực chỉ huy
-              </Menu.Item>
+            <Menu.Item
+              key="/users/commander-duty-schedule"
+              icon={<ClockCircleOutlined />}
+            >
+              Lịch trực chỉ huy
+            </Menu.Item>
 
-              {/* <Menu.Item key="/users/guard" icon={<SafetyOutlined />}>
+            {/* <Menu.Item key="/users/guard" icon={<SafetyOutlined />}>
                 Lịch gác đêm
               </Menu.Item> */}
 
-              <Menu.Item
-                key="/users/regulatory-regime"
-                icon={<FileTextOutlined />}
-              >
-                Chế độ quy định
-              </Menu.Item>
+            <Menu.Item
+              key="/users/regulatory-regime"
+              icon={<FileTextOutlined />}
+            >
+              Chế độ quy định
+            </Menu.Item>
 
-              <Menu.Item key="/users/achievement" icon={<CrownOutlined />}>
-                Khen thưởng
-              </Menu.Item>
-            </Menu>
-          </ConfigProvider>
+            <Menu.Item key="/users/achievement" icon={<CrownOutlined />}>
+              Khen thưởng
+            </Menu.Item>
+          </Menu>
+        </ConfigProvider>
       </Sider>
     );
   }

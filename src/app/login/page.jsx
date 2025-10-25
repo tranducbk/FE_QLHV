@@ -13,45 +13,35 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    const checkToken = async () => {
+    const checkToken = () => {
       const token = localStorage.getItem("token");
       if (token) {
         try {
           const decodedToken = jwtDecode(token);
+          // Redirect SUPER_ADMIN
+          if (decodedToken.role === "SUPER_ADMIN") {
+            router.replace("/supper_admin");
+            return;
+          }
+          // Check admin thường - redirect ngay không cần gọi API
           if (decodedToken.admin === true) {
-            await axios.get(`${BASE_URL}/commander/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            setIsLoggedIn(true);
-            setUserType("admin");
+            router.replace("/admin");
           } else {
-            await axios.get(
-              `${BASE_URL}/student/by-user/${decodedToken.id}`,
-              {
-                headers: {
-                  token: `Bearer ${token}`,
-                },
-              }
-            );
-            setIsLoggedIn(true);
-            setUserType("student");
+            router.replace("/users");
           }
         } catch (error) {
           console.log("Token invalid:", error);
           localStorage.removeItem("token");
+          localStorage.removeItem("accessToken");
         }
       }
     };
 
     checkToken();
-  }, []);
+  }, [router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -66,17 +56,16 @@ const Login = () => {
       localStorage.setItem("token", accessToken);
 
       const decodedToken = jwtDecode(accessToken);
-      setIsLoggedIn(true);
-      setUserType(decodedToken.admin === true ? "admin" : "student");
       handleNotify("success", "Thành công!", "Đăng nhập thành công");
 
-      setTimeout(() => {
-        if (decodedToken.admin === true) {
-          router.push("/admin");
-        } else {
-          router.push("/users");
-        }
-      }, 1000);
+      // Redirect ngay lập tức - dùng replace để không quay lại được
+      if (decodedToken.role === "SUPER_ADMIN") {
+        router.replace("/supper_admin");
+      } else if (decodedToken.admin === true) {
+        router.replace("/admin");
+      } else {
+        router.replace("/users");
+      }
     } catch (error) {
       if (error.response) {
         handleNotify(
@@ -139,21 +128,12 @@ const Login = () => {
                 >
                   Liên hệ
                 </a>
-                {isLoggedIn ? (
-                  <a
-                    href={userType === "admin" ? "/admin" : "/users"}
-                    className="bg-white text-blue-600 px-4 py-2 rounded-full font-semibold hover:bg-white/90 transition-colors"
-                  >
-                    Quản lý Học Viên
-                  </a>
-                ) : (
-                  <a
-                    href="/"
-                    className="bg-white text-blue-600 px-4 py-2 rounded-full font-semibold hover:bg-white/90 transition-colors"
-                  >
-                    Trang chủ
-                  </a>
-                )}
+                <a
+                  href="/"
+                  className="bg-white text-blue-600 px-4 py-2 rounded-full font-semibold hover:bg-white/90 transition-colors"
+                >
+                  Trang chủ
+                </a>
               </div>
             </div>
           </nav>

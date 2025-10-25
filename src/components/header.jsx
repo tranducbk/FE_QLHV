@@ -14,6 +14,7 @@ import {
   MenuOutlined,
   CloseOutlined,
   DownOutlined,
+  BulbOutlined,
 } from "@ant-design/icons";
 import {
   Layout,
@@ -57,7 +58,11 @@ const Header = () => {
       userDetail?.isAdmin === true ||
       userDetail?.isAdmin === "TRUE" ||
       user?.isAdmin === true ||
-      user?.isAdmin === "TRUE"
+      user?.isAdmin === "TRUE" ||
+      userDetail?.role === "ADMIN" ||
+      userDetail?.role === "SUPER_ADMIN" ||
+      user?.role === "ADMIN" ||
+      user?.role === "SUPER_ADMIN"
     );
   };
 
@@ -232,6 +237,7 @@ const Header = () => {
     if (token) {
       try {
         const decodedToken = jwtDecode(token);
+        const isAdmin = checkIsAdmin();
 
         // Đánh dấu đã đọc
         await axios.put(
@@ -252,30 +258,149 @@ const Header = () => {
 
         setDropdownOpen(false);
 
-        // Điều hướng thông minh dựa trên type và link
-        let targetUrl = "/users"; // Default
+        // Điều hướng thông minh dựa trên role (ADMIN hoặc USER)
+        let targetUrl = isAdmin ? "/admin" : "/users"; // Default
 
         if (notification?.link) {
-          // Nếu có link trực tiếp, sử dụng link đó
-          targetUrl = notification.link;
+          // Nếu có link từ backend, điều chỉnh dựa vào role hiện tại
+          // Backend lưu link với /users, nhưng frontend cần chuyển đổi cho đúng role
+          let backendLink = notification.link;
+
+          // Nếu là admin và link bắt đầu bằng /users, chuyển thành /admin
+          if (isAdmin && backendLink.startsWith("/users")) {
+            // Mapping các route từ user sang admin
+            if (backendLink.includes("/semester-results")) {
+              targetUrl = backendLink.replace(
+                "/users/semester-results",
+                "/admin/learning-results"
+              );
+            } else if (backendLink.includes("/tuition-fee")) {
+              targetUrl = backendLink.replace(
+                "/users/tuition-fee",
+                "/admin/tuition-fees"
+              );
+            } else if (backendLink.includes("/yearly-statistics")) {
+              targetUrl = backendLink.replace(
+                "/users/yearly-statistics",
+                "/admin/yearly-statistics"
+              );
+            } else if (backendLink.includes("/time-table")) {
+              targetUrl = backendLink.replace(
+                "/users/time-table",
+                "/admin/time-table"
+              );
+            } else if (backendLink.includes("/cut-rice")) {
+              targetUrl = backendLink.replace(
+                "/users/cut-rice",
+                "/admin/cut-rice"
+              );
+            } else if (backendLink.includes("/commander-duty-schedule")) {
+              targetUrl = backendLink.replace(
+                "/users/commander-duty-schedule",
+                "/admin/commander-duty-schedule"
+              );
+            } else if (backendLink.includes("/achievement")) {
+              targetUrl = backendLink.replace(
+                "/users/achievement",
+                "/admin/achievement"
+              );
+            } else if (backendLink.match(/^\/users\/\d+$/)) {
+              // Pattern: /users/{id} -> /admin/{id}
+              targetUrl = backendLink.replace("/users/", "/admin/");
+            } else if (backendLink === "/users") {
+              targetUrl = "/admin";
+            } else {
+              // Các route khác giữ nguyên hoặc về trang chính
+              targetUrl = "/admin";
+            }
+          } else {
+            // Giữ nguyên link nếu là user hoặc link đã đúng
+            targetUrl = backendLink;
+          }
         } else if (notification?.type) {
-          // Nếu không có link nhưng có type, map type sang URL
+          // Map type sang URL tương ứng theo role
+          const baseRoute = isAdmin ? "/admin" : "/users";
+
           switch (notification.type) {
             case "new_semester":
-              targetUrl = "/users/semester-results";
+            case "semester_result":
+            case "learning_result":
+              // Kết quả học tập
+              targetUrl = isAdmin
+                ? "/admin/learning-results"
+                : "/users/semester-results";
               break;
             case "update_info":
-              targetUrl = `/users/${decodedToken.id}`;
+            case "profile_update":
+              // Thông tin cá nhân
+              targetUrl = `${baseRoute}/${decodedToken.id}`;
               break;
             case "tuition_fee":
-              targetUrl = "/users/tuition-fee";
+            case "payment":
+              // Học phí
+              targetUrl = isAdmin
+                ? "/admin/tuition-fees"
+                : "/users/tuition-fee";
               break;
             case "party_rating":
+              // Xếp loại Đảng viên
+              targetUrl = isAdmin
+                ? "/admin/party-rating"
+                : "/users/yearly-statistics";
+              break;
             case "training_rating":
-              targetUrl = "/users/yearly-statistics";
+              // Xếp loại rèn luyện
+              targetUrl = isAdmin
+                ? "/admin/training-rating"
+                : "/users/yearly-statistics";
+              break;
+            case "yearly_statistics":
+              // Thống kê theo năm
+              targetUrl = isAdmin
+                ? "/admin/yearly-statistics"
+                : "/users/yearly-statistics";
+              break;
+            case "time_table":
+            case "schedule":
+              // Thời khóa biểu / Lịch học
+              targetUrl = isAdmin ? "/admin/time-table" : "/users/time-table";
+              break;
+            case "cut_rice":
+            case "meal":
+              // Cắt cơm
+              targetUrl = isAdmin ? "/admin/cut-rice" : "/users/cut-rice";
+              break;
+            case "commander_duty":
+            case "duty_schedule":
+              // Lịch trực chỉ huy
+              targetUrl = `${baseRoute}/commander-duty-schedule`;
+              break;
+            case "achievement":
+            case "award":
+              // Khen thưởng
+              targetUrl = `${baseRoute}/achievement`;
+              break;
+            case "regulation":
+            case "regulatory_regime":
+              // Chế độ quy định (chỉ user có)
+              targetUrl = isAdmin ? baseRoute : "/users/regulatory-regime";
+              break;
+            case "semester_management":
+              // Quản lý kì học (chỉ admin có)
+              targetUrl = isAdmin ? "/admin/semester-management" : baseRoute;
+              break;
+            case "list_user":
+            case "student_management":
+              // Danh sách học viên (chỉ admin có)
+              targetUrl = isAdmin ? "/admin/list-user" : baseRoute;
+              break;
+            case "statistical":
+              // Thống kê (chỉ admin có)
+              targetUrl = isAdmin ? "/admin/statistical" : baseRoute;
               break;
             default:
-              targetUrl = "/users";
+              // Mặc định về trang tổng quan
+              targetUrl = baseRoute;
           }
         }
 
@@ -333,6 +458,20 @@ const Header = () => {
       className: "hover:bg-gray-50 dark:hover:bg-gray-700",
     },
     {
+      key: "theme",
+      icon: <BulbOutlined className="text-gray-700 dark:text-gray-300" />,
+      label: (
+        <div className="flex items-center justify-between w-full">
+          <span className="text-gray-900 dark:text-white">Chế độ tối</span>
+          <ThemeToggle />
+        </div>
+      ),
+      className: "hover:bg-gray-50 dark:hover:bg-gray-700",
+      onClick: (e) => {
+        e.domEvent.stopPropagation();
+      },
+    },
+    {
       type: "divider",
       className: "border-gray-200 dark:border-gray-600",
     },
@@ -385,6 +524,8 @@ const Header = () => {
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: "vertical",
                       overflow: "hidden",
+                      wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
                     }}
                   >
                     {doc.content}
@@ -547,11 +688,8 @@ const Header = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center space-x-4">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-
-          {/* Notifications - Only for non-admin users */}
-          {isDesktop && !checkIsAdmin() && (
+          {/* Notifications - Only for USER role */}
+          {isDesktop && user?.role === "USER" && (
             <Dropdown
               menu={{
                 items: notificationItems,
@@ -594,11 +732,8 @@ const Header = () => {
 
         {/* Mobile Actions */}
         <div className="flex md:hidden items-center space-x-2">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-
-          {/* Notifications - Only for non-admin users */}
-          {!isDesktop && !checkIsAdmin() && (
+          {/* Notifications - Only for USER role */}
+          {!isDesktop && user?.role === "USER" && (
             <Dropdown
               menu={{
                 items: notificationItems,

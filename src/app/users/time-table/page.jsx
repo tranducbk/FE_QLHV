@@ -256,8 +256,6 @@ const TimeTable = () => {
 
   const fetchTimeTable = async () => {
     const token = localStorage.getItem("token");
-    console.log("DEBUG - fetchTimeTable - studentId:", studentId);
-    console.log("DEBUG - fetchTimeTable - token:", !!token);
 
     if (token && studentId) {
       try {
@@ -269,7 +267,6 @@ const TimeTable = () => {
             },
           }
         );
-        console.log("DEBUG - fetchTimeTable response:", res.data);
 
         // Sắp xếp theo thứ và thời gian bắt đầu
         const sortedTimeTable = res.data.sort((a, b) => {
@@ -294,7 +291,6 @@ const TimeTable = () => {
 
         setTimeTable(sortedTimeTable);
       } catch (error) {
-        console.log(error);
       }
     }
   };

@@ -148,7 +148,6 @@ const CutRice = () => {
           setCutRice(null);
         }
       } catch (error) {
-        console.log(error);
         setCutRice(null);
       }
     }

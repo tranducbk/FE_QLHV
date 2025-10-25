@@ -86,7 +86,6 @@ const YearlyStatistics = () => {
         headers: { token: `Bearer ${token}` },
       });
 
-      console.log("Yearly results data:", res.data);
 
       // Xử lý dữ liệu từ API - đảm bảo có failedSubjects/debtCredits
       const processedData = (res.data || []).map((item) => {
@@ -134,7 +133,6 @@ const YearlyStatistics = () => {
       // Mặc định chọn "Tất cả các năm"
       setSelectedSchoolYear("all");
     } catch (error) {
-      console.log("Error fetching initial data:", error);
       setYearlyResults([]);
       setSchoolYears([]);
       setSelectedSchoolYear("");
@@ -167,7 +165,6 @@ const YearlyStatistics = () => {
         }
       );
 
-      console.log(`Yearly results data for ${year}:`, res.data);
       // Đảm bảo có failedSubjects/debtCredits
       const normalized = (res.data || []).map((item) => {
         const subjects = Array.isArray(item.subjects) ? item.subjects : [];
@@ -186,7 +183,6 @@ const YearlyStatistics = () => {
       });
       setYearlyResults(normalized);
     } catch (error) {
-      console.log("Error fetching yearly results for year:", error);
       setYearlyResults([]);
     }
   };
@@ -203,7 +199,6 @@ const YearlyStatistics = () => {
         headers: { token: `Bearer ${token}` },
       });
 
-      console.log("Yearly results data:", res.data);
 
       // Dữ liệu đã được xử lý từ backend, chỉ cần set
       const processedData = (res.data || []).map((item) => {
@@ -233,7 +228,6 @@ const YearlyStatistics = () => {
       ];
       setAvailableUnits(units);
     } catch (error) {
-      console.log("Error fetching yearly results:", error);
       setYearlyResults([]);
     }
   };
@@ -295,7 +289,6 @@ const YearlyStatistics = () => {
         }
       }
     } catch (error) {
-      console.log("Error fetching student detail:", error);
       handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm của sinh viên");
     }
   };
@@ -357,7 +350,6 @@ const YearlyStatistics = () => {
         }
       }
     } catch (error) {
-      console.log("Error updating rating:", error);
       handleNotify("error", "Lỗi", "Không thể cập nhật xếp loại");
     }
   };

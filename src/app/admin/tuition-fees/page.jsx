@@ -116,9 +116,7 @@ const TuitionFees = () => {
 
         setTuitionFees(res.data);
         // stats sẽ tính lại trong useEffect theo bộ lọc
-      } catch (error) {
-        console.log(error);
-      }
+      } catch (error) {}
     }
   };
 
@@ -153,9 +151,7 @@ const TuitionFees = () => {
       const sorted = [...list].sort(compareSemestersDesc);
       setSemesters(sorted);
       // Mặc định không chọn (hiển thị tất cả)
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (error) {}
   };
 
   const handleSubmit = async (e) => {
@@ -176,9 +172,7 @@ const TuitionFees = () => {
 
         setTuitionFees(res.data);
         // stats sẽ tính lại theo bộ lọc phía dưới
-      } catch (error) {
-        console.log(error);
-      }
+      } catch (error) {}
     }
   };
 
@@ -357,14 +351,6 @@ const TuitionFees = () => {
             ? exportSelectedUnits.join(",")
             : "all";
 
-        console.log("Frontend - Export parameters:", {
-          semesterParam,
-          schoolYearParam,
-          unitParam,
-          exportSelectedSemesters,
-          exportSelectedUnits,
-        });
-
         const response = await axios.get(
           `${BASE_URL}/commander/tuitionFee/pdf?semester=${semesterParam}&schoolYear=${schoolYearParam}&unit=${unitParam}`,
           {
@@ -468,7 +454,7 @@ const TuitionFees = () => {
             ? exportSelectedUnits.join(",")
             : "all";
 
-        console.log("Frontend - Export Word parameters:", {
+        console.log({
           semesterParam,
           schoolYearParam,
           unitParam,

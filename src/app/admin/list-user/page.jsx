@@ -327,7 +327,6 @@ const ListUser = () => {
         );
         setProfile(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -342,7 +341,6 @@ const ListUser = () => {
 
         setUniversities(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -365,7 +363,6 @@ const ListUser = () => {
           await loadStudentsWithSchoolYear(latestSchoolYear);
         }
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -392,7 +389,6 @@ const ListUser = () => {
         );
         setProfile(res.data);
       } catch (error) {
-        console.log(error);
         setProfile([]);
       }
     }
@@ -417,7 +413,6 @@ const ListUser = () => {
 
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -437,7 +432,6 @@ const ListUser = () => {
 
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -457,7 +451,6 @@ const ListUser = () => {
 
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -513,9 +506,6 @@ const ListUser = () => {
           }
         );
 
-        console.log("Student data for edit:", res.data);
-        console.log("Available universities:", universities);
-
         setFormData({
           studentId: res.data.studentId || "",
           fullName: res.data.fullName || "",
@@ -543,7 +533,6 @@ const ListUser = () => {
             : null,
           university: res.data.university || "Đại học Bách Khoa Hà Nội",
           positionParty: res.data.positionParty || "Không",
-
           hometown: res.data.hometown || "",
           ethnicity: res.data.ethnicity || "",
           religion: res.data.religion || "",
@@ -563,13 +552,11 @@ const ListUser = () => {
         ) {
           // Ưu tiên sử dụng university object từ API
           foundUniversity = res.data.university;
-          console.log("University from API:", foundUniversity);
         } else if (res.data.universityId) {
           // Fallback: tìm theo universityId
           foundUniversity = universities.find(
             (u) => u.id === res.data.universityId
           );
-          console.log("University found by universityId:", foundUniversity);
         } else if (
           res.data.university &&
           typeof res.data.university === "string"
@@ -578,48 +565,43 @@ const ListUser = () => {
           foundUniversity = universities.find(
             (u) => u.universityName === res.data.university
           );
-          console.log("University found by name:", foundUniversity);
         }
 
         if (foundUniversity) {
           setSelectedUniversity(foundUniversity);
 
-          // Gọi API để load organizations, education levels, và classes
-          try {
-            // Load organizations
-            const organizations = await fetchOrganizations(foundUniversity.id);
-            setOrganizations(organizations);
+          const organizations = await fetchOrganizations(foundUniversity.id);
+          setOrganizations(organizations);
 
-            // Tìm organization đã chọn
-            let selectedOrgId = null;
-            if (
-              res.data.organization &&
-              typeof res.data.organization === "object" &&
-              res.data.organization.id
-            ) {
-              // Ưu tiên sử dụng organization object từ API
-              selectedOrgId = res.data.organization.id;
-              console.log("Organization from API:", res.data.organization);
-            } else if (res.data.organizationId) {
-              // Fallback: sử dụng organizationId
-              selectedOrgId = res.data.organizationId;
-            } else if (
-              res.data.organization &&
-              typeof res.data.organization === "string"
-            ) {
-              // Fallback: tìm theo tên
-              const selectedOrg = organizations.find(
-                (org) => org.organizationName === res.data.organization
-              );
-              selectedOrgId = selectedOrg?.id;
-            }
+          // Tìm organization đã chọn
+          let selectedOrgId = null;
+          if (
+            res.data.organization &&
+            typeof res.data.organization === "object" &&
+            res.data.organization.id
+          ) {
+            // Ưu tiên sử dụng organization object từ API
+            selectedOrgId = res.data.organization.id;
+          } else if (res.data.organizationId) {
+            // Fallback: sử dụng organizationId
+            selectedOrgId = res.data.organizationId;
+          } else if (
+            res.data.organization &&
+            typeof res.data.organization === "string"
+          ) {
+            // Fallback: tìm theo tên
+            const selectedOrg = organizations.find(
+              (org) => org.organizationName === res.data.organization
+            );
+            selectedOrgId = selectedOrg?.id;
+          }
 
-            if (selectedOrgId) {
-              setSelectedOrganization(selectedOrgId);
+          if (selectedOrgId) {
+            setSelectedOrganization(selectedOrgId);
 
-              // Load education levels
-              const educationLevels = await fetchEducationLevels(selectedOrgId);
-              setEducationLevels(educationLevels);
+            // Load education levels
+            const educationLevels = await fetchEducationLevels(selectedOrgId);
+            setEducationLevels(educationLevels);
 
               // Tìm education level đã chọn
               let selectedLevelId = null;
@@ -630,17 +612,9 @@ const ListUser = () => {
               ) {
                 // Ưu tiên sử dụng education_level object từ API
                 selectedLevelId = res.data.education_level.id;
-                console.log(
-                  "✅ Education level from API:",
-                  res.data.education_level
-                );
               } else if (res.data.educationLevelId) {
                 // Fallback: sử dụng educationLevelId
                 selectedLevelId = res.data.educationLevelId;
-                console.log(
-                  "✅ Education level from educationLevelId:",
-                  selectedLevelId
-                );
               } else if (
                 res.data.educationLevel &&
                 typeof res.data.educationLevel === "object"
@@ -658,7 +632,6 @@ const ListUser = () => {
 
               if (selectedLevelId) {
                 setSelectedLevel(selectedLevelId);
-                console.log("✅ Set selectedLevel:", selectedLevelId);
 
                 // Load classes
                 const classes = await fetchClasses(selectedLevelId);
@@ -673,7 +646,6 @@ const ListUser = () => {
                 ) {
                   // Ưu tiên sử dụng class object từ API
                   selectedClassId = res.data.class.id;
-                  console.log("Class from API:", res.data.class);
                 } else if (res.data.classId) {
                   // Fallback: sử dụng classId
                   selectedClassId = res.data.classId;
@@ -693,14 +665,6 @@ const ListUser = () => {
                 }
               }
             }
-          } catch (error) {
-            console.error("Error loading cascading data:", error);
-          }
-
-          console.log("Selected university set:", foundUniversity);
-        } else {
-          console.log("No university found for:", res.data.university);
-        }
 
         // Load thông tin gia đình và yếu tố nước ngoài vào state
         if (res.data.familyMembers && Array.isArray(res.data.familyMembers)) {
@@ -714,10 +678,6 @@ const ListUser = () => {
             })
           );
           setFamilyMembers(formattedFamilyMembers);
-          console.log(
-            "Loaded family members for edit:",
-            formattedFamilyMembers
-          );
         } else {
           setFamilyMembers([]);
         }
@@ -738,10 +698,6 @@ const ListUser = () => {
             })
           );
           setForeignRelations(formattedForeignRelations);
-          console.log(
-            "Loaded foreign relations for edit:",
-            formattedForeignRelations
-          );
         } else {
           setForeignRelations([]);
         }
@@ -749,7 +705,6 @@ const ListUser = () => {
         setSelectedStudentId(studentId);
         setShowForm(true);
       } catch (error) {
-        console.log(error);
         handleNotify("danger", "Lỗi!", "Không thể tải thông tin học viên");
       }
     }
@@ -856,7 +811,6 @@ const ListUser = () => {
 
     if (event.target.files) {
       const avatar = URL.createObjectURL(event.target.files[0]);
-      console.log(avatar);
       setFormData({
         ...formData,
         avatar: avatar,
@@ -1229,17 +1183,12 @@ const ListUser = () => {
               res.data.educationLevel.length === 24
             ) {
               try {
-                console.log(
-                  "Fetching education level:",
-                  res.data.educationLevel
-                );
                 const educationLevelRes = await axios.get(
                   `${BASE_URL}/university/education-levels/${res.data.educationLevel}`,
                   {
                     headers: { token: `Bearer ${token}` },
                   }
                 );
-                console.log("Education level data:", educationLevelRes.data);
                 setProfileEducationLevel(educationLevelRes.data);
               } catch (error) {
                 console.error("Error fetching education level:", error);
@@ -1252,14 +1201,12 @@ const ListUser = () => {
                 res.data.class.length === 24
               ) {
                 try {
-                  console.log("Fetching class:", res.data.class);
                   const classRes = await axios.get(
                     `${BASE_URL}/university/classes/${res.data.class}`,
                     {
                       headers: { token: `Bearer ${token}` },
                     }
                   );
-                  console.log("Class data:", classRes.data);
                   setProfileClass(classRes.data);
                 } catch (error) {
                   console.error("Error fetching class:", error);
@@ -1271,7 +1218,6 @@ const ListUser = () => {
 
         setShowProfileDetail(true);
       } catch (error) {
-        console.log(error);
       }
     }
   };

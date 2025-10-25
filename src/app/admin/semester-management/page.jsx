@@ -58,7 +58,6 @@ const SemesterManagement = () => {
 
       setSemesters(sortedSemesters);
     } catch (error) {
-      console.log("Error fetching semesters:", error);
       handleNotify("error", "Lỗi", "Không thể tải danh sách học kỳ");
     }
   };
@@ -117,7 +116,6 @@ const SemesterManagement = () => {
       setYearEnd("");
       fetchSemesters();
     } catch (error) {
-      console.log("Error creating semester:", error);
       handleNotify(
         "error",
         "Lỗi",
@@ -191,7 +189,6 @@ const SemesterManagement = () => {
       setEditYearEnd("");
       fetchSemesters();
     } catch (error) {
-      console.log("Error updating semester:", error);
       handleNotify(
         "error",
         "Lỗi",
@@ -214,7 +211,6 @@ const SemesterManagement = () => {
       setSelectedEditSemesterId(null);
       fetchSemesters();
     } catch (error) {
-      console.log("Error deleting semester:", error);
       handleNotify(
         "error",
         "Lỗi",

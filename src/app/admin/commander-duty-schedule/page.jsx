@@ -59,7 +59,6 @@ const CommanderDutySchedule = () => {
 
         setShowFormEdit(true);
       } catch (error) {
-        console.log(error);
         handleNotify("danger", "Lỗi!", "Không thể tải thông tin lịch trực");
       }
     }
@@ -211,7 +210,6 @@ const CommanderDutySchedule = () => {
         if (res.status === 404) setCommanderDutySchedule([]);
         setCommanderDutySchedule(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -228,7 +226,6 @@ const CommanderDutySchedule = () => {
         });
         setCommanders(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -259,7 +256,6 @@ const CommanderDutySchedule = () => {
 
         setCommanderDutySchedule(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };

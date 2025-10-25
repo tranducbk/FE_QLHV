@@ -229,7 +229,6 @@ const TuitionFee = () => {
 
         setTuitionFee(filteredData);
       } catch (error) {
-        console.log(error);
       }
     }
   };
@@ -289,7 +288,6 @@ const TuitionFee = () => {
         // Mặc định hiển thị "Tất cả học kỳ" khi mới vào
         // Không set selectedSemester để giữ giá trị rỗng
       } catch (e) {
-        console.log(e);
       }
     };
     fetchSemesters();

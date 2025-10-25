@@ -30,7 +30,6 @@ const DocumentDetail = ({ params }) => {
 
         setDocumentDetail(res.data);
       } catch (error) {
-        console.log(error);
       }
     }
   };

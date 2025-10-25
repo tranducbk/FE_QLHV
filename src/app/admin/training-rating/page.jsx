@@ -69,7 +69,6 @@ const TrainingRating = () => {
         }
       );
 
-      console.log("Training ratings data:", res.data);
 
       const processedData = res.data || [];
 
@@ -110,7 +109,6 @@ const TrainingRating = () => {
         setSelectedSchoolYear("all");
       }
     } catch (error) {
-      console.log("Error fetching initial data:", error);
       setTrainingRatings([]);
       setSchoolYears([]);
       setSelectedSchoolYear("");
@@ -134,7 +132,6 @@ const TrainingRating = () => {
         }
       );
 
-      console.log(`Training ratings data for ${year}:`, res.data);
       const data = res.data || [];
       setTrainingRatings(data);
       const units = [
@@ -144,7 +141,6 @@ const TrainingRating = () => {
       ];
       setAvailableUnits(units);
     } catch (error) {
-      console.log("Error fetching training ratings for year:", error);
       setTrainingRatings([]);
     }
   };
@@ -293,7 +289,6 @@ const TrainingRating = () => {
             successCount++;
           }
         } catch (error) {
-          console.log(`Error updating student ${student.fullName}:`, error);
           errorCount++;
         }
       }
@@ -317,7 +312,6 @@ const TrainingRating = () => {
         handleNotify("error", "Lỗi", "Không thể cập nhật bất kỳ sinh viên nào");
       }
     } catch (error) {
-      console.log("Error in bulk update:", error);
       handleNotify(
         "error",
         "Lỗi",

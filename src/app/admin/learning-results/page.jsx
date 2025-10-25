@@ -255,9 +255,19 @@ const LearningResults = () => {
 
       if (response.status === 200) {
         handleNotify("success", "Thành công", "Cập nhật xếp loại thành công");
+
+        // Reset state và đóng modal
         setShowUpdateModal(false);
+        setSelectedStudent(null);
+        setUpdateFormData({
+          partyRating: "",
+          trainingRating: "",
+          decisionNumber: "",
+        });
+
         // Khôi phục scroll body khi đóng modal
         document.body.style.overflow = "unset";
+
         // Refresh data
         fetchLearningResults();
       }

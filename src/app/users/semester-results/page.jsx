@@ -18,8 +18,6 @@ const SemesterResults = () => {
   const [semesterResults, setSemesterResults] = useState([]);
   const [showConfirmLearn, setShowConfirmLearn] = useState(false);
   const [learnId, setLearnId] = useState(null);
-  const [isOpenLearningResult, setIsOpenLearningResult] = useState(false);
-  const [editedLearningResult, setEditedLearningResult] = useState({});
   const [editingSemester, setEditingSemester] = useState(null);
   const [viewingSemester, setViewingSemester] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -292,6 +290,18 @@ const SemesterResults = () => {
             )
           );
         }
+
+        // Đóng modal và reset state
+        setShowGradeModal(false);
+        setEditingSemester(null);
+        setGradeSubjects([
+          {
+            subjectCode: "",
+            subjectName: "",
+            credits: "",
+            grade10: "",
+          },
+        ]);
       } else {
         // Thêm mới học kỳ - sử dụng API grade với studentId
         const response = await axios.post(
@@ -312,18 +322,19 @@ const SemesterResults = () => {
           setLearningResult((prev) => [...prev, response.data.semesterResult]);
           setSemesterResults((prev) => [...prev, response.data.semesterResult]);
         }
-      }
 
-      setShowGradeModal(false);
-      setEditingSemester(null);
-      setGradeSubjects([
-        {
-          subjectCode: "",
-          subjectName: "",
-          credits: "",
-          grade10: "",
-        },
-      ]);
+        // Đóng modal và reset state
+        setShowGradeModal(false);
+        setEditingSemester(null);
+        setGradeSubjects([
+          {
+            subjectCode: "",
+            subjectName: "",
+            credits: "",
+            grade10: "",
+          },
+        ]);
+      }
     } catch (err) {
       handleNotify(
         "danger",
@@ -381,17 +392,12 @@ const SemesterResults = () => {
         ]);
       }
 
-      setIsOpenLearningResult(true);
+      setShowGradeModal(true);
     } else {
       console.log("Semester not found for id:", id);
     }
   };
 
-  const handleUpdateLearningResult = async (e) => {
-    // Sử dụng submitSemesterGrades để xử lý cập nhật
-    await submitSemesterGrades(e);
-    setIsOpenLearningResult(false);
-  };
 
   const handleDeleteLearn = (id) => {
     setLearnId(id);
@@ -907,276 +913,7 @@ const SemesterResults = () => {
         </div>
       )}
 
-      {/* Modal Sửa Kết Quả Học Tập */}
-      {isOpenLearningResult && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pt-10 p-4">
-          <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Chỉnh sửa kết quả học tập
-              </h2>
-              <button
-                onClick={() => {
-                  setIsOpenLearningResult(false);
-                  setEditingSemester(null);
-                }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
-              <form onSubmit={submitSemesterGrades} className="p-4">
-                <div className="flex justify-between items-end mb-4">
-                  <div className="flex-1 max-w-xs">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Học kỳ
-                    </label>
-                    <select
-                      value={gradeSemesterCode}
-                      onChange={(e) => setGradeSemesterCode(e.target.value)}
-                      disabled={true}
-                      className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-600"
-                    >
-                      <option value="" disabled>
-                        Chọn học kỳ
-                      </option>
-                      {semesters
-                        .sort((a, b) => {
-                          // Sắp xếp theo năm học (mới nhất trước)
-                          const yearComparison = b.schoolYear.localeCompare(
-                            a.schoolYear
-                          );
-                          if (yearComparison !== 0) return yearComparison;
-
-                          // Nếu cùng năm, sắp xếp theo học kỳ (lớn nhất trước)
-                          const semesterA = a.code.includes(".")
-                            ? parseInt(a.code.split(".")[1])
-                            : 0;
-                          const semesterB = b.code.includes(".")
-                            ? parseInt(b.code.split(".")[1])
-                            : 0;
-                          return semesterB - semesterA;
-                        })
-                        .map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.code.startsWith("HK") && s.schoolYear
-                              ? `${s.code} - ${s.schoolYear}`
-                              : s.schoolYear && s.code.includes(".")
-                              ? `HK${s.code.split(".")[1]} - ${s.schoolYear}`
-                              : s.code}
-                          </option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Không thể thay đổi học kỳ khi đang chỉnh sửa
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addSubjectRow}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md flex items-center gap-2 transition-colors duration-200"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                    Thêm môn học
-                  </button>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-gray-200 dark:border-gray-700 text-sm rounded-lg">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-3 py-2 border-r w-1/5">Mã môn</th>
-                        <th className="px-3 py-2 border-r w-2/5">Tên môn</th>
-                        <th className="px-3 py-2 border-r w-1/5">Tín chỉ</th>
-                        <th className="px-3 py-2 border-r w-1/5">Điểm hệ 10</th>
-                        <th className="px-3 py-2 w-16">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {gradeSubjects.map((row, idx) => (
-                        <tr key={idx} className="border-t">
-                          <td className="px-2 py-2 border-r w-1/5">
-                            <input
-                              type="text"
-                              value={row.subjectCode}
-                              onChange={(e) =>
-                                updateSubjectField(
-                                  idx,
-                                  "subjectCode",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
-                              placeholder="Mã môn"
-                            />
-                          </td>
-                          <td className="px-2 py-2 border-r w-2/5">
-                            <input
-                              type="text"
-                              value={row.subjectName}
-                              onChange={(e) =>
-                                updateSubjectField(
-                                  idx,
-                                  "subjectName",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
-                              placeholder="Tên môn học"
-                            />
-                          </td>
-                          <td className="px-2 py-2 border-r w-1/5">
-                            <input
-                              type="number"
-                              min="0"
-                              value={row.credits}
-                              onChange={(e) =>
-                                updateSubjectField(
-                                  idx,
-                                  "credits",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
-                              placeholder="Tín chỉ"
-                            />
-                          </td>
-                          <td className="px-2 py-2 border-r w-1/5">
-                            <input
-                              type="number"
-                              min="0"
-                              max="10"
-                              step="0.01"
-                              value={row.grade10 || ""}
-                              onChange={(e) =>
-                                updateSubjectField(
-                                  idx,
-                                  "grade10",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
-                              placeholder="0.0"
-                            />
-                          </td>
-                          <td className="px-2 py-2 text-center w-16">
-                            <button
-                              type="button"
-                              onClick={() => removeSubjectRow(idx)}
-                              className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
-                              title="Xóa môn học"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Tổng kết học kỳ */}
-                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                    Tổng kết học kỳ
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {calculateSemesterSummary().totalCredits}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Tổng tín chỉ
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {calculateSemesterSummary().gpa4}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        GPA (Hệ 4)
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                        {calculateSemesterSummary().gpa10}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        GPA (Hệ 10)
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-sm text-gray-600 dark:text-gray-400 text-center">
-                    * Điểm hệ 10 sẽ được tự động chuyển đổi sang điểm chữ và
-                    điểm hệ 4
-                  </div>
-                </div>
-
-                <div className="flex justify-end mt-3">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsOpenLearningResult(false);
-                        setEditingSemester(null);
-                      }}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md"
-                    >
-                      Hủy
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
-                    >
-                      Cập nhật kết quả
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal nhập KQ học tập theo môn */}
+      {/* Modal nhập/sửa KQ học tập theo môn */}
       {showGradeModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pt-10 p-4">
           <div className="bg-black bg-opacity-50 inset-0 fixed"></div>

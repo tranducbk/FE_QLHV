@@ -162,31 +162,32 @@ const TrainingRating = () => {
     if (!token || !selectedStudent) return;
 
     try {
-      const yearlyResultId = selectedStudent.yearlyResultId;
-
-      if (!yearlyResultId) {
-        handleNotify("danger", "Lỗi!", "Không tìm thấy kết quả năm học");
-        return;
-      }
+      const yearlyResultId = selectedStudent.yearlyResultId || "null";
 
       const response = await axios.put(
         `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
         {
           trainingRating: updateFormData.trainingRating,
           studentId: selectedStudent.studentId,
+          schoolYear: selectedStudent.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
         },
         {
           headers: { token: `Bearer ${token}` },
         }
       );
 
-      if (response.status === 200) {
+      if (response.status === 200 || response.status === 201) {
         handleNotify(
           "success",
           "Thành công",
           "Cập nhật xếp loại rèn luyện thành công"
         );
         setShowUpdateModal(false);
+        setSelectedStudent(null);
+        setUpdateFormData({
+          trainingRating: "",
+        });
+
         if (selectedSchoolYear === "all") {
           fetchInitialData();
         } else {
@@ -195,7 +196,8 @@ const TrainingRating = () => {
       }
     } catch (error) {
       console.log("Error updating training rating:", error);
-      handleNotify("error", "Lỗi", "Không thể cập nhật xếp loại rèn luyện");
+      const errorMsg = error.response?.data?.message || "Không thể cập nhật xếp loại rèn luyện";
+      handleNotify("error", "Lỗi", errorMsg);
     }
   };
 
@@ -273,18 +275,21 @@ const TrainingRating = () => {
 
       for (const student of studentsToUpdate) {
         try {
+          const yearlyResultId = student.yearlyResultId || "null";
+
           const response = await axios.put(
-            `${BASE_URL}/commander/updateStudentRating/${student.yearlyResultId}`,
+            `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
             {
               trainingRating: bulkUpdateData.trainingRating,
               studentId: student.studentId,
+              schoolYear: student.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
             },
             {
               headers: { token: `Bearer ${token}` },
             }
           );
 
-          if (response.status === 200) {
+          if (response.status === 200 || response.status === 201) {
             successCount++;
           }
         } catch (error) {

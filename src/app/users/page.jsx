@@ -44,26 +44,8 @@ export default function Home() {
     return null;
   };
 
-  const fetchLearningResult = async (sid) => {
-    const token = localStorage.getItem("token");
-
-    if (token && sid) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/student/${sid}/learning-information`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        setLearningResult(res.data);
-      } catch (error) {
-        console.log(error);
-      }
-    }
-  };
+  // Removed: fetchLearningResult - API không tồn tại
+  // Dữ liệu learning result đã có trong semesterResults
 
   const fetchSemesterResults = async (sid) => {
     const token = localStorage.getItem("token");
@@ -237,7 +219,6 @@ export default function Home() {
       const sid = studentId || await fetchStudentId();
       if (sid) {
         await Promise.all([
-          fetchLearningResult(sid),
           fetchSemesterResults(sid),
           fetchTuitionFee(sid),
           fetchTimeTable(sid),
@@ -262,7 +243,6 @@ export default function Home() {
         const sid = await fetchStudentId();
         if (sid) {
           await Promise.all([
-            fetchLearningResult(sid),
             fetchSemesterResults(sid),
             fetchTuitionFee(sid),
             fetchTimeTable(sid),

@@ -166,12 +166,7 @@ const PartyRating = () => {
     if (!token || !selectedStudent) return;
 
     try {
-      const yearlyResultId = selectedStudent.yearlyResultId;
-
-      if (!yearlyResultId) {
-        handleNotify("danger", "Lỗi!", "Không tìm thấy kết quả năm học");
-        return;
-      }
+      const yearlyResultId = selectedStudent.yearlyResultId || "null";
 
       const response = await axios.put(
         `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
@@ -179,19 +174,26 @@ const PartyRating = () => {
           partyRating: updateFormData.partyRating,
           decisionNumber: updateFormData.decisionNumber,
           studentId: selectedStudent.studentId,
+          schoolYear: selectedStudent.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
         },
         {
           headers: { token: `Bearer ${token}` },
         }
       );
 
-      if (response.status === 200) {
+      if (response.status === 200 || response.status === 201) {
         handleNotify(
           "success",
           "Thành công",
           "Cập nhật xếp loại Đảng viên thành công"
         );
         setShowUpdateModal(false);
+        setSelectedStudent(null);
+        setUpdateFormData({
+          partyRating: "",
+          decisionNumber: "",
+        });
+
         if (selectedSchoolYear === "all") {
           fetchInitialData();
         } else {
@@ -200,7 +202,8 @@ const PartyRating = () => {
       }
     } catch (error) {
       console.log("Error updating party rating:", error);
-      handleNotify("error", "Lỗi", "Không thể Cập nhật xếp loại Đảng viên");
+      const errorMsg = error.response?.data?.message || "Không thể cập nhật xếp loại Đảng viên";
+      handleNotify("error", "Lỗi", errorMsg);
     }
   };
 
@@ -281,19 +284,22 @@ const PartyRating = () => {
 
       for (const student of studentsToUpdate) {
         try {
+          const yearlyResultId = student.yearlyResultId || "null";
+
           const response = await axios.put(
-            `${BASE_URL}/commander/updateStudentRating/${student.yearlyResultId}`,
+            `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
             {
               partyRating: bulkUpdateData.partyRating,
               decisionNumber: bulkUpdateData.decisionNumber,
               studentId: student.studentId,
+              schoolYear: student.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
             },
             {
               headers: { token: `Bearer ${token}` },
             }
           );
 
-          if (response.status === 200) {
+          if (response.status === 200 || response.status === 201) {
             successCount++;
           }
         } catch (error) {

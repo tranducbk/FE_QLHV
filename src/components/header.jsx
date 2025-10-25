@@ -51,13 +51,24 @@ const Header = () => {
   const { token: themeToken } = theme.useToken();
   const { theme: currentTheme } = useThemeContext();
 
+  // Helper function để check admin (xử lý cả boolean và string)
+  const checkIsAdmin = () => {
+    return (
+      userDetail?.isAdmin === true ||
+      userDetail?.isAdmin === "TRUE" ||
+      user?.isAdmin === true ||
+      user?.isAdmin === "TRUE"
+    );
+  };
+
   useEffect(() => {
-    fetchDocuments();
-
-    const interval = setInterval(fetchDocuments, 50000);
-
-    return () => clearInterval(interval);
-  }, []);
+    // Chỉ fetch notifications nếu đã có thông tin user
+    if (user !== null) {
+      fetchDocuments();
+      const interval = setInterval(fetchDocuments, 50000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -70,19 +81,34 @@ const Header = () => {
 
   const fetchDocuments = async () => {
     const token = localStorage.getItem("token");
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/commander/studentNotifications/${jwtDecode(token).id}`,
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
-      );
+    if (!token) return;
 
-      setDocuments(res.data);
+    try {
+      const decodedToken = jwtDecode(token);
+
+      // CHỈ fetch notifications cho student
+      // Admin sẽ nhận thông báo từ hệ thống khác (khi student cập nhật data)
+      if (!checkIsAdmin()) {
+        const res = await axios.get(
+          `${BASE_URL}/commander/studentNotifications/${decodedToken.id}`,
+          {
+            headers: {
+              token: `Bearer ${token}`,
+            },
+          }
+        );
+        setDocuments(res.data || []);
+      } else {
+        // TODO: Implement admin notifications
+        // Admin sẽ nhận thông báo khi:
+        // - Student cập nhật học phí
+        // - Student cập nhật kết quả học tập
+        // - Student cập nhật thông tin cá nhân
+        setDocuments([]);
+      }
     } catch (error) {
       console.log(error);
+      setDocuments([]);
     }
   };
 
@@ -162,6 +188,7 @@ const Header = () => {
         });
 
         setUser(res.data);
+        console.log(res.data);
       } catch (error) {
         console.log(error);
       }
@@ -198,13 +225,15 @@ const Header = () => {
     setDropdownOpen(false);
   };
 
-  const handleUpdateIsRead = async (e, notificationId) => {
+  const handleUpdateIsRead = async (e, notificationId, notification) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
 
     if (token) {
       try {
         const decodedToken = jwtDecode(token);
+
+        // Đánh dấu đã đọc
         await axios.put(
           `${BASE_URL}/commander/notification/${decodedToken.id}/${notificationId}`,
           { isRead: true },
@@ -214,14 +243,43 @@ const Header = () => {
             },
           }
         );
+
         setDocuments((prevDocs) =>
           prevDocs.map((doc) =>
             doc.id === notificationId ? { ...doc, isRead: true } : doc
           )
         );
-        // Điều hướng đến trang kết quả học tập
+
         setDropdownOpen(false);
-        router.push(`/users/learning-information?tab=results`);
+
+        // Điều hướng thông minh dựa trên type và link
+        let targetUrl = "/users"; // Default
+
+        if (notification?.link) {
+          // Nếu có link trực tiếp, sử dụng link đó
+          targetUrl = notification.link;
+        } else if (notification?.type) {
+          // Nếu không có link nhưng có type, map type sang URL
+          switch (notification.type) {
+            case "new_semester":
+              targetUrl = "/users/semester-results";
+              break;
+            case "update_info":
+              targetUrl = `/users/${decodedToken.id}`;
+              break;
+            case "tuition_fee":
+              targetUrl = "/users/tuition-fee";
+              break;
+            case "party_rating":
+            case "training_rating":
+              targetUrl = "/users/yearly-statistics";
+              break;
+            default:
+              targetUrl = "/users";
+          }
+        }
+
+        router.push(targetUrl);
       } catch (error) {
         console.log(error);
       }
@@ -238,9 +296,7 @@ const Header = () => {
       icon: <UserOutlined className="text-gray-700 dark:text-gray-300" />,
       label: (
         <Link
-          href={
-            user?.isAdmin === true ? `/admin/${user?.id}` : `/users/${user?.id}`
-          }
+          href={checkIsAdmin() ? `/admin/${user?.id}` : `/users/${user?.id}`}
           className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 block w-full"
         >
           <Space direction="vertical" size={0}>
@@ -307,8 +363,9 @@ const Header = () => {
                   : themeToken.colorPrimaryBg,
                 border: `1px solid ${themeToken.colorBorder}`,
                 opacity: doc.isRead ? 0.7 : 1,
+                cursor: "pointer",
               }}
-              onClick={(e) => handleUpdateIsRead(e, doc.id)}
+              onClick={(e) => handleUpdateIsRead(e, doc.id, doc)}
             >
               <Space direction="vertical" size={4} style={{ width: "100%" }}>
                 <Space>
@@ -319,17 +376,22 @@ const Header = () => {
                     </Tag>
                   )}
                 </Space>
-                {doc?.author &&
-                  !(
-                    typeof doc.author === "string" &&
-                    /^(?=.*[a-fA-F])[a-fA-F0-9]{24}$/.test(doc.author)
-                  ) && (
-                    <Text type="secondary" style={{ fontSize: "12px" }}>
-                      {doc.author}
-                    </Text>
-                  )}
-                <Text type="secondary" style={{ fontSize: "12px" }}>
-                  {dayjs(doc.dateIssued).format("DD/MM/YYYY")}
+                {doc?.content && (
+                  <Text
+                    type="secondary"
+                    style={{
+                      fontSize: "12px",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {doc.content}
+                  </Text>
+                )}
+                <Text type="secondary" style={{ fontSize: "11px" }}>
+                  {dayjs(doc.createdAt).format("DD/MM/YYYY HH:mm")}
                 </Text>
               </Space>
             </Card>
@@ -362,9 +424,7 @@ const Header = () => {
       icon: <UserOutlined className="text-gray-700 dark:text-gray-300" />,
       label: (
         <Link
-          href={
-            user?.isAdmin === true ? `/admin/${user?.id}` : `/users/${user?.id}`
-          }
+          href={checkIsAdmin() ? `/admin/${user?.id}` : `/users/${user?.id}`}
           onClick={() => setMobileMenuOpen(false)}
           className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 block w-full"
         >
@@ -440,7 +500,7 @@ const Header = () => {
       className="theme-button-secondary"
     >
       <Avatar
-        src={user?.avatar}
+        src={userDetail?.avatar || user?.avatar}
         icon={<UserOutlined />}
         size="small"
         style={{ marginRight: 8 }}
@@ -453,7 +513,7 @@ const Header = () => {
           type="secondary"
           className="text-xs leading-tight theme-text-secondary"
         >
-          {user?.isAdmin ? "Quản trị viên" : "Học viên"}
+          {checkIsAdmin() ? "Quản trị viên" : "Học viên"}
         </Text>
       </div>
       <DownOutlined className="text-xs theme-icon" />
@@ -475,7 +535,7 @@ const Header = () => {
         {/* Logo and Brand */}
         <div className="flex items-center">
           <Link
-            href={`/${user?.isAdmin ? "admin" : "users"}`}
+            href={`/${checkIsAdmin() ? "admin" : "users"}`}
             className="flex items-center"
           >
             <img src="/image.png" className="h-8 md:h-10 mr-3" alt="H5 Logo" />
@@ -491,23 +551,24 @@ const Header = () => {
           <ThemeToggle />
 
           {/* Notifications - Only for non-admin users */}
-          {isDesktop && !user?.isAdmin && (
+          {isDesktop && !checkIsAdmin() && (
             <Dropdown
               menu={{
                 items: notificationItems,
                 className:
-                  "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+                  "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 notification-dropdown-menu",
                 style: {
-                  maxHeight: "400px",
+                  maxHeight: "500px",
                   overflowY: "auto",
-                  width: "320px",
+                  width: "360px",
+                  padding: "8px",
                 },
               }}
               open={dropdownOpen}
               onOpenChange={setDropdownOpen}
               placement="bottomRight"
               trigger={[]}
-              overlayClassName="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+              overlayClassName="notification-dropdown"
             >
               <Badge count={unreadCount} size="small">
                 <NotificationButton />
@@ -537,23 +598,24 @@ const Header = () => {
           <ThemeToggle />
 
           {/* Notifications - Only for non-admin users */}
-          {!isDesktop && !user?.isAdmin && (
+          {!isDesktop && !checkIsAdmin() && (
             <Dropdown
               menu={{
                 items: notificationItems,
                 className:
-                  "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
+                  "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 notification-dropdown-menu",
                 style: {
-                  maxHeight: "300px",
+                  maxHeight: "400px",
                   overflowY: "auto",
-                  width: "280px",
+                  width: "300px",
+                  padding: "8px",
                 },
               }}
               open={dropdownOpen}
               onOpenChange={setDropdownOpen}
               placement="bottomRight"
               trigger={[]}
-              overlayClassName="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
+              overlayClassName="notification-dropdown"
             >
               <Badge count={unreadCount} size="small">
                 <NotificationButton />

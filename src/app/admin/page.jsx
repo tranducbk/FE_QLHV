@@ -4,6 +4,8 @@ import Link from "next/link";
 import axios from "axios";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { jwtDecode } from "jwt-decode";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
 import { BASE_URL } from "@/configs";
@@ -29,6 +31,23 @@ import {
 const { Title, Text } = Typography;
 
 export default function Home() {
+  const router = useRouter();
+
+  // Redirect SUPER_ADMIN về trang quản lý admin users
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token") || localStorage.getItem("accessToken");
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        if (decodedToken.role === "SUPER_ADMIN") {
+          router.push("/supper_admin");
+        }
+      } catch (error) {
+        console.error("Error decoding token:", error);
+      }
+    }
+  }, [router]);
   const [learningResult, setLearningResult] = useState(null);
   const [student, setStudent] = useState(null);
   const [cutRice, setCutRice] = useState(null);

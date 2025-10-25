@@ -86,14 +86,11 @@ export default function Home() {
 
     if (token && sid) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/student/${sid}/tuition-fee`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await axios.get(`${BASE_URL}/student/${sid}/tuition-fee`, {
+          headers: {
+            token: `Bearer ${token}`,
+          },
+        });
 
         setTuitionFee(res.data);
       } catch (error) {
@@ -106,14 +103,11 @@ export default function Home() {
 
     if (token && sid) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/student/${sid}/time-table`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await axios.get(`${BASE_URL}/student/${sid}/time-table`, {
+          headers: {
+            token: `Bearer ${token}`,
+          },
+        });
 
         setTimeTable(res.data);
       } catch (error) {
@@ -126,14 +120,11 @@ export default function Home() {
 
     if (token && sid) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/student/${sid}/cut-rice`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await axios.get(`${BASE_URL}/student/${sid}/cut-rice`, {
+          headers: {
+            token: `Bearer ${token}`,
+          },
+        });
 
         if (res.data && typeof res.data === "object") {
           setCutRice(res.data);
@@ -166,14 +157,11 @@ export default function Home() {
 
     if (token && sid) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/achievement/${sid}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await axios.get(`${BASE_URL}/achievement/${sid}`, {
+          headers: {
+            token: `Bearer ${token}`,
+          },
+        });
 
         setAchievement(res.data);
       } catch (error) {
@@ -220,7 +208,7 @@ export default function Home() {
     setIsRefreshing(true);
     try {
       // Get studentId first if not available
-      const sid = studentId || await fetchStudentId();
+      const sid = studentId || (await fetchStudentId());
       if (sid) {
         await Promise.all([
           fetchSemesterResults(sid),
@@ -917,10 +905,7 @@ export default function Home() {
             </Link>
 
             {/* Học phí */}
-            <Link
-              href="/users/learning-information?tab=tuition-fee"
-              className="group"
-            >
+            <Link href="/users/tuition-fee" className="group">
               <div className="bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-900/20 dark:to-purple-900/20 rounded-2xl p-6 shadow-lg border border-violet-200 dark:border-violet-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-violet-100 dark:bg-violet-900/30 rounded-xl">

@@ -250,7 +250,8 @@ export default function Home() {
 
   useEffect(() => {
     initialLoad();
-  }, [withLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Chỉ chạy 1 lần khi component mount
 
   // Tính toán thống kê
   const getLatestSemester = () => {

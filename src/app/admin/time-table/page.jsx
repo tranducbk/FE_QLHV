@@ -65,11 +65,6 @@ const TimeTable = () => {
         if (item.subject) student.subjects.push(item.subject);
         if (item.classroom) student.classrooms.push(item.classroom);
         if (item.schoolWeek) student.weeks.push(item.schoolWeek);
-
-        // Debug log để kiểm tra dữ liệu
-          `Student: ${item.fullName}, Classroom: ${item.classroom}, All classrooms:`,
-          student.classrooms
-        );
       });
 
       const students = Array.from(studentsMap.values()).map((student) => ({

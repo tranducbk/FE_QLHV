@@ -345,3 +345,52 @@ body::-webkit-scrollbar,
 .dark-notification .ant-notification-notice-description {
   color: #e5e7eb !important;
 }
+
+/* Notification Dropdown Scrollbar Styles */
+.notification-dropdown-menu {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.notification-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+  display: block !important;
+}
+
+.notification-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.notification-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.notification-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Dark mode scrollbar for notification dropdown */
+.dark .notification-dropdown-menu {
+  scrollbar-color: #4b5563 transparent;
+}
+
+.dark .notification-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark .notification-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Smooth scroll behavior */
+.notification-dropdown-menu {
+  scroll-behavior: smooth;
+}
+
+/* Add padding to prevent scrollbar from covering content */
+.notification-dropdown .ant-dropdown-menu-item {
+  padding-right: 12px !important;
+}

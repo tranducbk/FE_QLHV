@@ -223,7 +223,6 @@ export default function Home() {
       const sid = studentId || await fetchStudentId();
       if (sid) {
         await Promise.all([
-          fetchLearningResult(sid),
           fetchSemesterResults(sid),
           fetchTuitionFee(sid),
           fetchTimeTable(sid),
@@ -248,7 +247,6 @@ export default function Home() {
         const sid = await fetchStudentId();
         if (sid) {
           await Promise.all([
-            fetchLearningResult(sid),
             fetchSemesterResults(sid),
             fetchTuitionFee(sid),
             fetchTimeTable(sid),

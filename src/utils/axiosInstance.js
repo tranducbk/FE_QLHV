@@ -15,7 +15,23 @@ const axiosInstance = axios.create({
   timeout: 30000, // 30 giây timeout
 });
 
-// KHÔNG CẦN request interceptor vì token trong httpOnly cookie tự động gửi
+// Request interceptor để debug cookies
+axiosInstance.interceptors.request.use(
+  (config) => {
+    console.log(
+      "🍪 Request interceptor - Cookies being sent:",
+      document.cookie
+    );
+    console.log("🍪 Request URL:", config.url);
+    console.log("🍪 withCredentials:", config.withCredentials);
+    console.log("🍪 Base URL:", config.baseURL);
+    return config;
+  },
+  (error) => {
+    console.error("🍪 Request interceptor error:", error);
+    return Promise.reject(error);
+  }
+);
 
 // Response interceptor: Tự động refresh token khi 401
 let isRefreshing = false;

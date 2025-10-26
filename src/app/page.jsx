@@ -30,23 +30,36 @@ export default function HomePage() {
   useEffect(() => {
     const checkToken = async () => {
       try {
+        console.log("🔍 Checking token on home page...");
+
         // Lấy thông tin user từ API
         const userRes = await axiosInstance.get("/user/me");
         const userData = userRes.data;
 
+        console.log("🔍 User data:", userData);
+
         // Sử dụng utility function để kiểm tra role
         if (isAdmin(userData)) {
+          console.log("🔍 User is admin, checking commander...");
           // Kiểm tra commander role
           await axiosInstance.get(`/commander/${userData.id}`);
           setIsLoggedIn(true);
           setUserType("admin");
+          console.log("✅ Admin user logged in");
         } else {
+          console.log("🔍 User is student, checking student...");
           // Kiểm tra student role
           await axiosInstance.get(`/student/by-user/${userData.id}`);
           setIsLoggedIn(true);
           setUserType("student");
+          console.log("✅ Student user logged in");
         }
       } catch (error) {
+        console.log(
+          "❌ Token check failed:",
+          error.response?.status,
+          error.message
+        );
         // Handle token validation error - axiosInstance sẽ tự động xử lý
         setIsLoggedIn(false);
         setUserType(null);

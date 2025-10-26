@@ -263,6 +263,28 @@ const TuitionFees = () => {
     return sum + val;
   }, 0);
 
+  const formatNumberWithCommas = (number) => {
+    if (number == null) {
+      return "0";
+    }
+    // Loại bỏ tất cả ký tự không phải số trước khi format
+    let numStr = number.toString().replace(/[^0-9]/g, "");
+
+    if (!numStr || numStr === "0") {
+      return "0";
+    }
+
+    // Tách chuỗi thành các mảng con với 3 ký tự
+    let parts = [];
+    while (numStr.length > 3) {
+      parts.unshift(numStr.slice(-3));
+      numStr = numStr.slice(0, -3);
+    }
+    parts.unshift(numStr);
+
+    return parts.join(".");
+  };
+
   const updatePaymentStatus = async (studentId, feeId, nextStatus) => {
     try {
       const res = await axiosInstance.put(
@@ -279,132 +301,108 @@ const TuitionFees = () => {
         "Không thể cập nhật trạng thái học phí";
       handleNotify("error", "Lỗi!", errorMessage);
     }
+  };
 
-    const formatNumberWithCommas = (number) => {
-      if (number == null) {
-        return "0";
-      }
-      // Loại bỏ tất cả ký tự không phải số trước khi format
-      let numStr = number.toString().replace(/[^0-9]/g, "");
+  const handleExportFilePdf = async () => {
+    try {
+      // Tạo tham số cho API
+      const semesterParam =
+        exportSelectedSemesters.length > 0
+          ? exportSelectedSemesters
+              .map((semesterId) => {
+                const semester = semesters.find((s) => s.id === semesterId);
+                return semester?.code;
+              })
+              .join(",")
+          : "all";
 
-      if (!numStr || numStr === "0") {
-        return "0";
-      }
+      const schoolYearParam =
+        exportSelectedSemesters.length > 0
+          ? exportSelectedSemesters
+              .map((semesterId) => {
+                const semester = semesters.find((s) => s.id === semesterId);
+                return semester?.schoolYear;
+              })
+              .filter(Boolean)
+              .join(",")
+          : "all";
 
-      // Tách chuỗi thành các mảng con với 3 ký tự
-      let parts = [];
-      while (numStr.length > 3) {
-        parts.unshift(numStr.slice(-3));
-        numStr = numStr.slice(0, -3);
-      }
-      parts.unshift(numStr);
+      const unitParam =
+        exportSelectedUnits.length > 0 ? exportSelectedUnits.join(",") : "all";
 
-      return parts.join(".");
-    };
+      console.log("Frontend - Export parameters:", {
+        semesterParam,
+        schoolYearParam,
+        unitParam,
+        exportSelectedSemesters,
+        exportSelectedUnits,
+      });
 
-    const handleExportFilePdf = async () => {
-      try {
-        // Tạo tham số cho API
-        const semesterParam =
-          exportSelectedSemesters.length > 0
-            ? exportSelectedSemesters
-                .map((semesterId) => {
-                  const semester = semesters.find((s) => s.id === semesterId);
-                  return semester?.code;
-                })
-                .join(",")
-            : "all";
-
-        const schoolYearParam =
-          exportSelectedSemesters.length > 0
-            ? exportSelectedSemesters
-                .map((semesterId) => {
-                  const semester = semesters.find((s) => s.id === semesterId);
-                  return semester?.schoolYear;
-                })
-                .filter(Boolean)
-                .join(",")
-            : "all";
-
-        const unitParam =
-          exportSelectedUnits.length > 0
-            ? exportSelectedUnits.join(",")
-            : "all";
-
-        console.log("Frontend - Export parameters:", {
-          semesterParam,
-          schoolYearParam,
-          unitParam,
-          exportSelectedSemesters,
-          exportSelectedUnits,
-        });
-
-        const response = await axiosInstance.get(
-          `/commander/tuitionFee/pdf?semester=${semesterParam}&schoolYear=${schoolYearParam}&unit=${unitParam}`,
-          {
-            responseType: "blob",
-          }
-        );
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        // Tạo tên file động dựa trên các tham số được chọn
-        let fileName = "Thong_ke_hoc_phi_he_hoc_vien_5";
-
-        // Thêm thông tin học kỳ
-        if (exportSelectedSemesters.length > 0) {
-          const semesterCodes = exportSelectedSemesters
-            .map((semesterId) => {
-              const semester = semesters.find((s) => s.id === semesterId);
-              return semester?.code;
-            })
-            .filter(Boolean);
-          fileName += `_${semesterCodes.join("_")}`;
-        } else {
-          fileName += "_tat_ca_hoc_ky";
+      const response = await axiosInstance.get(
+        `/commander/tuitionFee/pdf?semester=${semesterParam}&schoolYear=${schoolYearParam}&unit=${unitParam}`,
+        {
+          responseType: "blob",
         }
+      );
 
-        // Thêm thông tin năm học
-        if (exportSelectedSemesters.length > 0) {
-          const schoolYears = exportSelectedSemesters
-            .map((semesterId) => {
-              const semester = semesters.find((s) => s.id === semesterId);
-              return semester?.schoolYear;
-            })
-            .filter(Boolean);
-          // Loại bỏ các năm học trùng lặp
-          const uniqueSchoolYears = [...new Set(schoolYears)];
-          fileName += `_${uniqueSchoolYears.join("_")}`;
-        } else {
-          fileName += "_tat_ca_nam_hoc";
-        }
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      // Tạo tên file động dựa trên các tham số được chọn
+      let fileName = "Thong_ke_hoc_phi_he_hoc_vien_5";
 
-        // Thêm thông tin đơn vị
-        if (exportSelectedUnits.length > 0) {
-          fileName += `_${exportSelectedUnits.join("_")}`;
-        } else {
-          fileName += "_tat_ca_don_vi";
-        }
-
-        fileName += ".pdf";
-
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-
-        // Đóng modal và reset
-        setShowExportModal(false);
-        setExportSelectedSemesters([]);
-        setExportSelectedUnits([]);
-
-        handleNotify("success", "Thành công", "Đã xuất file PDF");
-      } catch (error) {
-        console.error("Lỗi tải xuống file", error);
-        handleNotify("error", "Lỗi", "Không thể xuất file PDF");
+      // Thêm thông tin học kỳ
+      if (exportSelectedSemesters.length > 0) {
+        const semesterCodes = exportSelectedSemesters
+          .map((semesterId) => {
+            const semester = semesters.find((s) => s.id === semesterId);
+            return semester?.code;
+          })
+          .filter(Boolean);
+        fileName += `_${semesterCodes.join("_")}`;
+      } else {
+        fileName += "_tat_ca_hoc_ky";
       }
-    };
+
+      // Thêm thông tin năm học
+      if (exportSelectedSemesters.length > 0) {
+        const schoolYears = exportSelectedSemesters
+          .map((semesterId) => {
+            const semester = semesters.find((s) => s.id === semesterId);
+            return semester?.schoolYear;
+          })
+          .filter(Boolean);
+        // Loại bỏ các năm học trùng lặp
+        const uniqueSchoolYears = [...new Set(schoolYears)];
+        fileName += `_${uniqueSchoolYears.join("_")}`;
+      } else {
+        fileName += "_tat_ca_nam_hoc";
+      }
+
+      // Thêm thông tin đơn vị
+      if (exportSelectedUnits.length > 0) {
+        fileName += `_${exportSelectedUnits.join("_")}`;
+      } else {
+        fileName += "_tat_ca_don_vi";
+      }
+
+      fileName += ".pdf";
+
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+
+      // Đóng modal và reset
+      setShowExportModal(false);
+      setExportSelectedSemesters([]);
+      setExportSelectedUnits([]);
+
+      handleNotify("success", "Thành công", "Đã xuất file PDF");
+    } catch (error) {
+      console.error("Lỗi tải xuống file", error);
+      handleNotify("error", "Lỗi", "Không thể xuất file PDF");
+    }
   };
 
   const handleExportFileWord = async () => {

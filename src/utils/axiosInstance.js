@@ -15,7 +15,7 @@ const axiosInstance = axios.create({
   timeout: 30000, // 30 giây timeout
 });
 
-// Request interceptor để debug cookies
+// Request interceptor để debug cookies và fallback localStorage
 axiosInstance.interceptors.request.use(
   (config) => {
     console.log(
@@ -25,6 +25,18 @@ axiosInstance.interceptors.request.use(
     console.log("🍪 Request URL:", config.url);
     console.log("🍪 withCredentials:", config.withCredentials);
     console.log("🍪 Base URL:", config.baseURL);
+
+    // Fallback: Nếu cookies không có, gửi token từ localStorage
+    if (
+      !document.cookie.includes("accessToken") &&
+      localStorage.getItem("accessToken")
+    ) {
+      console.log("💾 Fallback: Using localStorage token");
+      config.headers.Authorization = `Bearer ${localStorage.getItem(
+        "accessToken"
+      )}`;
+    }
+
     return config;
   },
   (error) => {
@@ -84,7 +96,7 @@ axiosInstance.interceptors.response.use(
         console.log("🔄 Attempting to refresh token...");
 
         // Gọi API refresh token (cookie tự động gửi refreshToken)
-        await axiosInstance.post(
+        const refreshResponse = await axiosInstance.post(
           `/user/refresh-token`,
           {},
           {
@@ -92,6 +104,16 @@ axiosInstance.interceptors.response.use(
             timeout: 10000, // 10 giây timeout
           }
         );
+
+        // Fallback: Nếu cookies không hoạt động, lưu token mới vào localStorage
+        if (refreshResponse.data.accessToken) {
+          console.log("💾 Fallback: Saving new token to localStorage");
+          localStorage.setItem("accessToken", refreshResponse.data.accessToken);
+          localStorage.setItem(
+            "refreshToken",
+            refreshResponse.data.refreshToken
+          );
+        }
 
         console.log("✅ Token refreshed successfully");
 

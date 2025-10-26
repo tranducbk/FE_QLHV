@@ -24,11 +24,30 @@ const Login = () => {
         password,
       });
 
-      const { user } = res.data;
+      const { user, accessToken, refreshToken } = res.data;
 
       console.log("🔐 Login successful, user data:", user);
       console.log("🔐 Response headers:", res.headers);
       console.log("🔐 Cookies should be set by backend");
+
+      // Kiểm tra cookies ngay sau login
+      console.log("🍪 Current cookies after login:", document.cookie);
+      console.log("🍪 Response Set-Cookie headers:", res.headers["set-cookie"]);
+
+      // Đợi một chút để cookies được set
+      setTimeout(() => {
+        console.log("🍪 Cookies after timeout:", document.cookie);
+
+        // Fallback: Nếu cookies không có, lưu vào localStorage
+        if (!document.cookie.includes("accessToken")) {
+          console.log("⚠️ Cookies not set, using localStorage fallback");
+          localStorage.setItem("accessToken", accessToken);
+          localStorage.setItem("refreshToken", refreshToken);
+          console.log("💾 Tokens saved to localStorage");
+        } else {
+          console.log("✅ Cookies working, no localStorage needed");
+        }
+      }, 100);
 
       handleNotify("success", "Thành công!", "Đăng nhập thành công");
 

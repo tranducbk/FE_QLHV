@@ -307,81 +307,68 @@ const CutRice = () => {
     }
   };
 
-  const handleEditClick = async (cutRiceItem) => {
+  const handleEditClick = (cutRiceItem) => {
     setSelectedStudent(cutRiceItem);
+
+    // Điền formData với dữ liệu từ cutRiceItem (đã có sẵn từ table)
+    setFormData({
+      monday: cutRiceItem.monday || {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
+      tuesday: cutRiceItem.tuesday || {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
+      wednesday: cutRiceItem.wednesday || {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
+      thursday: cutRiceItem.thursday || {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
+      friday: cutRiceItem.friday || {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
+      saturday: cutRiceItem.saturday || {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
+      sunday: cutRiceItem.sunday || {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
+    });
+
     // Ngăn scroll ở body khi modal mở
     document.body.style.overflow = "hidden";
-    try {
-      const res = await axiosInstance.get(
-        `/commander/cutRice/${cutRiceItem.id}`
-      );
-      // Nếu API trả về mảng, lấy phần tử đầu tiên
-      const currentCutRice = Array.isArray(res.data) ? res.data[0] : res.data;
-      if (currentCutRice) {
-        setFormData({
-          monday: currentCutRice.monday || {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-          tuesday: currentCutRice.tuesday || {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-          wednesday: currentCutRice.wednesday || {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-          thursday: currentCutRice.thursday || {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-          friday: currentCutRice.friday || {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-          saturday: currentCutRice.saturday || {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-          sunday: currentCutRice.sunday || {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-        });
-      } else {
-        setFormData({
-          monday: { breakfast: false, lunch: false, dinner: false },
-          tuesday: { breakfast: false, lunch: false, dinner: false },
-          wednesday: { breakfast: false, lunch: false, dinner: false },
-          thursday: { breakfast: false, lunch: false, dinner: false },
-          friday: { breakfast: false, lunch: false, dinner: false },
-          saturday: { breakfast: false, lunch: false, dinner: false },
-          sunday: { breakfast: false, lunch: false, dinner: false },
-        });
-      }
-    } catch (error) {
-      setFormData({
-        monday: { breakfast: false, lunch: false, dinner: false },
-        tuesday: { breakfast: false, lunch: false, dinner: false },
-        wednesday: { breakfast: false, lunch: false, dinner: false },
-        thursday: { breakfast: false, lunch: false, dinner: false },
-        friday: { breakfast: false, lunch: false, dinner: false },
-        saturday: { breakfast: false, lunch: false, dinner: false },
-        sunday: { breakfast: false, lunch: false, dinner: false },
-      });
-    }
+
+    // Mở modal sau khi đã set dữ liệu
     setShowEditModal(true);
   };
 
   const handleCloseEditModal = () => {
     setShowEditModal(false);
+    setSelectedStudent(null);
+    // Reset formData về trạng thái ban đầu
+    setFormData({
+      monday: { breakfast: false, lunch: false, dinner: false },
+      tuesday: { breakfast: false, lunch: false, dinner: false },
+      wednesday: { breakfast: false, lunch: false, dinner: false },
+      thursday: { breakfast: false, lunch: false, dinner: false },
+      friday: { breakfast: false, lunch: false, dinner: false },
+      saturday: { breakfast: false, lunch: false, dinner: false },
+      sunday: { breakfast: false, lunch: false, dinner: false },
+    });
     // Khôi phục scroll ở body khi đóng modal
     document.body.style.overflow = "unset";
   };
@@ -1102,14 +1089,14 @@ const CutRice = () => {
                         {dayDisplayMapping[day]}
                       </h3>
                       <div className="space-y-3">
-                        {Object.entries(meals).map(([meal, checked]) => (
+                        {["breakfast", "lunch", "dinner"].map((meal) => (
                           <label
                             key={meal}
                             className="flex items-center space-x-3"
                           >
                             <input
                               type="checkbox"
-                              checked={checked}
+                              checked={meals[meal]}
                               onChange={(e) => {
                                 setFormData((prev) => ({
                                   ...prev,

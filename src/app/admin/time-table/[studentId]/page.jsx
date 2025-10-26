@@ -1,10 +1,10 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
+import axiosInstance from "@/utils/axiosInstance";
 
 import { BASE_URL } from "@/configs";
 const TimeTableDetail = ({ params }) => {

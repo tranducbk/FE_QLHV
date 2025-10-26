@@ -981,7 +981,7 @@ export default function Home() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                              {student.studentName || "N/A"}
+                              {student.fullName || "N/A"}
                             </p>
                             <p className="text-xs text-slate-600 dark:text-slate-400">
                               {student.className || "N/A"}

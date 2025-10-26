@@ -405,7 +405,7 @@ const Header = () => {
       ),
       label: (
         <Link
-          href={checkIsAdmin() ? "/admin" : "/users"}
+          href={"/"}
           className="!text-gray-900 dark:!text-white hover:!text-blue-600 dark:hover:!text-blue-400 block w-full"
         >
           Trang chủ
@@ -577,7 +577,7 @@ const Header = () => {
       ),
       label: (
         <Link
-          href={checkIsAdmin() ? "/admin" : "/users"}
+          href={"/"}
           onClick={() => setMobileMenuOpen(false)}
           className="text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 block w-full"
         >

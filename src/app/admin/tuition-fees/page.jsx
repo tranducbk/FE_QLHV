@@ -311,8 +311,12 @@ const TuitionFees = () => {
     if (number == null) {
       return "0";
     }
-    // Chuyển đổi số thành chuỗi
-    let numStr = number.toString();
+    // Loại bỏ tất cả ký tự không phải số trước khi format
+    let numStr = number.toString().replace(/[^0-9]/g, "");
+
+    if (!numStr || numStr === "0") {
+      return "0";
+    }
 
     // Tách chuỗi thành các mảng con với 3 ký tự
     let parts = [];

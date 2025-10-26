@@ -84,8 +84,8 @@ axiosInstance.interceptors.response.use(
         console.log("🔄 Attempting to refresh token...");
 
         // Gọi API refresh token (cookie tự động gửi refreshToken)
-        await axios.post(
-          `${BASE_URL}/user/refresh-token`,
+        await axiosInstance.post(
+          `/user/refresh-token`,
           {},
           {
             withCredentials: true, // Gửi cookies

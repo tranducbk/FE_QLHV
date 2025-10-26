@@ -15,34 +15,21 @@ const axiosInstance = axios.create({
   timeout: 30000, // 30 giây timeout
 });
 
-// Request interceptor để debug cookies và fallback localStorage
+// Request interceptor để fallback localStorage
 axiosInstance.interceptors.request.use(
   (config) => {
-    console.log(
-      "🍪 Request interceptor - Cookies being sent:",
-      document.cookie
-    );
-    console.log("🍪 Request URL:", config.url);
-    console.log("🍪 withCredentials:", config.withCredentials);
-    console.log("🍪 Base URL:", config.baseURL);
-
     // Fallback: Nếu cookies không có, gửi token từ localStorage
     if (
       !document.cookie.includes("accessToken") &&
       localStorage.getItem("accessToken")
     ) {
-      console.log("💾 Fallback: Using localStorage token");
       config.headers.Authorization = `Bearer ${localStorage.getItem(
         "accessToken"
       )}`;
     }
-
     return config;
   },
-  (error) => {
-    console.error("🍪 Request interceptor error:", error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor: Tự động refresh token khi 401
@@ -68,8 +55,6 @@ axiosInstance.interceptors.response.use(
 
     // Xử lý lỗi 429 (Rate Limited)
     if (error.response?.status === 429) {
-      console.warn("⚠️ Rate limited, waiting before retry...");
-      // Đợi 1 giây trước khi retry
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return axiosInstance(originalRequest);
     }
@@ -93,21 +78,17 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        console.log("🔄 Attempting to refresh token...");
-
-        // Gọi API refresh token (cookie tự động gửi refreshToken)
         const refreshResponse = await axiosInstance.post(
           `/user/refresh-token`,
           {},
           {
-            withCredentials: true, // Gửi cookies
-            timeout: 10000, // 10 giây timeout
+            withCredentials: true,
+            timeout: 10000,
           }
         );
 
-        // Fallback: Nếu cookies không hoạt động, lưu token mới vào localStorage
+        // Fallback: Lưu token mới vào localStorage nếu cookies không hoạt động
         if (refreshResponse.data.accessToken) {
-          console.log("💾 Fallback: Saving new token to localStorage");
           localStorage.setItem("accessToken", refreshResponse.data.accessToken);
           localStorage.setItem(
             "refreshToken",
@@ -115,27 +96,14 @@ axiosInstance.interceptors.response.use(
           );
         }
 
-        console.log("✅ Token refreshed successfully");
-
-        // Token mới đã được lưu vào cookie bởi backend
-        // Process tất cả requests đang chờ
         processQueue(null, true);
-
         isRefreshing = false;
 
-        // Retry request ban đầu (cookie mới tự động gửi)
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.error(
-          "❌ Token refresh failed:",
-          refreshError.response?.status
-        );
-
-        // Refresh token hết hạn hoặc không hợp lệ
         processQueue(refreshError, false);
         isRefreshing = false;
 
-        // Redirect đến login
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }

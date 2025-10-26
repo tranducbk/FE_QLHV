@@ -37,6 +37,14 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Xử lý lỗi 429 (Rate Limited)
+    if (error.response?.status === 429) {
+      console.warn("⚠️ Rate limited, waiting before retry...");
+      // Đợi 1 giây trước khi retry
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return axiosInstance(originalRequest);
+    }
+
     // Nếu lỗi 401 và chưa retry
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
@@ -56,14 +64,19 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        console.log("🔄 Attempting to refresh token...");
+
         // Gọi API refresh token (cookie tự động gửi refreshToken)
         await axios.post(
           `${BASE_URL}/user/refresh-token`,
           {},
           {
             withCredentials: true, // Gửi cookies
+            timeout: 10000, // 10 giây timeout
           }
         );
+
+        console.log("✅ Token refreshed successfully");
 
         // Token mới đã được lưu vào cookie bởi backend
         // Process tất cả requests đang chờ
@@ -74,6 +87,11 @@ axiosInstance.interceptors.response.use(
         // Retry request ban đầu (cookie mới tự động gửi)
         return axiosInstance(originalRequest);
       } catch (refreshError) {
+        console.error(
+          "❌ Token refresh failed:",
+          refreshError.response?.status
+        );
+
         // Refresh token hết hạn hoặc không hợp lệ
         processQueue(refreshError, false);
         isRefreshing = false;

@@ -616,16 +616,38 @@ export default function Home() {
                   <div className="space-y-2">
                     {(() => {
                       const latestYear = getLatestSchoolYearStats();
+                      // Nếu không có dữ liệu năm học, lấy điểm của học kỳ gần nhất
+                      if (!latestYear && latestSemester) {
+                        return (
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span>GPA học kỳ (hệ 4):</span>
+                              <span className="font-semibold">
+                                {latestSemester.semesterGpa4}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span>Học kỳ:</span>
+                              <span className="font-semibold">
+                                {latestSemester.semester}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span>Tín chỉ học kỳ:</span>
+                              <span className="font-semibold">
+                                {latestSemester.semesterCredits}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      }
+
                       return (
                         <>
                           <div className="flex justify-between text-sm">
                             <span>GPA năm (hệ 4):</span>
                             <span className="font-semibold">
-                              {latestYear
-                                ? latestYear.gpa4
-                                : latestSemester
-                                ? latestSemester.semesterGpa4
-                                : "Chưa có dữ liệu"}
+                              {latestYear ? latestYear.gpa4 : "Chưa có dữ liệu"}
                             </span>
                           </div>
                           <div className="flex justify-between text-sm">
@@ -641,8 +663,6 @@ export default function Home() {
                             <span className="font-semibold">
                               {latestYear
                                 ? latestYear.credits
-                                : latestSemester
-                                ? latestSemester.semesterCredits
                                 : "Chưa có dữ liệu"}
                             </span>
                           </div>

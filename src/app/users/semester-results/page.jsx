@@ -672,7 +672,26 @@ const SemesterResults = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800">
-                      {semesterResults?.map((item, index) => (
+                      {semesterResults
+                        ?.slice()
+                        .sort((a, b) => {
+                          // Sắp xếp theo năm học (mới nhất trước)
+                          const yearComparison = b.schoolYear.localeCompare(
+                            a.schoolYear
+                          );
+                          if (yearComparison !== 0) return yearComparison;
+
+                          // Nếu cùng năm, sắp xếp theo học kỳ (HK3 > HK2 > HK1)
+                          const getSemesterNumber = (semester) => {
+                            const match = semester.match(/HK(\d+)/);
+                            return match ? parseInt(match[1]) : 0;
+                          };
+                          return (
+                            getSemesterNumber(b.semester) -
+                            getSemesterNumber(a.semester)
+                          );
+                        })
+                        .map((item, index) => (
                         <tr
                           key={index}
                           className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer"

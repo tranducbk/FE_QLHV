@@ -12,6 +12,7 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000, // 30 giây timeout
 });
 
 // KHÔNG CẦN request interceptor vì token trong httpOnly cookie tự động gửi

@@ -26,6 +26,10 @@ const Login = () => {
 
       const { user } = res.data;
 
+      console.log("🔐 Login successful, user data:", user);
+      console.log("🔐 Response headers:", res.headers);
+      console.log("🔐 Cookies should be set by backend");
+
       handleNotify("success", "Thành công!", "Đăng nhập thành công");
 
       // Redirect ngay lập tức theo role

@@ -8,34 +8,13 @@ import {
   ArrowLeftOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import axiosInstance from "@/utils/axiosInstance";
+// Không cần axiosInstance cho trang công khai
 
 const ForgotPassword = () => {
   const router = useRouter();
 
-  useEffect(() => {
-    const checkToken = async () => {
-      try {
-        // Lấy thông tin user từ API
-        const userRes = await axiosInstance.get("/user/me");
-        const userData = userRes.data;
-
-        if (userData.admin === true) {
-          // Kiểm tra commander role
-          await axiosInstance.get(`/commander/${userData.id}`);
-          router.push("/admin");
-        } else {
-          // Kiểm tra student role
-          await axiosInstance.get(`/student/by-user/${userData.id}`);
-          router.push("/users");
-        }
-      } catch (error) {
-        // Handle token validation error - axiosInstance sẽ tự động xử lý
-      }
-    };
-
-    checkToken();
-  }, []);
+  // Không cần kiểm tra token cho trang quên mật khẩu
+  // Đây là trang công khai, ai cũng có thể truy cập
 
   return (
     <div

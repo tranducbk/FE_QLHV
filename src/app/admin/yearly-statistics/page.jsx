@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-import { BASE_URL } from "@/configs";
 import {
   TreeSelect,
   ConfigProvider,
@@ -21,6 +19,7 @@ import {
   Button,
 } from "antd";
 import { useState as useThemeState } from "react";
+import axiosInstance from "@/utils/axiosInstance";
 
 const YearlyStatistics = () => {
   const [yearlyResults, setYearlyResults] = useState([]);
@@ -77,14 +76,9 @@ const YearlyStatistics = () => {
   }, []);
 
   const fetchInitialData = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       // Gọi API để lấy dữ liệu thống kê năm học (không có tham số schoolYear)
-      const res = await axios.get(`${BASE_URL}/commander/yearlyStatistics`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const res = await axiosInstance.get("/commander/yearlyStatistics");
 
       // Tính toán từ subjects
       const processedData = (res.data || []).map((item) => {
@@ -185,15 +179,9 @@ const YearlyStatistics = () => {
   };
 
   const fetchYearlyResultsForYear = async (year) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const res = await axios.get(
-        `${BASE_URL}/commander/yearlyStatistics?schoolYear=${year}`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const res = await axiosInstance.get(
+        `/commander/yearlyStatistics?schoolYear=${year}`
       );
 
       console.log(`Yearly results data for ${year}:`, res.data);
@@ -249,16 +237,13 @@ const YearlyStatistics = () => {
   };
 
   const fetchYearlyResults = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !selectedSchoolYear) return;
+    if (!selectedSchoolYear) return;
 
     try {
       let res;
 
       // Lấy tất cả dữ liệu thống kê năm học
-      res = await axios.get(`${BASE_URL}/commander/yearlyStatistics`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      res = await axiosInstance.get("/commander/yearlyStatistics");
 
       console.log("Yearly results data:", res.data);
 
@@ -297,9 +282,6 @@ const YearlyStatistics = () => {
 
   // Lấy chi tiết 1 SV theo kỳ để xem
   const fetchStudentDetail = async (studentId, semester, schoolYear) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       // Sử dụng dữ liệu đã có từ yearlyResults
       const studentData = yearlyResults.find(
@@ -322,9 +304,8 @@ const YearlyStatistics = () => {
         });
       } else {
         // Fallback: gọi API nếu không tìm thấy dữ liệu
-        const res = await axios.get(
-          `${BASE_URL}/grade/student/${studentId}/${semester}/${schoolYear}`,
-          { headers: { token: `Bearer ${token}` } }
+        const res = await axiosInstance.get(
+          `/grade/student/${studentId}/${semester}/${schoolYear}`
         );
 
         const data = res.data;
@@ -378,8 +359,7 @@ const YearlyStatistics = () => {
   };
 
   const handleSubmitUpdate = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !selectedStudent) return;
+    if (!selectedStudent) return;
 
     try {
       // Sử dụng yearlyResultId từ dữ liệu API
@@ -390,16 +370,13 @@ const YearlyStatistics = () => {
         return;
       }
 
-      const response = await axios.put(
-        `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
+      const response = await axiosInstance.put(
+        `/commander/updateStudentRating/${yearlyResultId}`,
         {
           partyRating: updateFormData.partyRating,
           trainingRating: updateFormData.trainingRating,
           decisionNumber: updateFormData.decisionNumber,
           studentId: selectedStudent.studentId,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 

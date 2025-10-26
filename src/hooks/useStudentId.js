@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 /**
  * Custom hook to get studentId from userId
@@ -14,23 +12,13 @@ export const useStudentId = () => {
 
   useEffect(() => {
     const fetchStudentId = async () => {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const decodedToken = jwtDecode(token);
+        // Lấy thông tin user từ API
+        const userRes = await axiosInstance.get("/user/me");
+        const userId = userRes.data.id;
 
         // Use helper route to get studentId from userId
-        const res = await axios.get(
-          `${BASE_URL}/student/by-user/${decodedToken.id}`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
-        );
+        const res = await axiosInstance.get(`/student/by-user/${userId}`);
 
         setStudentId(res.data.id);
         setError(null);
@@ -54,20 +42,8 @@ export const useStudentId = () => {
  * Use this for one-time conversions
  */
 export const getStudentIdFromUserId = async (userId) => {
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    throw new Error("No token found");
-  }
-
   try {
-    const res = await axios.get(
-      `${BASE_URL}/student/by-user/${userId}`,
-      {
-        headers: { token: `Bearer ${token}` },
-      }
-    );
-
+    const res = await axiosInstance.get(`/student/by-user/${userId}`);
     return res.data.id;
   } catch (error) {
     console.error("Error getting studentId from userId:", error);

@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { handleNotify } from "../../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 import {
   Form,
   Input,
@@ -37,28 +35,19 @@ const ResetPassword = ({ params }) => {
 
   useEffect(() => {
     const checkToken = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decodedToken = jwtDecode(token);
-          if (decodedToken.admin === true) {
-            await axios.get(`${BASE_URL}/commander/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            router.push("/admin");
-          } else {
-            await axios.get(`${BASE_URL}/student/by-user/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            router.push("/users");
-          }
-        } catch (error) {
-          handleNotify("danger", "", error);
+      try {
+        // Kiểm tra xem user đã đăng nhập chưa bằng cách gọi API
+        const userRes = await axiosInstance.get("/user/me");
+        const user = userRes.data;
+
+        if (user.admin === true) {
+          router.push("/admin");
+        } else {
+          router.push("/users");
         }
+      } catch (error) {
+        // User chưa đăng nhập, tiếp tục với reset password
+        console.log("User not logged in, proceeding with password reset");
       }
     };
 
@@ -68,7 +57,7 @@ const ResetPassword = ({ params }) => {
   const handleResetPassword = async (values) => {
     setLoading(true);
     try {
-      await axios.post(`${BASE_URL}/user/reset-password/${params.token}`, {
+      await axiosInstance.post(`/user/reset-password/${params.token}`, {
         newPassword: values.newPassword,
         confirmPassword: values.confirmPassword,
       });

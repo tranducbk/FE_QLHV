@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "@/utils/axiosInstance";
 import Link from "next/link";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-import { BASE_URL } from "@/configs";
 import {
   PlusOutlined,
   EditOutlined,
@@ -58,27 +57,16 @@ export default function Universities() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
       // Lấy danh sách universities
-      const universitiesRes = await axios.get(`${BASE_URL}/university`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const universitiesRes = await axiosInstance.get(`/university`);
 
       // Lấy organizations, education levels, và classes cho mỗi university
       const universitiesWithData = await Promise.all(
         universitiesRes.data.map(async (university) => {
           try {
             // Lấy organizations cho university này
-            const organizationsRes = await axios.get(
-              `${BASE_URL}/university/${university.id}/organizations`,
-              {
-                headers: { token: `Bearer ${token}` },
-              }
+            const organizationsRes = await axiosInstance.get(
+              `/university/${university.id}/organizations`
             );
 
             // Lấy education levels và classes cho mỗi organization
@@ -86,22 +74,16 @@ export default function Universities() {
               organizationsRes.data.map(async (organization) => {
                 try {
                   // Lấy education levels cho organization này
-                  const educationLevelsRes = await axios.get(
-                    `${BASE_URL}/university/organizations/${organization.id}/education-levels`,
-                    {
-                      headers: { token: `Bearer ${token}` },
-                    }
+                  const educationLevelsRes = await axiosInstance.get(
+                    `/university/organizations/${organization.id}/education-levels`
                   );
 
                   // Lấy classes cho mỗi education level
                   const educationLevelsWithData = await Promise.all(
                     educationLevelsRes.data.map(async (educationLevel) => {
                       try {
-                        const classesRes = await axios.get(
-                          `${BASE_URL}/university/education-levels/${educationLevel.id}/classes`,
-                          {
-                            headers: { token: `Bearer ${token}` },
-                          }
+                        const classesRes = await axiosInstance.get(
+                          `/university/education-levels/${educationLevel.id}/classes`
                         );
                         return {
                           ...educationLevel,
@@ -157,21 +139,12 @@ export default function Universities() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
       // Create university
-      await axios.post(
-        `${BASE_URL}/university/create`,
+      await axiosInstance.post(
+        `/university/create`,
         {
           universityCode: addFormData.universityCode,
           universityName: addFormData.universityName,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -197,20 +170,11 @@ export default function Universities() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.put(
-        `${BASE_URL}/university/${selectedUniversity.id}`,
+      await axiosInstance.put(
+        `/university/${selectedUniversity.id}`,
         {
           universityCode: editFormData.universityCode,
           universityName: editFormData.universityName,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -243,15 +207,7 @@ export default function Universities() {
 
   const confirmDeleteUniversity = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.delete(`${BASE_URL}/university/${universityToDelete.id}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/university/${universityToDelete.id}`);
 
       // Refresh data
       fetchData();

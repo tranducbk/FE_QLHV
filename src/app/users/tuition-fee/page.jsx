@@ -1,15 +1,13 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { jwtDecode } from "jwt-decode";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { handleNotify } from "../../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const TuitionFee = () => {
   const [tuitionFee, setTuitionFee] = useState([]);
@@ -49,14 +47,8 @@ const TuitionFee = () => {
 
   const handleEditTuitionFee = async (id) => {
     setFeeId(id);
-    const token = localStorage.getItem("token");
     try {
-      const res = await axios.get(
-        `${BASE_URL}/student/${studentId}/tuition-fee`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
-      );
+      const res = await axiosInstance.get(`/student/${studentId}/tuition-fee`);
       const item = (res.data || []).find((t) => t.id === id);
       if (item) {
         setEditedTuitionFee({
@@ -74,54 +66,44 @@ const TuitionFee = () => {
 
   const handleUpdateTuitionFee = async (e, tuitionFeeId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
-    if (token) {
-      // Kiểm tra và đảm bảo có semester
-      const semester = editedTuitionFee.semester || selectedSemester;
-      if (!semester) {
-        handleNotify("warning", "Cảnh báo", "Vui lòng chọn học kỳ");
-        return;
-      }
+    // Kiểm tra và đảm bảo có semester
+    const semester = editedTuitionFee.semester || selectedSemester;
+    if (!semester) {
+      handleNotify("warning", "Cảnh báo", "Vui lòng chọn học kỳ");
+      return;
+    }
 
-      // Tìm semester để lấy schoolYear
-      const selectedSemesterData = semesters.find((s) => s.id === semester);
-      const schoolYear =
-        selectedSemesterData?.schoolYear || editedTuitionFee.schoolYear;
+    // Tìm semester để lấy schoolYear
+    const selectedSemesterData = semesters.find((s) => s.id === semester);
+    const schoolYear =
+      selectedSemesterData?.schoolYear || editedTuitionFee.schoolYear;
 
-      try {
-        const decodedToken = jwtDecode(token);
-        const payload = {
-          ...editedTuitionFee,
-          semester: selectedSemesterData?.code || semester,
-          schoolYear: schoolYear,
-        };
-        await axios.put(
-          `${BASE_URL}/student/${studentId}/tuitionFee/${tuitionFeeId}`,
-          payload,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-        handleNotify("success", "Thành công!", "Chỉnh sửa học phí thành công");
-        setIsOpenTuitionFee(false);
-        fetchTuitionFee();
-      } catch (error) {
-        const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data ||
-          "Có lỗi xảy ra khi cập nhật học phí";
-        handleNotify("danger", "Lỗi!", errorMessage);
-        setIsOpenTuitionFee(false);
-      }
+    try {
+      const payload = {
+        ...editedTuitionFee,
+        semester: selectedSemesterData?.code || semester,
+        schoolYear: schoolYear,
+      };
+      await axiosInstance.put(
+        `/student/${studentId}/tuitionFee/${tuitionFeeId}`,
+        payload
+      );
+      handleNotify("success", "Thành công!", "Chỉnh sửa học phí thành công");
+      setIsOpenTuitionFee(false);
+      fetchTuitionFee();
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Có lỗi xảy ra khi cập nhật học phí";
+      handleNotify("danger", "Lỗi!", errorMessage);
+      setIsOpenTuitionFee(false);
     }
   };
 
   const handleAddFormTuitionFee = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
     // Kiểm tra và đảm bảo có semester
     const semester = addFormDataTuitionFee.semester || selectedSemester;
@@ -142,14 +124,9 @@ const TuitionFee = () => {
         schoolYear: schoolYear,
         status: "Chưa thanh toán",
       };
-      const response = await axios.post(
-        `${BASE_URL}/student/${studentId}/tuition-fee`,
-        payload,
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
+      const response = await axiosInstance.post(
+        `/student/${studentId}/tuition-fee`,
+        payload
       );
       handleNotify("success", "Thành công!", "Thêm học phí thành công");
       setTuitionFee([...tuitionFee, response.data]);
@@ -172,44 +149,29 @@ const TuitionFee = () => {
   };
 
   const handleConfirmDeleteFee = (feeId) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      axios
-        .delete(`${BASE_URL}/student/${studentId}/tuitionFee/${feeId}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        })
-        .then(() => {
-          setTuitionFee(tuitionFee.filter((fee) => fee.id !== feeId));
-          handleNotify("success", "Thành công!", "Xóa học phí thành công");
-          fetchTuitionFee();
-        })
-        .catch((error) => {
-          const errorMessage =
-            error.response?.data?.message ||
-            error.response?.data ||
-            "Có lỗi xảy ra khi xóa học phí";
-          handleNotify("danger", "Lỗi!", errorMessage);
-        });
-    }
+    axiosInstance
+      .delete(`/student/${studentId}/tuitionFee/${feeId}`)
+      .then(() => {
+        setTuitionFee(tuitionFee.filter((fee) => fee.id !== feeId));
+        handleNotify("success", "Thành công!", "Xóa học phí thành công");
+        fetchTuitionFee();
+      })
+      .catch((error) => {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data ||
+          "Có lỗi xảy ra khi xóa học phí";
+        handleNotify("danger", "Lỗi!", errorMessage);
+      });
 
     setShowConfirmFee(false);
   };
 
   const fetchTuitionFee = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token && studentId) {
+    if (studentId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/student/${studentId}/tuition-fee`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+        const res = await axiosInstance.get(
+          `/student/${studentId}/tuition-fee`
         );
 
         // Lọc dữ liệu theo học kỳ đã chọn
@@ -236,25 +198,19 @@ const TuitionFee = () => {
 
   // Lấy studentId từ userId
   const fetchStudentId = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        // Use helper route to convert userId to studentId
-        const res = await axios.get(
-          `${BASE_URL}/student/by-user/${decodedToken.id}`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
-        );
-        setStudentId(res.data.id);
-        return res.data.id;
-      } catch (error) {
-        console.error("Error fetching student ID:", error);
-        return null;
-      }
+    try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
+      // Use helper route to convert userId to studentId
+      const res = await axiosInstance.get(`/student/by-user/${userId}`);
+      setStudentId(res.data.id);
+      return res.data.id;
+    } catch (error) {
+      console.error("Error fetching student ID:", error);
+      return null;
     }
-    return null;
   };
 
   useEffect(() => {
@@ -276,12 +232,8 @@ const TuitionFee = () => {
   // fetch danh sách học kỳ cho user
   useEffect(() => {
     const fetchSemesters = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
       try {
-        const res = await axios.get(`${BASE_URL}/semester`, {
-          headers: { token: `Bearer ${token}` },
-        });
+        const res = await axiosInstance.get(`/semester`);
         const list = (res.data || []).sort((a, b) =>
           (b.createdAt || "").localeCompare(a.createdAt || "")
         );

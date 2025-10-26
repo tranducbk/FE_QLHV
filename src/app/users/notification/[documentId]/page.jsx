@@ -1,13 +1,12 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const DocumentDetail = ({ params }) => {
   const [documentDetail, setDocumentDetail] = useState(null);
@@ -15,24 +14,15 @@ const DocumentDetail = ({ params }) => {
   const { loading, withLoading } = useLoading(true);
 
   const fetchDocumentDetail = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/regulatory_documents/${params.documentId}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+    try {
+        const res = await axiosInstance.get(
+          `/commander/regulatory_documents/${params.documentId}`
         );
 
         setDocumentDetail(res.data);
       } catch (error) {
         console.log(error);
       }
-    }
   };
 
   useEffect(() => {

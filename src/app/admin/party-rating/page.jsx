@@ -7,6 +7,7 @@ import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { BASE_URL } from "@/configs";
 import { useLoading } from "@/hooks";
+import axiosInstance from "@/utils/axiosInstance";
 import { TreeSelect, ConfigProvider, theme, Input, Select } from "antd";
 import { useState as useThemeState } from "react";
 
@@ -61,15 +62,9 @@ const PartyRating = () => {
   }, [withLoading]);
 
   const fetchInitialData = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const res = await axios.get(
-        `${BASE_URL}/commander/allStudentsForPartyRating`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const res = await axiosInstance.get(
+        `/commander/allStudentsForPartyRating`
       );
 
       console.log("Party ratings data:", res.data);
@@ -126,15 +121,9 @@ const PartyRating = () => {
   };
 
   const fetchPartyRatingsForYear = async (year) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const res = await axios.get(
-        `${BASE_URL}/commander/allStudentsForPartyRating?schoolYear=${year}`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const res = await axiosInstance.get(
+        `/commander/allStudentsForPartyRating?schoolYear=${year}`
       );
 
       console.log(`Party ratings data for ${year}:`, res.data);
@@ -162,22 +151,18 @@ const PartyRating = () => {
   };
 
   const handleSubmitUpdate = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !selectedStudent) return;
+    if (!selectedStudent) return;
 
     try {
       const yearlyResultId = selectedStudent.yearlyResultId || "null";
 
-      const response = await axios.put(
-        `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
+      const response = await axiosInstance.put(
+        `/commander/updateStudentRating/${yearlyResultId}`,
         {
           partyRating: updateFormData.partyRating,
           decisionNumber: updateFormData.decisionNumber,
           studentId: selectedStudent.studentId,
           schoolYear: selectedStudent.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -202,7 +187,9 @@ const PartyRating = () => {
       }
     } catch (error) {
       console.log("Error updating party rating:", error);
-      const errorMsg = error.response?.data?.message || "Không thể cập nhật xếp loại Đảng viên";
+      const errorMsg =
+        error.response?.data?.message ||
+        "Không thể cập nhật xếp loại Đảng viên";
       handleNotify("error", "Lỗi", errorMsg);
     }
   };
@@ -270,9 +257,6 @@ const PartyRating = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       const filteredStudents = getFilteredStudentsForBulk();
       const studentsToUpdate = filteredStudents.filter((student) =>
@@ -286,16 +270,13 @@ const PartyRating = () => {
         try {
           const yearlyResultId = student.yearlyResultId || "null";
 
-          const response = await axios.put(
-            `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
+          const response = await axiosInstance.put(
+            `/commander/updateStudentRating/${yearlyResultId}`,
             {
               partyRating: bulkUpdateData.partyRating,
               decisionNumber: bulkUpdateData.decisionNumber,
               studentId: student.studentId,
               schoolYear: student.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
-            },
-            {
-              headers: { token: `Bearer ${token}` },
             }
           );
 

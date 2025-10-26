@@ -1,11 +1,10 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { handleNotify } from "../../../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const StudentAchievement = () => {
   const router = useRouter();
@@ -22,61 +21,49 @@ const StudentAchievement = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchStudentAndAchievement = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        // Fetch student info
-        const studentRes = await axios.get(
-          `${BASE_URL}/commander/student/${studentId}`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
-        );
-        setStudent(studentRes.data);
+    try {
+      // Fetch student info
+      const studentRes = await axiosInstance.get(
+        `/commander/student/${studentId}`
+      );
+      setStudent(studentRes.data);
 
-        // Fetch achievement
+      // Fetch achievement
+      try {
+        const achievementRes = await axiosInstance.get(
+          `/achievement/admin/${studentId}`
+        );
+        setAchievement(achievementRes.data);
+        // Fetch recommendations (đề xuất)
         try {
-          const achievementRes = await axios.get(
-            `${BASE_URL}/achievement/admin/${studentId}`,
-            {
-              headers: { token: `Bearer ${token}` },
-            }
+          const recRes = await axiosInstance.get(
+            `/achievement/admin/${studentId}/recommendations`
           );
-          setAchievement(achievementRes.data);
-          // Fetch recommendations (đề xuất)
-          try {
-            const recRes = await axios.get(
-              `${BASE_URL}/achievement/admin/${studentId}/recommendations`,
-              {
-                headers: { token: `Bearer ${token}` },
-              }
-            );
-            setRecommendations(recRes.data);
-          } catch (e) {
-            setRecommendations({ suggestions: [] });
-          }
-        } catch (error) {
-          // If no achievement exists, create default structure
-          setAchievement({
-            studentId: studentId,
-            yearlyAchievements: [],
-            totalYears: 0,
-            totalAdvancedSoldier: 0,
-            totalCompetitiveSoldier: 0,
-            totalScientificTopics: 0,
-            totalScientificInitiatives: 0,
-            eligibleForMinistryReward: false,
-            eligibleForNationalReward: false,
-            nextYearRecommendations: {},
-          });
+          setRecommendations(recRes.data);
+        } catch (e) {
           setRecommendations({ suggestions: [] });
         }
       } catch (error) {
-        // Handle error silently
-        handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu học viên");
-      } finally {
-        setLoading(false);
+        // If no achievement exists, create default structure
+        setAchievement({
+          studentId: studentId,
+          yearlyAchievements: [],
+          totalYears: 0,
+          totalAdvancedSoldier: 0,
+          totalCompetitiveSoldier: 0,
+          totalScientificTopics: 0,
+          totalScientificInitiatives: 0,
+          eligibleForMinistryReward: false,
+          eligibleForNationalReward: false,
+          nextYearRecommendations: {},
+        });
+        setRecommendations({ suggestions: [] });
       }
+    } catch (error) {
+      // Handle error silently
+      handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu học viên");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,15 +75,8 @@ const StudentAchievement = () => {
 
   const handleAddYearlyAchievement = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
-      await axios.post(
-        `${BASE_URL}/achievement/admin/${studentId}`,
-        addFormData,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
-      );
+      await axiosInstance.post(`/achievement/admin/${studentId}`, addFormData);
       handleNotify("success", "Thành công!", "Thêm khen thưởng thành công");
       setShowFormAdd(false);
       setAddFormData({});
@@ -112,14 +92,10 @@ const StudentAchievement = () => {
 
   const handleUpdateYearlyAchievement = async (e, achievementId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
-      await axios.put(
-        `${BASE_URL}/achievement/admin/${achievementId}`,
-        editFormData,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      await axiosInstance.put(
+        `/achievement/admin/${achievementId}`,
+        editFormData
       );
       handleNotify("success", "Thành công!", "Cập nhật khen thưởng thành công");
       setShowFormEdit(false);
@@ -135,11 +111,8 @@ const StudentAchievement = () => {
   };
 
   const handleDeleteYearlyAchievement = async (achievementId) => {
-    const token = localStorage.getItem("token");
     try {
-      await axios.delete(`${BASE_URL}/achievement/admin/${achievementId}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/achievement/admin/${achievementId}`);
       handleNotify("success", "Thành công!", "Xóa khen thưởng thành công");
       fetchStudentAndAchievement();
     } catch (error) {

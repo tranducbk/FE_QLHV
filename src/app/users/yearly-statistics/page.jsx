@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Link from "next/link";
-import { jwtDecode } from "jwt-decode";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 import { ConfigProvider, theme, Select } from "antd";
 import { useState as useThemeState } from "react";
 import SideBar from "@/components/sidebar";
@@ -170,15 +168,13 @@ const YearlyStatistics = () => {
   }, [selectedSchoolYear, withLoading]);
 
   const fetchSchoolYears = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
       // Lấy dữ liệu kết quả học tập của user hiện tại
-      const decodedToken = jwtDecode(token);
-      const gradeRes = await axios.get(`${BASE_URL}/grade/${decodedToken.id}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const gradeRes = await axiosInstance.get(`/grade/${userId}`);
 
       const semesterResults = gradeRes.data.semesterResults || [];
       // User semester results loaded
@@ -207,15 +203,15 @@ const YearlyStatistics = () => {
   };
 
   const fetchYearlyResults = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !selectedSchoolYear) return;
+    if (!selectedSchoolYear) return;
 
     try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
       // Lấy dữ liệu kết quả học tập của user hiện tại
-      const decodedToken = jwtDecode(token);
-      const res = await axios.get(`${BASE_URL}/grade/${decodedToken.id}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const res = await axiosInstance.get(`/grade/${userId}`);
 
       const semesterResults = res.data.semesterResults || [];
       const yearlyResults = res.data.yearlyResults || [];
@@ -346,14 +342,10 @@ const YearlyStatistics = () => {
 
   // Lấy chi tiết 1 SV theo kỳ để xem
   const fetchStudentDetail = async (studentId, semester, schoolYear) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       // Gọi API từ bên học viên để lấy chi tiết điểm
-      const res = await axios.get(
-        `${BASE_URL}/grade/student/${studentId}/${semester}/${schoolYear}`,
-        { headers: { token: `Bearer ${token}` } }
+      const res = await axiosInstance.get(
+        `/grade/student/${studentId}/${semester}/${schoolYear}`
       );
 
       // Kiểm tra và format dữ liệu trả về
@@ -392,48 +384,46 @@ const YearlyStatistics = () => {
     setShowDetailModal(true);
 
     // Lấy dữ liệu học kỳ của năm học được chọn
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        const res = await axios.get(`${BASE_URL}/grade/${decodedToken.id}`, {
-          headers: { token: `Bearer ${token}` },
+    try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
+      const res = await axiosInstance.get(`/grade/${userId}`);
+
+      const semesterResults = res.data.semesterResults || [];
+      const positionParty = res.data.positionParty;
+      const semestersInYear = semesterResults.filter(
+        (result) => result.schoolYear === row.schoolYear
+      );
+
+      if (semestersInYear.length > 0) {
+        // Tạo dữ liệu tổng hợp từ các học kỳ
+        const combinedData = {
+          schoolYear: row.schoolYear,
+          totalCredits: row.totalCredits || 0,
+          averageGrade4: parseFloat(row.averageGrade4) || 0,
+          averageGrade10: parseFloat(row.averageGrade10) || 0,
+          cumulativeGrade4: parseFloat(row.cumulativeGrade4) || 0,
+          cumulativeGrade10: parseFloat(row.cumulativeGrade10) || 0,
+          cumulativeCredits: parseFloat(row.cumulativeCredits) || 0,
+          positionParty: positionParty,
+          trainingRating: row.trainingRating,
+          partyRating: row.partyRating, // Thêm partyRating từ row
+          subjects: [],
+        };
+
+        // Gộp tất cả môn học từ các học kỳ
+        semestersInYear.forEach((semester) => {
+          if (semester.subjects) {
+            combinedData.subjects.push(...semester.subjects);
+          }
         });
-
-        const semesterResults = res.data.semesterResults || [];
-        const positionParty = res.data.positionParty;
-        const semestersInYear = semesterResults.filter(
-          (result) => result.schoolYear === row.schoolYear
-        );
-
-        if (semestersInYear.length > 0) {
-          // Tạo dữ liệu tổng hợp từ các học kỳ
-          const combinedData = {
-            schoolYear: row.schoolYear,
-            totalCredits: row.totalCredits || 0,
-            averageGrade4: parseFloat(row.averageGrade4) || 0,
-            averageGrade10: parseFloat(row.averageGrade10) || 0,
-            cumulativeGrade4: parseFloat(row.cumulativeGrade4) || 0,
-            cumulativeGrade10: parseFloat(row.cumulativeGrade10) || 0,
-            cumulativeCredits: parseFloat(row.cumulativeCredits) || 0,
-            positionParty: positionParty,
-            trainingRating: row.trainingRating,
-            partyRating: row.partyRating, // Thêm partyRating từ row
-            subjects: [],
-          };
-
-          // Gộp tất cả môn học từ các học kỳ
-          semestersInYear.forEach((semester) => {
-            if (semester.subjects) {
-              combinedData.subjects.push(...semester.subjects);
-            }
-          });
-          setStudentDetail(combinedData);
-        }
-      } catch (error) {
-        // Handle error silently
-        handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm");
+        setStudentDetail(combinedData);
       }
+    } catch (error) {
+      // Handle error silently
+      handleNotify("error", "Lỗi", "Không thể tải chi tiết điểm");
     }
   };
 

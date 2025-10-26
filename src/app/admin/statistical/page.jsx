@@ -1,11 +1,10 @@
 "use client";
 
-import axios from "axios";
+import axiosInstance from "@/utils/axiosInstance";
 import { useState, useEffect, useRef } from "react";
 import Chart from "chart.js/auto";
 import Link from "next/link";
 import { Select } from "antd";
-import { BASE_URL } from "@/configs";
 const Statictical = () => {
   const chartRef1 = useRef(null);
   const chartRef2 = useRef(null);
@@ -33,50 +32,31 @@ const Statictical = () => {
   const [selectedUnit, setSelectedUnit] = useState("all");
 
   const fetchLearningClassification = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/learningClassification`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        setLearningClassification(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get(`/commander/learningClassification`);
+      setLearningClassification(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
   const fetchLearningResultBySemester = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/learningResultBySemester`,
-          { headers: { token: `Bearer ${token}` } }
-        );
-        setLearningResultBySemester(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get(
+        `/commander/learningResultBySemester`
+      );
+      setLearningResultBySemester(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
   // Lấy thống kê theo NĂM HỌC mới nhất và gom nhóm theo mức GPA
   const fetchLearningResultByYear = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
     try {
       // Lấy danh sách năm học, chọn năm mới nhất
-      const yearsRes = await axios.get(
-        `${BASE_URL}/commander/yearlyResults/years`,
-        { headers: { token: `Bearer ${token}` } }
+      const yearsRes = await axiosInstance.get(
+        `/commander/yearlyResults/years`
       );
       const years = yearsRes.data?.years || [];
       setAvailableSchoolYears(years);
@@ -91,11 +71,8 @@ const Statictical = () => {
       }
 
       // Lấy dữ liệu theo năm học mới nhất
-      const resultsRes = await axios.get(
-        `${BASE_URL}/commander/yearlyResults?schoolYear=${encodeURIComponent(
-          latestYear
-        )}`,
-        { headers: { token: `Bearer ${token}` } }
+      const resultsRes = await axiosInstance.get(
+        `/commander/yearlyResults?schoolYear=${encodeURIComponent(latestYear)}`
       );
       const results = resultsRes.data?.results || [];
 
@@ -145,21 +122,16 @@ const Statictical = () => {
   };
 
   const fetchTopStudentsLatestYear = async (year) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const url = `${BASE_URL}/commander/topStudents/latestYear${
-          year ? `?schoolYear=${encodeURIComponent(year)}` : ""
-        }`;
-        const res = await axios.get(url, {
-          headers: { token: `Bearer ${token}` },
-        });
-        setTopStudentsLatestYear(
-          res.data || { schoolYear: null, topStudents: [] }
-        );
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const url = `${BASE_URL}/commander/topStudents/latestYear${
+        year ? `?schoolYear=${encodeURIComponent(year)}` : ""
+      }`;
+      const res = await axiosInstance.get(url);
+      setTopStudentsLatestYear(
+        res.data || { schoolYear: null, topStudents: [] }
+      );
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -251,100 +223,86 @@ const Statictical = () => {
 
   const handleExportFileWord = async (e, maxSemester) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
+    try {
+      const response = await axiosInstance.get(
+        `/commander/listSuggestedReward/word`,
+        {
+          responseType: "blob",
+        }
+      );
 
-    if (token) {
-      try {
-        const response = await axios.get(
-          `${BASE_URL}/commander/listSuggestedReward/word`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-            responseType: "blob",
-          }
-        );
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute(
-          "download",
-          `Danh_sach_goi_y_khen_thuong_hoc_ky_${maxSemester}.docx`
-        );
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-      } catch (error) {
-        console.error("Lỗi tải xuống file", error);
-      }
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Danh_sach_goi_y_khen_thuong_hoc_ky_${maxSemester}.docx`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      console.error("Lỗi tải xuống file", error);
     }
   };
 
   const handleExportTuitionFeeWord = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
+    try {
+      const params = new URLSearchParams();
 
-    if (token) {
-      try {
-        const params = new URLSearchParams();
-
-        if (selectedSemester && selectedSemester !== "all") {
-          params.append("semester", selectedSemester);
-        }
-
-        if (selectedSchoolYear && selectedSchoolYear !== "all") {
-          params.append("schoolYear", selectedSchoolYear);
-        }
-
-        if (selectedUnit && selectedUnit !== "all") {
-          params.append("unit", selectedUnit);
-        }
-
-        const response = await axios.get(
-          `${BASE_URL}/commander/tuitionFee/word?${params.toString()}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-            responseType: "blob",
-          }
-        );
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-
-        // Tạo tên file động
-        let fileName = "Thong_ke_hoc_phi_he_hoc_vien_5";
-
-        if (selectedSemester && selectedSemester !== "all") {
-          fileName += `_${selectedSemester}`;
-        } else {
-          fileName += "_tat_ca_hoc_ky";
-        }
-
-        if (selectedSchoolYear && selectedSchoolYear !== "all") {
-          fileName += `_${selectedSchoolYear}`;
-        } else {
-          fileName += "_tat_ca_nam_hoc";
-        }
-
-        if (selectedUnit && selectedUnit !== "all") {
-          fileName += `_${selectedUnit}`;
-        } else {
-          fileName += "_tat_ca_don_vi";
-        }
-
-        fileName += ".docx";
-
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-      } catch (error) {
-        console.error("Lỗi tải xuống file Word", error);
+      if (selectedSemester && selectedSemester !== "all") {
+        params.append("semester", selectedSemester);
       }
+
+      if (selectedSchoolYear && selectedSchoolYear !== "all") {
+        params.append("schoolYear", selectedSchoolYear);
+      }
+
+      if (selectedUnit && selectedUnit !== "all") {
+        params.append("unit", selectedUnit);
+      }
+
+      const response = await axiosInstance.get(
+        `/commander/tuitionFee/word?${params.toString()}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Tạo tên file động
+      let fileName = "Thong_ke_hoc_phi_he_hoc_vien_5";
+
+      if (selectedSemester && selectedSemester !== "all") {
+        fileName += `_${selectedSemester}`;
+      } else {
+        fileName += "_tat_ca_hoc_ky";
+      }
+
+      if (selectedSchoolYear && selectedSchoolYear !== "all") {
+        fileName += `_${selectedSchoolYear}`;
+      } else {
+        fileName += "_tat_ca_nam_hoc";
+      }
+
+      if (selectedUnit && selectedUnit !== "all") {
+        fileName += `_${selectedUnit}`;
+      } else {
+        fileName += "_tat_ca_don_vi";
+      }
+
+      fileName += ".docx";
+
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      console.error("Lỗi tải xuống file Word", error);
     }
   };
 

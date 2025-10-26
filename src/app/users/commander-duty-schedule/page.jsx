@@ -2,13 +2,12 @@
 
 import SideBar from "@/components/sidebar";
 import Link from "next/link";
-import axios from "axios";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const CommanderDutySchedule = () => {
   const router = useRouter();
@@ -29,60 +28,43 @@ const CommanderDutySchedule = () => {
   }, [currentPage, withLoading]);
 
   const fetchSchedule = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(
+        `/user/commanderDutySchedule?page=${currentPage}&year=${year}&month=${parseInt(
+          month
+        )}`
+      );
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/user/commanderDutySchedule?page=${currentPage}&year=${year}&month=${parseInt(
-            month
-          )}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      if (res.status === 404) setCommanderDutySchedule([]);
 
-        if (res.status === 404) setCommanderDutySchedule([]);
-
-        setCommanderDutySchedule(res.data);
-        router.push(
-          `/users/commander-duty-schedule?page=${currentPage}&year=${year}&month=${month}`
-        );
-      } catch (error) {
-        console.log(error);
-      }
+      setCommanderDutySchedule(res.data);
+      router.push(
+        `/users/commander-duty-schedule?page=${currentPage}&year=${year}&month=${month}`
+      );
+    } catch (error) {
+      console.log(error);
     }
   };
 
   const handleSubmit = async (e, year, month) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/user/commanderDutySchedule?page=${currentPage}&year=${year}&month=${parseInt(
-            month
-          )}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+    try {
+      const res = await axiosInstance.get(
+        `/user/commanderDutySchedule?page=${currentPage}&year=${year}&month=${parseInt(
+          month
+        )}`
+      );
 
-        if (res.status === 404) setCommanderDutySchedule([]);
-        console.log(res.data);
-        setCommanderDutySchedule(res.data);
+      if (res.status === 404) setCommanderDutySchedule([]);
+      console.log(res.data);
+      setCommanderDutySchedule(res.data);
 
-        router.push(
-          `/users/commander-duty-schedule?page=${currentPage}&year=${year}&month=${month}`
-        );
-      } catch (error) {
-        console.log(error);
-      }
+      router.push(
+        `/users/commander-duty-schedule?page=${currentPage}&year=${year}&month=${month}`
+      );
+    } catch (error) {
+      console.log(error);
     }
   };
 

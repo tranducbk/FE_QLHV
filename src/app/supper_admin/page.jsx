@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { handleNotify } from "@/components/notify";
-import { BASE_URL } from "@/configs";
 import { useModalScroll } from "@/hooks/useModalScroll";
+import axiosInstance from "@/utils/axiosInstance";
 
 const AdminManagement = () => {
   const router = useRouter();
@@ -32,23 +31,15 @@ const AdminManagement = () => {
   useModalScroll(showForm || showConfirm);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
     fetchUsers();
   }, [currentPage, searchTerm, roleFilter]);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const token =
-        localStorage.getItem("token") || localStorage.getItem("accessToken");
       // Fetching users
 
-      const response = await axios.get(`${BASE_URL}/user/admin-users/list`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await axiosInstance.get(`/user/admin-users/list`, {
         params: {
           page: currentPage,
           search: searchTerm,
@@ -114,11 +105,7 @@ const AdminManagement = () => {
   const confirmDelete = async () => {
     try {
       setIsLoading(true);
-      const token =
-        localStorage.getItem("token") || localStorage.getItem("accessToken");
-      await axios.delete(`${BASE_URL}/user/admin-users/${userToDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/user/admin-users/${userToDelete.id}`);
       handleNotify("success", "Thành công!", "Xóa tài khoản thành công");
       setShowConfirm(false);
       setUserToDelete(null);
@@ -151,8 +138,6 @@ const AdminManagement = () => {
 
     try {
       setIsLoading(true);
-      const token =
-        localStorage.getItem("token") || localStorage.getItem("accessToken");
       const requestData = {
         username: formData.username,
         password: formData.password || undefined,
@@ -160,16 +145,13 @@ const AdminManagement = () => {
       };
 
       if (editingUser) {
-        await axios.put(
-          `${BASE_URL}/user/admin-users/${editingUser.id}`,
-          requestData,
-          { headers: { Authorization: `Bearer ${token}` } }
+        await axiosInstance.put(
+          `/user/admin-users/${editingUser.id}`,
+          requestData
         );
         handleNotify("success", "Thành công!", "Cập nhật tài khoản thành công");
       } else {
-        await axios.post(`${BASE_URL}/user/admin-users`, requestData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await axiosInstance.post(`/user/admin-users`, requestData);
         handleNotify("success", "Thành công!", "Tạo tài khoản thành công");
       }
 

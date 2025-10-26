@@ -16,7 +16,9 @@ export default function RootLayout({ children }) {
     <html lang="vi" suppressHydrationWarning>
       <body className="bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text transition-colors duration-200">
         <div className="background-pattern"></div>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Link from "next/link";
 import dayjs from "dayjs";
 import DatePicker from "react-datepicker";
@@ -9,11 +8,11 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useRouter } from "next/navigation";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
-import { BASE_URL } from "@/configs";
 import { useLoading } from "@/hooks";
 import { useModalScroll } from "@/hooks/useModalScroll";
 import { CarryOutOutlined, TeamOutlined } from "@ant-design/icons";
 import { Select } from "antd";
+import axiosInstance from "@/utils/axiosInstance";
 const ListUser = () => {
   const router = useRouter();
   const [profile, setProfile] = useState([]);
@@ -142,7 +141,6 @@ const ListUser = () => {
 
   const handleAddFormData = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
     // Validation các trường bắt buộc - chỉ 4 trường cần thiết
     if (
@@ -187,11 +185,7 @@ const ListUser = () => {
 
     setIsLoading(true);
     try {
-      await axios.post(`${BASE_URL}/commander/student`, submitData, {
-        headers: {
-          token: `Bearer ${token}`,
-        },
-      });
+      await axiosInstance.post(`/commander/student`, submitData);
       handleNotify("success", "Thành công!", "Thêm học viên thành công");
       setShowFormAdd(false);
       setAddFormData({});
@@ -314,59 +308,40 @@ const ListUser = () => {
   }, [currentPage, pageSize, schoolYear, fullName, unit, enrollmentYear]);
 
   const fetchProfile = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/student?page=${currentPage}&pageSize=${pageSize}&fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&graduated=false`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-        setProfile(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get(
+        `/commander/student?page=${currentPage}&pageSize=${pageSize}&fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&graduated=false`
+      );
+      setProfile(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
   const fetchUniversities = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/university`, {
-          headers: { token: `Bearer ${token}` },
-        });
-
-        setUniversities(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get(`/university`);
+      setUniversities(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
   // Đã bỏ sử dụng bộ lọc Năm vào trường
 
   const fetchSchoolYears = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/schoolYears`, {
-          headers: { token: `Bearer ${token}` },
-        });
-        setSchoolYears(res.data);
-        // Set năm học mới nhất làm giá trị mặc định
-        if (res.data.length > 0 && !schoolYear) {
-          const latestSchoolYear = res.data[0];
-          setSchoolYear(latestSchoolYear);
-          // Tự động load dữ liệu với năm học mới nhất chỉ khi khởi tạo lần đầu
-          await loadStudentsWithSchoolYear(latestSchoolYear);
-        }
-      } catch (error) {
-        console.log(error);
+    try {
+      const res = await axiosInstance.get(`/commander/schoolYears`);
+      setSchoolYears(res.data);
+      // Set năm học mới nhất làm giá trị mặc định
+      if (res.data.length > 0 && !schoolYear) {
+        const latestSchoolYear = res.data[0];
+        setSchoolYear(latestSchoolYear);
+        // Tự động load dữ liệu với năm học mới nhất chỉ khi khởi tạo lần đầu
+        await loadStudentsWithSchoolYear(latestSchoolYear);
       }
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -379,22 +354,14 @@ const ListUser = () => {
   };
 
   const loadStudentsWithSchoolYear = async (schoolYearValue) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/student?page=${currentPage}&pageSize=${pageSize}&schoolYear=${schoolYearValue}&graduated=false`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-        setProfile(res.data);
-      } catch (error) {
-        console.log(error);
-        setProfile([]);
-      }
+    try {
+      const res = await axiosInstance.get(
+        `/commander/student?page=${currentPage}&pageSize=${pageSize}&schoolYear=${schoolYearValue}&graduated=false`
+      );
+      setProfile(res.data);
+    } catch (error) {
+      console.log(error);
+      setProfile([]);
     }
   };
 
@@ -405,16 +372,11 @@ const ListUser = () => {
   };
 
   const fetchOrganizations = async (universityId) => {
-    const token = localStorage.getItem("token");
-    if (token && universityId) {
+    if (universityId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/university/${universityId}/organizations`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const res = await axiosInstance.get(
+          `/university/${universityId}/organizations`
         );
-
         return res.data;
       } catch (error) {
         console.log(error);
@@ -425,16 +387,11 @@ const ListUser = () => {
   };
 
   const fetchEducationLevels = async (organizationId) => {
-    const token = localStorage.getItem("token");
-    if (token && organizationId) {
+    if (organizationId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/university/organizations/${organizationId}/education-levels`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const res = await axiosInstance.get(
+          `/university/organizations/${organizationId}/education-levels`
         );
-
         return res.data;
       } catch (error) {
         console.log(error);
@@ -445,16 +402,11 @@ const ListUser = () => {
   };
 
   const fetchClasses = async (educationLevelId) => {
-    const token = localStorage.getItem("token");
-    if (token && educationLevelId) {
+    if (educationLevelId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/university/education-levels/${educationLevelId}/classes`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const res = await axiosInstance.get(
+          `/university/education-levels/${educationLevelId}/classes`
         );
-
         return res.data;
       } catch (error) {
         console.log(error);
@@ -465,299 +417,274 @@ const ListUser = () => {
   };
 
   const handleConfirmDelete = (id) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      axios
-        .delete(`${BASE_URL}/commander/student/${id}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        })
-        .then(() => {
-          setProfile((prevProfile) => ({
-            ...prevProfile,
-            students: prevProfile?.students?.filter(
-              (student) => student.id !== id
-            ),
-          }));
-          handleNotify("success", "Thành công!", "Xóa học viên thành công");
-          setShowConfirm(false);
-          reloadStudents();
-        })
-        .catch((error) => {
-          handleNotify("danger", "Lỗi!", error);
-          setShowConfirm(false);
-        });
-    } else {
-      setShowConfirm(false);
-    }
+    axiosInstance
+      .delete(`/commander/student/${id}`)
+      .then(() => {
+        setProfile((prevProfile) => ({
+          ...prevProfile,
+          students: prevProfile?.students?.filter(
+            (student) => student.id !== id
+          ),
+        }));
+        handleNotify("success", "Thành công!", "Xóa học viên thành công");
+        setShowConfirm(false);
+        reloadStudents();
+      })
+      .catch((error) => {
+        handleNotify("danger", "Lỗi!", error);
+        setShowConfirm(false);
+      });
   };
 
   const editStudent = async (studentId) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        // Đảm bảo universities đã được load
-        if (universities.length === 0) {
-          await fetchUniversities();
-        }
-
-        const res = await axios.get(
-          `${BASE_URL}/commander/student/${studentId}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        console.log("Student data for edit:", res.data);
-        console.log("Available universities:", universities);
-
-        setFormData({
-          studentId: res.data.studentId || "",
-          fullName: res.data.fullName || "",
-          phoneNumber: res.data.phoneNumber || "",
-          placeOfBirth: res.data.placeOfBirth || "",
-          cccdNumber: res.data.cccdNumber || "",
-          partyMemberCardNumber: res.data.partyMemberCardNumber || "",
-          gender: res.data.gender || "Nam",
-          unit: res.data.unit || "",
-          birthday: res.data.birthday ? new Date(res.data.birthday) : null,
-          rank: res.data.rank || "Binh nhì",
-          enrollment: res.data.enrollment || 2017,
-          positionGovernment: res.data.positionGovernment || "Học viên",
-          educationLevel: res.data.educationLevel || "Đại học đại trà",
-          dateOfEnlistment: res.data.dateOfEnlistment
-            ? new Date(res.data.dateOfEnlistment)
-            : null,
-          classUniversity: res.data.classUniversity || "",
-          probationaryPartyMember: res.data.probationaryPartyMember
-            ? new Date(res.data.probationaryPartyMember)
-            : null,
-          organization: res.data.organization || "Viện ngoại ngữ",
-          fullPartyMember: res.data.fullPartyMember
-            ? new Date(res.data.fullPartyMember)
-            : null,
-          university: res.data.university || "Đại học Bách Khoa Hà Nội",
-          positionParty: res.data.positionParty || "Không",
-
-          hometown: res.data.hometown || "",
-          ethnicity: res.data.ethnicity || "",
-          religion: res.data.religion || "",
-          currentAddress: res.data.currentAddress || "",
-          avatar:
-            res.data.avatar ||
-            "https://i.pinimg.com/736x/81/09/3a/81093a0429e25b0ff579fa41aa96c421.jpg",
-        });
-
-        // Khởi tạo các select động từ dữ liệu có sẵn
-        let foundUniversity = null;
-
-        if (
-          res.data.university &&
-          typeof res.data.university === "object" &&
-          res.data.university.id
-        ) {
-          // Ưu tiên sử dụng university object từ API
-          foundUniversity = res.data.university;
-          console.log("University from API:", foundUniversity);
-        } else if (res.data.universityId) {
-          // Fallback: tìm theo universityId
-          foundUniversity = universities.find(
-            (u) => u.id === res.data.universityId
-          );
-          console.log("University found by universityId:", foundUniversity);
-        } else if (
-          res.data.university &&
-          typeof res.data.university === "string"
-        ) {
-          // Fallback: tìm theo tên
-          foundUniversity = universities.find(
-            (u) => u.universityName === res.data.university
-          );
-          console.log("University found by name:", foundUniversity);
-        }
-
-        if (foundUniversity) {
-          setSelectedUniversity(foundUniversity);
-
-          // Gọi API để load organizations, education levels, và classes
-          try {
-            // Load organizations
-            const organizations = await fetchOrganizations(foundUniversity.id);
-            setOrganizations(organizations);
-
-            // Tìm organization đã chọn
-            let selectedOrgId = null;
-            if (
-              res.data.organization &&
-              typeof res.data.organization === "object" &&
-              res.data.organization.id
-            ) {
-              // Ưu tiên sử dụng organization object từ API
-              selectedOrgId = res.data.organization.id;
-              console.log("Organization from API:", res.data.organization);
-            } else if (res.data.organizationId) {
-              // Fallback: sử dụng organizationId
-              selectedOrgId = res.data.organizationId;
-            } else if (
-              res.data.organization &&
-              typeof res.data.organization === "string"
-            ) {
-              // Fallback: tìm theo tên
-              const selectedOrg = organizations.find(
-                (org) => org.organizationName === res.data.organization
-              );
-              selectedOrgId = selectedOrg?.id;
-            }
-
-            if (selectedOrgId) {
-              setSelectedOrganization(selectedOrgId);
-
-              // Load education levels
-              const educationLevels = await fetchEducationLevels(selectedOrgId);
-              setEducationLevels(educationLevels);
-
-              // Tìm education level đã chọn
-              let selectedLevelId = null;
-              if (
-                res.data.education_level &&
-                typeof res.data.education_level === "object" &&
-                res.data.education_level.id
-              ) {
-                // Ưu tiên sử dụng education_level object từ API
-                selectedLevelId = res.data.education_level.id;
-                console.log(
-                  "✅ Education level from API:",
-                  res.data.education_level
-                );
-              } else if (res.data.educationLevelId) {
-                // Fallback: sử dụng educationLevelId
-                selectedLevelId = res.data.educationLevelId;
-                console.log(
-                  "✅ Education level from educationLevelId:",
-                  selectedLevelId
-                );
-              } else if (
-                res.data.educationLevel &&
-                typeof res.data.educationLevel === "object"
-              ) {
-                selectedLevelId = res.data.educationLevel.id;
-              } else if (
-                res.data.educationLevel &&
-                typeof res.data.educationLevel === "string"
-              ) {
-                const selectedLevelObj = educationLevels.find(
-                  (level) => level.levelName === res.data.educationLevel
-                );
-                selectedLevelId = selectedLevelObj?.id;
-              }
-
-              if (selectedLevelId) {
-                setSelectedLevel(selectedLevelId);
-                console.log("✅ Set selectedLevel:", selectedLevelId);
-
-                // Load classes
-                const classes = await fetchClasses(selectedLevelId);
-                setClasses(classes);
-
-                // Tìm class đã chọn
-                let selectedClassId = null;
-                if (
-                  res.data.class &&
-                  typeof res.data.class === "object" &&
-                  res.data.class.id
-                ) {
-                  // Ưu tiên sử dụng class object từ API
-                  selectedClassId = res.data.class.id;
-                  console.log("Class from API:", res.data.class);
-                } else if (res.data.classId) {
-                  // Fallback: sử dụng classId
-                  selectedClassId = res.data.classId;
-                } else if (
-                  res.data.class &&
-                  typeof res.data.class === "string"
-                ) {
-                  // Fallback: tìm theo tên
-                  const selectedClassObj = classes.find(
-                    (cls) => cls.className === res.data.class
-                  );
-                  selectedClassId = selectedClassObj?.id;
-                }
-
-                if (selectedClassId) {
-                  setSelectedClass(selectedClassId);
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Error loading cascading data:", error);
-          }
-
-          console.log("Selected university set:", foundUniversity);
-        } else {
-          console.log("No university found for:", res.data.university);
-        }
-
-        // Load thông tin gia đình và yếu tố nước ngoài vào state
-        if (res.data.familyMembers && Array.isArray(res.data.familyMembers)) {
-          const formattedFamilyMembers = res.data.familyMembers.map(
-            (member, index) => ({
-              id: member.id || `temp-${Date.now()}-${index}`,
-              relationship: member.relationship || "",
-              fullName: member.fullName || "",
-              birthday: member.birthday ? new Date(member.birthday) : null,
-              occupation: member.occupation || "",
-            })
-          );
-          setFamilyMembers(formattedFamilyMembers);
-          console.log(
-            "Loaded family members for edit:",
-            formattedFamilyMembers
-          );
-        } else {
-          setFamilyMembers([]);
-        }
-
-        if (
-          res.data.foreignRelations &&
-          Array.isArray(res.data.foreignRelations)
-        ) {
-          const formattedForeignRelations = res.data.foreignRelations.map(
-            (relation, index) => ({
-              id: relation.id || `temp-${Date.now()}-${index}`,
-              relationship: relation.relationship || "",
-              fullName: relation.fullName || "",
-              birthday: relation.birthday ? new Date(relation.birthday) : null,
-              country: relation.country || "",
-              reason: relation.reason || "",
-              nationality: relation.nationality || "",
-            })
-          );
-          setForeignRelations(formattedForeignRelations);
-          console.log(
-            "Loaded foreign relations for edit:",
-            formattedForeignRelations
-          );
-        } else {
-          setForeignRelations([]);
-        }
-
-        setSelectedStudentId(studentId);
-        setShowForm(true);
-      } catch (error) {
-        console.log(error);
-        handleNotify("danger", "Lỗi!", "Không thể tải thông tin học viên");
+    try {
+      // Đảm bảo universities đã được load
+      if (universities.length === 0) {
+        await fetchUniversities();
       }
+
+      const res = await axiosInstance.get(
+        `/commander/student/${studentId}`,
+        {}
+      );
+
+      console.log("Student data for edit:", res.data);
+      console.log("Available universities:", universities);
+
+      setFormData({
+        studentId: res.data.studentId || "",
+        fullName: res.data.fullName || "",
+        phoneNumber: res.data.phoneNumber || "",
+        placeOfBirth: res.data.placeOfBirth || "",
+        cccdNumber: res.data.cccdNumber || "",
+        partyMemberCardNumber: res.data.partyMemberCardNumber || "",
+        gender: res.data.gender || "Nam",
+        unit: res.data.unit || "",
+        birthday: res.data.birthday ? new Date(res.data.birthday) : null,
+        rank: res.data.rank || "Binh nhì",
+        enrollment: res.data.enrollment || 2017,
+        positionGovernment: res.data.positionGovernment || "Học viên",
+        educationLevel: res.data.educationLevel || "Đại học đại trà",
+        dateOfEnlistment: res.data.dateOfEnlistment
+          ? new Date(res.data.dateOfEnlistment)
+          : null,
+        classUniversity: res.data.classUniversity || "",
+        probationaryPartyMember: res.data.probationaryPartyMember
+          ? new Date(res.data.probationaryPartyMember)
+          : null,
+        organization: res.data.organization || "Viện ngoại ngữ",
+        fullPartyMember: res.data.fullPartyMember
+          ? new Date(res.data.fullPartyMember)
+          : null,
+        university: res.data.university || "Đại học Bách Khoa Hà Nội",
+        positionParty: res.data.positionParty || "Không",
+
+        hometown: res.data.hometown || "",
+        ethnicity: res.data.ethnicity || "",
+        religion: res.data.religion || "",
+        currentAddress: res.data.currentAddress || "",
+        avatar:
+          res.data.avatar ||
+          "https://i.pinimg.com/736x/81/09/3a/81093a0429e25b0ff579fa41aa96c421.jpg",
+      });
+
+      // Khởi tạo các select động từ dữ liệu có sẵn
+      let foundUniversity = null;
+
+      if (
+        res.data.university &&
+        typeof res.data.university === "object" &&
+        res.data.university.id
+      ) {
+        // Ưu tiên sử dụng university object từ API
+        foundUniversity = res.data.university;
+        console.log("University from API:", foundUniversity);
+      } else if (res.data.universityId) {
+        // Fallback: tìm theo universityId
+        foundUniversity = universities.find(
+          (u) => u.id === res.data.universityId
+        );
+        console.log("University found by universityId:", foundUniversity);
+      } else if (
+        res.data.university &&
+        typeof res.data.university === "string"
+      ) {
+        // Fallback: tìm theo tên
+        foundUniversity = universities.find(
+          (u) => u.universityName === res.data.university
+        );
+        console.log("University found by name:", foundUniversity);
+      }
+
+      if (foundUniversity) {
+        setSelectedUniversity(foundUniversity);
+
+        // Gọi API để load organizations, education levels, và classes
+        try {
+          // Load organizations
+          const organizations = await fetchOrganizations(foundUniversity.id);
+          setOrganizations(organizations);
+
+          // Tìm organization đã chọn
+          let selectedOrgId = null;
+          if (
+            res.data.organization &&
+            typeof res.data.organization === "object" &&
+            res.data.organization.id
+          ) {
+            // Ưu tiên sử dụng organization object từ API
+            selectedOrgId = res.data.organization.id;
+            console.log("Organization from API:", res.data.organization);
+          } else if (res.data.organizationId) {
+            // Fallback: sử dụng organizationId
+            selectedOrgId = res.data.organizationId;
+          } else if (
+            res.data.organization &&
+            typeof res.data.organization === "string"
+          ) {
+            // Fallback: tìm theo tên
+            const selectedOrg = organizations.find(
+              (org) => org.organizationName === res.data.organization
+            );
+            selectedOrgId = selectedOrg?.id;
+          }
+
+          if (selectedOrgId) {
+            setSelectedOrganization(selectedOrgId);
+
+            // Load education levels
+            const educationLevels = await fetchEducationLevels(selectedOrgId);
+            setEducationLevels(educationLevels);
+
+            // Tìm education level đã chọn
+            let selectedLevelId = null;
+            if (
+              res.data.education_level &&
+              typeof res.data.education_level === "object" &&
+              res.data.education_level.id
+            ) {
+              // Ưu tiên sử dụng education_level object từ API
+              selectedLevelId = res.data.education_level.id;
+              console.log(
+                "✅ Education level from API:",
+                res.data.education_level
+              );
+            } else if (res.data.educationLevelId) {
+              // Fallback: sử dụng educationLevelId
+              selectedLevelId = res.data.educationLevelId;
+              console.log(
+                "✅ Education level from educationLevelId:",
+                selectedLevelId
+              );
+            } else if (
+              res.data.educationLevel &&
+              typeof res.data.educationLevel === "object"
+            ) {
+              selectedLevelId = res.data.educationLevel.id;
+            } else if (
+              res.data.educationLevel &&
+              typeof res.data.educationLevel === "string"
+            ) {
+              const selectedLevelObj = educationLevels.find(
+                (level) => level.levelName === res.data.educationLevel
+              );
+              selectedLevelId = selectedLevelObj?.id;
+            }
+
+            if (selectedLevelId) {
+              setSelectedLevel(selectedLevelId);
+              console.log("✅ Set selectedLevel:", selectedLevelId);
+
+              // Load classes
+              const classes = await fetchClasses(selectedLevelId);
+              setClasses(classes);
+
+              // Tìm class đã chọn
+              let selectedClassId = null;
+              if (
+                res.data.class &&
+                typeof res.data.class === "object" &&
+                res.data.class.id
+              ) {
+                // Ưu tiên sử dụng class object từ API
+                selectedClassId = res.data.class.id;
+                console.log("Class from API:", res.data.class);
+              } else if (res.data.classId) {
+                // Fallback: sử dụng classId
+                selectedClassId = res.data.classId;
+              } else if (res.data.class && typeof res.data.class === "string") {
+                // Fallback: tìm theo tên
+                const selectedClassObj = classes.find(
+                  (cls) => cls.className === res.data.class
+                );
+                selectedClassId = selectedClassObj?.id;
+              }
+
+              if (selectedClassId) {
+                setSelectedClass(selectedClassId);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error loading cascading data:", error);
+        }
+
+        console.log("Selected university set:", foundUniversity);
+      } else {
+        console.log("No university found for:", res.data.university);
+      }
+
+      // Load thông tin gia đình và yếu tố nước ngoài vào state
+      if (res.data.familyMembers && Array.isArray(res.data.familyMembers)) {
+        const formattedFamilyMembers = res.data.familyMembers.map(
+          (member, index) => ({
+            id: member.id || `temp-${Date.now()}-${index}`,
+            relationship: member.relationship || "",
+            fullName: member.fullName || "",
+            birthday: member.birthday ? new Date(member.birthday) : null,
+            occupation: member.occupation || "",
+          })
+        );
+        setFamilyMembers(formattedFamilyMembers);
+        console.log("Loaded family members for edit:", formattedFamilyMembers);
+      } else {
+        setFamilyMembers([]);
+      }
+
+      if (
+        res.data.foreignRelations &&
+        Array.isArray(res.data.foreignRelations)
+      ) {
+        const formattedForeignRelations = res.data.foreignRelations.map(
+          (relation, index) => ({
+            id: relation.id || `temp-${Date.now()}-${index}`,
+            relationship: relation.relationship || "",
+            fullName: relation.fullName || "",
+            birthday: relation.birthday ? new Date(relation.birthday) : null,
+            country: relation.country || "",
+            reason: relation.reason || "",
+            nationality: relation.nationality || "",
+          })
+        );
+        setForeignRelations(formattedForeignRelations);
+        console.log(
+          "Loaded foreign relations for edit:",
+          formattedForeignRelations
+        );
+      } else {
+        setForeignRelations([]);
+      }
+
+      setSelectedStudentId(studentId);
+      setShowForm(true);
+    } catch (error) {
+      console.log(error);
+      handleNotify("danger", "Lỗi!", "Không thể tải thông tin học viên");
     }
   };
 
   const handleSubmit = async (e, selectedStudentId, profile) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
     // Validation các trường bắt buộc
     if (!formData.studentId || !formData.fullName) {
@@ -823,14 +750,10 @@ const ListUser = () => {
 
     setIsLoading(true);
     try {
-      const response = await axios.put(
-        `${BASE_URL}/commander/student/${selectedStudentId}`,
+      const response = await axiosInstance.put(
+        `/commander/student/${selectedStudentId}`,
         submitData,
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
+        {}
       );
       handleNotify("success", "Thành công!", "Chỉnh sửa học viên thành công");
       setShowForm(false);
@@ -977,25 +900,17 @@ const ListUser = () => {
 
   // Hàm mở modal cập nhật đồng loạt ngày ra trường
   const handleBulkGraduationUpdate = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       // Lấy danh sách sinh viên
-      const studentsResponse = await axios.get(
-        `${BASE_URL}/commander/allStudents`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const studentsResponse = await axiosInstance.get(
+        `/commander/allStudents`,
+        {}
       );
       setAllStudents(studentsResponse.data);
 
       // Lấy danh sách năm học
-      const schoolYearsResponse = await axios.get(
-        `${BASE_URL}/commander/schoolYears`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const schoolYearsResponse = await axiosInstance.get(
+        `/commander/schoolYears`
       );
       setSchoolYears(schoolYearsResponse.data);
 
@@ -1132,19 +1047,13 @@ const ListUser = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     setIsLoading(true);
     try {
-      const response = await axios.put(
-        `${BASE_URL}/commander/bulkUpdateGraduationDate`,
+      const response = await axiosInstance.put(
+        `/commander/bulkUpdateGraduationDate`,
         {
           studentIds: selectedStudents,
           graduationDate: graduationDate,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -1172,107 +1081,84 @@ const ListUser = () => {
   };
 
   const handleRowClick = async (studentId) => {
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(
+        `/commander/student/${studentId}`,
+        {}
+      );
+      setProfileDetail(res.data);
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/student/${studentId}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-        setProfileDetail(res.data);
+      // Fetch university
+      if (
+        res.data.university &&
+        typeof res.data.university === "string" &&
+        res.data.university.length === 24
+      ) {
+        try {
+          const universityRes = await axiosInstance.get(
+            `/university/${res.data.university}`
+          );
+          setProfileUniversity(universityRes.data);
+        } catch (error) {
+          console.error("Error fetching university:", error);
+        }
 
-        // Fetch university
+        // Fetch organization
         if (
-          res.data.university &&
-          typeof res.data.university === "string" &&
-          res.data.university.length === 24
+          res.data.organization &&
+          typeof res.data.organization === "string" &&
+          res.data.organization.length === 24
         ) {
           try {
-            const universityRes = await axios.get(
-              `${BASE_URL}/university/${res.data.university}`,
-              {
-                headers: { token: `Bearer ${token}` },
-              }
+            const organizationRes = await axiosInstance.get(
+              `/university/organizations/${res.data.organization}`
             );
-            setProfileUniversity(universityRes.data);
+            setProfileOrganization(organizationRes.data);
           } catch (error) {
-            console.error("Error fetching university:", error);
+            console.error("Error fetching organization:", error);
           }
 
-          // Fetch organization
+          // Fetch education level
           if (
-            res.data.organization &&
-            typeof res.data.organization === "string" &&
-            res.data.organization.length === 24
+            res.data.educationLevel &&
+            typeof res.data.educationLevel === "string" &&
+            res.data.educationLevel.length === 24
           ) {
             try {
-              const organizationRes = await axios.get(
-                `${BASE_URL}/university/organizations/${res.data.organization}`,
-                {
-                  headers: { token: `Bearer ${token}` },
-                }
+              console.log("Fetching education level:", res.data.educationLevel);
+              const educationLevelRes = await axiosInstance.get(
+                `/university/education-levels/${res.data.educationLevel}`
               );
-              setProfileOrganization(organizationRes.data);
+              console.log("Education level data:", educationLevelRes.data);
+              setProfileEducationLevel(educationLevelRes.data);
             } catch (error) {
-              console.error("Error fetching organization:", error);
+              console.error("Error fetching education level:", error);
             }
 
-            // Fetch education level
+            // Fetch class
             if (
-              res.data.educationLevel &&
-              typeof res.data.educationLevel === "string" &&
-              res.data.educationLevel.length === 24
+              res.data.class &&
+              typeof res.data.class === "string" &&
+              res.data.class.length === 24
             ) {
               try {
-                console.log(
-                  "Fetching education level:",
-                  res.data.educationLevel
+                console.log("Fetching class:", res.data.class);
+                const classRes = await axiosInstance.get(
+                  `/university/classes/${res.data.class}`
                 );
-                const educationLevelRes = await axios.get(
-                  `${BASE_URL}/university/education-levels/${res.data.educationLevel}`,
-                  {
-                    headers: { token: `Bearer ${token}` },
-                  }
-                );
-                console.log("Education level data:", educationLevelRes.data);
-                setProfileEducationLevel(educationLevelRes.data);
+                console.log("Class data:", classRes.data);
+                setProfileClass(classRes.data);
               } catch (error) {
-                console.error("Error fetching education level:", error);
-              }
-
-              // Fetch class
-              if (
-                res.data.class &&
-                typeof res.data.class === "string" &&
-                res.data.class.length === 24
-              ) {
-                try {
-                  console.log("Fetching class:", res.data.class);
-                  const classRes = await axios.get(
-                    `${BASE_URL}/university/classes/${res.data.class}`,
-                    {
-                      headers: { token: `Bearer ${token}` },
-                    }
-                  );
-                  console.log("Class data:", classRes.data);
-                  setProfileClass(classRes.data);
-                } catch (error) {
-                  console.error("Error fetching class:", error);
-                }
+                console.error("Error fetching class:", error);
               }
             }
           }
         }
-
-        setShowProfileDetail(true);
-      } catch (error) {
-        console.log(error);
       }
+
+      setShowProfileDetail(true);
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -1281,25 +1167,17 @@ const ListUser = () => {
     router.push(
       `/admin/list-user?fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&schoolYear=${schoolYear}`
     );
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(
+        `/commander/student?page=${currentPage}&pageSize=${pageSize}&fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&schoolYear=${schoolYear}&graduated=false`,
+        {}
+      );
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/student?page=${currentPage}&pageSize=${pageSize}&fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&schoolYear=${schoolYear}&graduated=false`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      if (res.status === 404) setProfile([]);
 
-        if (res.status === 404) setProfile([]);
-
-        setProfile(res.data);
-      } catch (error) {
-        handleNotify("danger", "Lỗi!", error);
-      }
+      setProfile(res.data);
+    } catch (error) {
+      handleNotify("danger", "Lỗi!", error);
     }
   };
 
@@ -1313,24 +1191,16 @@ const ListUser = () => {
     router.push("/admin/list-user");
 
     // Fetch all data với năm học mới nhất
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const latestYear = schoolYears[0] || "";
-        const res = await axios.get(
-          `${BASE_URL}/commander/student?page=1&pageSize=${pageSize}&schoolYear=${latestYear}&graduated=false`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+    try {
+      const latestYear = schoolYears[0] || "";
+      const res = await axiosInstance.get(
+        `/commander/student?page=1&pageSize=${pageSize}&schoolYear=${latestYear}&graduated=false`
+      );
 
-        if (res.status === 404) setProfile([]);
-        setProfile(res.data);
-      } catch (error) {
-        handleNotify("danger", "Lỗi!", error);
-      }
+      if (res.status === 404) setProfile([]);
+      setProfile(res.data);
+    } catch (error) {
+      handleNotify("danger", "Lỗi!", error);
     }
   };
 
@@ -3090,14 +2960,8 @@ const ListUser = () => {
                     onClick={async () => {
                       if (!schoolYear) {
                         try {
-                          const token = localStorage.getItem("token");
-                          const response = await axios.get(
-                            `${BASE_URL}/commander/political-management/school-years`,
-                            {
-                              headers: {
-                                token: `Bearer ${token}`,
-                              },
-                            }
+                          const response = await axiosInstance.get(
+                            `/commander/political-management/school-years`
                           );
 
                           if (
@@ -3128,13 +2992,9 @@ const ListUser = () => {
                         return;
                       }
                       try {
-                        const token = localStorage.getItem("token");
-                        const response = await axios.get(
-                          `${BASE_URL}/commander/political-management/excel?schoolYear=${schoolYear}`,
+                        const response = await axiosInstance.get(
+                          `/commander/political-management/excel?schoolYear=${schoolYear}`,
                           {
-                            headers: {
-                              token: `Bearer ${token}`,
-                            },
                             responseType: "blob",
                           }
                         );

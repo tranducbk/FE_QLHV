@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
-import { BASE_URL } from "@/configs";
 import { useLoading } from "@/hooks";
 import { TreeSelect, ConfigProvider, theme, Input, Select } from "antd";
 import { useState as useThemeState } from "react";
+import axiosInstance from "@/utils/axiosInstance";
 
 const LearningResults = () => {
   const [learningResults, setLearningResults] = useState([]);
@@ -74,13 +73,8 @@ const LearningResults = () => {
   }, []);
 
   const fetchSemesters = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const res = await axios.get(`${BASE_URL}/semester`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const res = await axiosInstance.get("/semester");
       const list = res.data || [];
       console.log("Semesters data:", list);
       setSemesters(list);
@@ -96,9 +90,6 @@ const LearningResults = () => {
   };
 
   const fetchLearningResults = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       // Xử lý khi chọn "Tất cả học kỳ" hoặc chưa chọn gì
       let semesterData = [];
@@ -127,7 +118,7 @@ const LearningResults = () => {
       }
 
       // Nếu không có semesterData, gọi API không có params để lấy tất cả
-      let url = `${BASE_URL}/commander/allStudentsGrades`;
+      let url = "/commander/allStudentsGrades";
 
       if (semesterData.length > 0) {
         // Tách riêng semester và schoolYear để gửi lên API
@@ -143,12 +134,10 @@ const LearningResults = () => {
           schoolYearParam,
         });
 
-        url = `${BASE_URL}/commander/allStudentsGrades?semester=${semesterParam}&schoolYear=${schoolYearParam}`;
+        url = `/commander/allStudentsGrades?semester=${semesterParam}&schoolYear=${schoolYearParam}`;
       }
 
-      const res = await axios.get(url, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const res = await axiosInstance.get(url);
 
       console.log("Learning results data (raw):", res.data);
 
@@ -223,14 +212,10 @@ const LearningResults = () => {
 
   // Lấy chi tiết 1 SV theo kỳ để xem
   const fetchStudentDetail = async (studentId, semester, schoolYear) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       // Gọi API từ bên học viên để lấy chi tiết điểm
-      const res = await axios.get(
-        `${BASE_URL}/grade/student/${studentId}/${semester}/${schoolYear}`,
-        { headers: { token: `Bearer ${token}` } }
+      const res = await axiosInstance.get(
+        `/grade/student/${studentId}/${semester}/${schoolYear}`
       );
 
       // Kiểm tra và format dữ liệu trả về
@@ -285,8 +270,7 @@ const LearningResults = () => {
   };
 
   const handleSubmitUpdate = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !selectedStudent) return;
+    if (!selectedStudent) return;
 
     try {
       const yearlyResultId = selectedStudent.yearlyResults?.[0]?.id;
@@ -296,15 +280,12 @@ const LearningResults = () => {
         return;
       }
 
-      const response = await axios.put(
-        `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
+      const response = await axiosInstance.put(
+        `/commander/updateStudentRating/${yearlyResultId}`,
         {
           partyRating: updateFormData.partyRating,
           trainingRating: updateFormData.trainingRating,
           decisionNumber: updateFormData.decisionNumber,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -333,8 +314,7 @@ const LearningResults = () => {
   };
 
   const handleExportPDF = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || selectedSemesters.length === 0) return;
+    if (selectedSemesters.length === 0) return;
 
     try {
       // Chuyển đổi từ id sang code cho API export
@@ -351,10 +331,9 @@ const LearningResults = () => {
           })
           .join(",");
       }
-      const res = await axios.get(
-        `${BASE_URL}/commander/learningResult/pdf?semester=${semesterParam}`,
+      const res = await axiosInstance.get(
+        `/commander/learningResult/pdf?semester=${semesterParam}`,
         {
-          headers: { token: `Bearer ${token}` },
           responseType: "blob",
         }
       );

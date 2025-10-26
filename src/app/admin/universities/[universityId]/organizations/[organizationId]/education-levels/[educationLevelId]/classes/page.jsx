@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { handleNotify } from "../../../../../../../../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 import {
   PlusOutlined,
   EditOutlined,
@@ -47,17 +46,8 @@ export default function EducationLevelClasses() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      const response = await axios.get(
-        `${BASE_URL}/university/education-levels/${educationLevelId}/classes`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const response = await axiosInstance.get(
+        `/university/education-levels/${educationLevelId}/classes`
       );
 
       setClasses(response.data);
@@ -76,19 +66,10 @@ export default function EducationLevelClasses() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.post(
-        `${BASE_URL}/university/education-levels/${educationLevelId}/classes`,
+      await axiosInstance.post(
+        `/university/education-levels/${educationLevelId}/classes`,
         {
           className: addFormData.className,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -112,21 +93,9 @@ export default function EducationLevelClasses() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.put(
-        `${BASE_URL}/university/classes/${selectedClass.id}`,
-        {
-          className: editFormData.className,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
-        }
-      );
+      await axiosInstance.put(`/university/classes/${selectedClass.id}`, {
+        className: editFormData.className,
+      });
 
       fetchData();
       resetEditForm();
@@ -154,15 +123,7 @@ export default function EducationLevelClasses() {
 
   const confirmDeleteClass = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.delete(`${BASE_URL}/university/classes/${classToDelete.id}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/university/classes/${classToDelete.id}`);
 
       fetchData();
       handleNotify("success", "Thành công!", "Xóa lớp thành công!");

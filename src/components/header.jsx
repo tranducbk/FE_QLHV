@@ -1,6 +1,5 @@
 "use client";
 
-import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import dayjs from "dayjs";
 import Link from "next/link";
@@ -34,7 +33,8 @@ import {
 import TabNotification from "./tabNotification";
 import { ThemeToggle } from "./ThemeToggle";
 import { useThemeContext } from "./ThemeProvider";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
+import { isAdmin } from "@/utils/roleUtils";
 
 const { Header: AntHeader } = Layout;
 const { Text, Title } = Typography;
@@ -52,18 +52,9 @@ const Header = () => {
   const { token: themeToken } = theme.useToken();
   const { theme: currentTheme } = useThemeContext();
 
-  // Helper function để check admin (xử lý cả boolean và string)
+  // Helper function để check admin (sử dụng utility function)
   const checkIsAdmin = () => {
-    return (
-      userDetail?.isAdmin === true ||
-      userDetail?.isAdmin === "TRUE" ||
-      user?.isAdmin === true ||
-      user?.isAdmin === "TRUE" ||
-      userDetail?.role === "ADMIN" ||
-      userDetail?.role === "SUPER_ADMIN" ||
-      user?.role === "ADMIN" ||
-      user?.role === "SUPER_ADMIN"
-    );
+    return isAdmin(userDetail) || isAdmin(user);
   };
 
   useEffect(() => {
@@ -85,22 +76,14 @@ const Header = () => {
   }, []);
 
   const fetchDocuments = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const decodedToken = jwtDecode(token);
+      if (!user?.id) return;
 
       // CHỈ fetch notifications cho student
       // Admin sẽ nhận thông báo từ hệ thống khác (khi student cập nhật data)
       if (!checkIsAdmin()) {
-        const res = await axios.get(
-          `${BASE_URL}/commander/studentNotifications/${decodedToken.id}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+        const res = await axiosInstance.get(
+          `/commander/studentNotifications/${user.id}`
         );
         setDocuments(res.data || []);
       } else {
@@ -136,85 +119,45 @@ const Header = () => {
   }, []);
 
   const fetchUserDetail = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      // Lấy thông tin user trước
+      const userRes = await axiosInstance.get(`/user/me`);
+      const currentUser = userRes.data;
 
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        if (decodedToken.admin === true) {
-          const res = await axios.get(
-            `${BASE_URL}/commander/${decodedToken.id}`,
-            {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            }
-          );
+      // Sử dụng utility function để kiểm tra role
+      if (isAdmin(currentUser)) {
+        const res = await axiosInstance.get(`/commander/${currentUser.id}`);
+        setUserDetail(res.data);
+      } else {
+        // Get studentId from userId first
+        const studentRes = await axiosInstance.get(
+          `/student/by-user/${currentUser.id}`
+        );
 
-          setUserDetail(res.data);
-        } else {
-          // Get studentId from userId first
-          const studentRes = await axios.get(
-            `${BASE_URL}/student/by-user/${decodedToken.id}`,
-            {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            }
-          );
-
-          const res = await axios.get(
-            `${BASE_URL}/student/${studentRes.data.id}`,
-            {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            }
-          );
-
-          setUserDetail(res.data);
-        }
-      } catch (error) {
-        // Handle error silently
+        const res = await axiosInstance.get(`/student/${studentRes.data.id}`);
+        setUserDetail(res.data);
       }
+    } catch (error) {
+      // Token không hợp lệ -> redirect về login (axiosInstance đã xử lý)
     }
   };
 
   const fetchData = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-
-        const res = await axios.get(`${BASE_URL}/user/${decodedToken.id}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setUser(res.data);
-        // Response received
-      } catch (error) {
-        // Handle error silently
-      }
+    try {
+      const res = await axiosInstance.get(`/user/me`);
+      setUser(res.data);
+    } catch (error) {
+      // Token không hợp lệ -> redirect về login (axiosInstance đã xử lý)
     }
   };
 
   const handleLogout = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        await axios.post(`${BASE_URL}/user/logout`, null, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        localStorage.removeItem("token");
-        router.push("/login");
-      } catch (error) {
-        // Handle error silently
-      }
+    try {
+      await axiosInstance.post(`/user/logout`);
+      router.push("/login");
+    } catch (error) {
+      // Logout failed, nhưng vẫn redirect về login
+      router.push("/login");
     }
   };
 
@@ -232,182 +175,185 @@ const Header = () => {
 
   const handleUpdateIsRead = async (e, notificationId, notification) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        const isAdmin = checkIsAdmin();
+    try {
+      if (!user?.id) return;
 
-        // Đánh dấu đã đọc
-        await axios.put(
-          `${BASE_URL}/commander/notification/${decodedToken.id}/${notificationId}`,
-          { isRead: true },
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      const isAdmin = checkIsAdmin();
 
-        setDocuments((prevDocs) =>
-          prevDocs.map((doc) =>
-            doc.id === notificationId ? { ...doc, isRead: true } : doc
-          )
-        );
+      // Đánh dấu đã đọc
+      await axiosInstance.put(
+        `/commander/notification/${user.id}/${notificationId}`,
+        { isRead: true }
+      );
 
-        setDropdownOpen(false);
+      setDocuments((prevDocs) =>
+        prevDocs.map((doc) =>
+          doc.id === notificationId ? { ...doc, isRead: true } : doc
+        )
+      );
 
-        // Điều hướng thông minh dựa trên role (ADMIN hoặc USER)
-        let targetUrl = isAdmin ? "/admin" : "/users"; // Default
+      setDropdownOpen(false);
 
-        if (notification?.link) {
-          // Nếu có link từ backend, điều chỉnh dựa vào role hiện tại
-          // Backend lưu link với /users, nhưng frontend cần chuyển đổi cho đúng role
-          let backendLink = notification.link;
+      // Điều hướng thông minh dựa trên role (ADMIN hoặc USER)
+      let targetUrl = isAdmin ? "/admin" : "/users"; // Default
 
-          // Nếu là admin và link bắt đầu bằng /users, chuyển thành /admin
-          if (isAdmin && backendLink.startsWith("/users")) {
-            // Mapping các route từ user sang admin
-            if (backendLink.includes("/semester-results")) {
-              targetUrl = backendLink.replace(
-                "/users/semester-results",
-                "/admin/learning-results"
-              );
-            } else if (backendLink.includes("/tuition-fee")) {
-              targetUrl = backendLink.replace(
-                "/users/tuition-fee",
-                "/admin/tuition-fees"
-              );
-            } else if (backendLink.includes("/yearly-statistics")) {
-              targetUrl = backendLink.replace(
-                "/users/yearly-statistics",
-                "/admin/yearly-statistics"
-              );
-            } else if (backendLink.includes("/time-table")) {
-              targetUrl = backendLink.replace(
-                "/users/time-table",
-                "/admin/time-table"
-              );
-            } else if (backendLink.includes("/cut-rice")) {
-              targetUrl = backendLink.replace(
-                "/users/cut-rice",
-                "/admin/cut-rice"
-              );
-            } else if (backendLink.includes("/commander-duty-schedule")) {
-              targetUrl = backendLink.replace(
-                "/users/commander-duty-schedule",
-                "/admin/commander-duty-schedule"
-              );
-            } else if (backendLink.includes("/achievement")) {
-              targetUrl = backendLink.replace(
-                "/users/achievement",
-                "/admin/achievement"
-              );
-            } else if (backendLink.match(/^\/users\/\d+$/)) {
-              // Pattern: /users/{id} -> /admin/{id}
-              targetUrl = backendLink.replace("/users/", "/admin/");
-            } else if (backendLink === "/users") {
-              targetUrl = "/admin";
-            } else {
-              // Các route khác giữ nguyên hoặc về trang chính
-              targetUrl = "/admin";
-            }
+      if (notification?.link) {
+        // Nếu có link từ backend, điều chỉnh dựa vào role hiện tại
+        // Backend lưu link với /users, nhưng frontend cần chuyển đổi cho đúng role
+        let backendLink = notification.link;
+
+        // Nếu là admin và link bắt đầu bằng /users, chuyển thành /admin
+        if (isAdmin && backendLink.startsWith("/users")) {
+          // Mapping các route từ user sang admin
+          if (backendLink.includes("/semester-results")) {
+            targetUrl = backendLink.replace(
+              "/users/semester-results",
+              "/admin/learning-results"
+            );
+          } else if (backendLink.includes("/tuition-fee")) {
+            targetUrl = backendLink.replace(
+              "/users/tuition-fee",
+              "/admin/tuition-fees"
+            );
+          } else if (backendLink.includes("/yearly-statistics")) {
+            targetUrl = backendLink.replace(
+              "/users/yearly-statistics",
+              "/admin/yearly-statistics"
+            );
+          } else if (backendLink.includes("/time-table")) {
+            targetUrl = backendLink.replace(
+              "/users/time-table",
+              "/admin/time-table"
+            );
+          } else if (backendLink.includes("/cut-rice")) {
+            targetUrl = backendLink.replace(
+              "/users/cut-rice",
+              "/admin/cut-rice"
+            );
+          } else if (backendLink.includes("/commander-duty-schedule")) {
+            targetUrl = backendLink.replace(
+              "/users/commander-duty-schedule",
+              "/admin/commander-duty-schedule"
+            );
+          } else if (backendLink.includes("/achievement")) {
+            // Achievement có thể có studentId hoặc không
+            targetUrl = backendLink.replace(
+              "/users/achievement",
+              "/admin/achievement"
+            );
+          } else if (backendLink.match(/^\/users\/\d+$/)) {
+            // Pattern: /users/{id} -> /admin/{id}
+            targetUrl = backendLink.replace("/users/", "/admin/");
+          } else if (backendLink === "/users") {
+            targetUrl = "/admin";
           } else {
-            // Giữ nguyên link nếu là user hoặc link đã đúng
-            targetUrl = backendLink;
+            // Các route khác giữ nguyên hoặc về trang chính
+            targetUrl = "/admin";
           }
-        } else if (notification?.type) {
-          // Map type sang URL tương ứng theo role
-          const baseRoute = isAdmin ? "/admin" : "/users";
-
-          switch (notification.type) {
-            case "new_semester":
-            case "semester_result":
-            case "learning_result":
-              // Kết quả học tập
-              targetUrl = isAdmin
-                ? "/admin/learning-results"
-                : "/users/semester-results";
-              break;
-            case "update_info":
-            case "profile_update":
-              // Thông tin cá nhân
-              targetUrl = `${baseRoute}/${decodedToken.id}`;
-              break;
-            case "tuition_fee":
-            case "payment":
-              // Học phí
-              targetUrl = isAdmin
-                ? "/admin/tuition-fees"
-                : "/users/tuition-fee";
-              break;
-            case "party_rating":
-              // Xếp loại Đảng viên
-              targetUrl = isAdmin
-                ? "/admin/party-rating"
-                : "/users/yearly-statistics";
-              break;
-            case "training_rating":
-              // Xếp loại rèn luyện
-              targetUrl = isAdmin
-                ? "/admin/training-rating"
-                : "/users/yearly-statistics";
-              break;
-            case "yearly_statistics":
-              // Thống kê theo năm
-              targetUrl = isAdmin
-                ? "/admin/yearly-statistics"
-                : "/users/yearly-statistics";
-              break;
-            case "time_table":
-            case "schedule":
-              // Thời khóa biểu / Lịch học
-              targetUrl = isAdmin ? "/admin/time-table" : "/users/time-table";
-              break;
-            case "cut_rice":
-            case "meal":
-              // Cắt cơm
-              targetUrl = isAdmin ? "/admin/cut-rice" : "/users/cut-rice";
-              break;
-            case "commander_duty":
-            case "duty_schedule":
-              // Lịch trực chỉ huy
-              targetUrl = `${baseRoute}/commander-duty-schedule`;
-              break;
-            case "achievement":
-            case "award":
-              // Khen thưởng
-              targetUrl = `${baseRoute}/achievement`;
-              break;
-            case "regulation":
-            case "regulatory_regime":
-              // Chế độ quy định (chỉ user có)
-              targetUrl = isAdmin ? baseRoute : "/users/regulatory-regime";
-              break;
-            case "semester_management":
-              // Quản lý kì học (chỉ admin có)
-              targetUrl = isAdmin ? "/admin/semester-management" : baseRoute;
-              break;
-            case "list_user":
-            case "student_management":
-              // Danh sách học viên (chỉ admin có)
-              targetUrl = isAdmin ? "/admin/list-user" : baseRoute;
-              break;
-            case "statistical":
-              // Thống kê (chỉ admin có)
-              targetUrl = isAdmin ? "/admin/statistical" : baseRoute;
-              break;
-            default:
-              // Mặc định về trang tổng quan
-              targetUrl = baseRoute;
-          }
+        } else {
+          // Giữ nguyên link nếu là user hoặc link đã đúng
+          targetUrl = backendLink;
         }
+      } else if (notification?.type) {
+        // Map type sang URL tương ứng theo role
+        const baseRoute = isAdmin ? "/admin" : "/users";
 
-        router.push(targetUrl);
-      } catch (error) {
-        // Handle error silently
+        switch (notification.type) {
+          case "new_semester":
+          case "semester_result":
+          case "learning_result":
+            // Kết quả học tập
+            targetUrl = isAdmin
+              ? "/admin/learning-results"
+              : "/users/semester-results";
+            break;
+          case "update_info":
+          case "profile_update":
+            // Thông tin cá nhân
+            targetUrl = `${baseRoute}/${user.id}`;
+            break;
+          case "tuition_fee":
+          case "payment":
+            // Học phí
+            targetUrl = isAdmin ? "/admin/tuition-fees" : "/users/tuition-fee";
+            break;
+          case "party_rating":
+            // Xếp loại Đảng viên
+            targetUrl = isAdmin
+              ? "/admin/party-rating"
+              : "/users/yearly-statistics";
+            break;
+          case "training_rating":
+            // Xếp loại rèn luyện
+            targetUrl = isAdmin
+              ? "/admin/training-rating"
+              : "/users/yearly-statistics";
+            break;
+          case "yearly_statistics":
+            // Thống kê theo năm
+            targetUrl = isAdmin
+              ? "/admin/yearly-statistics"
+              : "/users/yearly-statistics";
+            break;
+          case "time_table":
+          case "schedule":
+            // Thời khóa biểu / Lịch học
+            targetUrl = isAdmin ? "/admin/time-table" : "/users/time-table";
+            break;
+          case "cut_rice":
+          case "meal":
+            // Cắt cơm
+            targetUrl = isAdmin ? "/admin/cut-rice" : "/users/cut-rice";
+            break;
+          case "commander_duty":
+          case "duty_schedule":
+            // Lịch trực chỉ huy
+            targetUrl = `${baseRoute}/commander-duty-schedule`;
+            break;
+          case "achievement":
+          case "award":
+            // Khen thưởng - nếu có studentId trong data thì đi đến trang chi tiết
+            try {
+              const notifData = notification?.data
+                ? JSON.parse(notification.data)
+                : null;
+              if (isAdmin && notifData?.studentId) {
+                targetUrl = `/admin/achievement/${notifData.studentId}`;
+              } else {
+                targetUrl = `${baseRoute}/achievement`;
+              }
+            } catch {
+              targetUrl = `${baseRoute}/achievement`;
+            }
+            break;
+          case "regulation":
+          case "regulatory_regime":
+            // Chế độ quy định (chỉ user có)
+            targetUrl = isAdmin ? baseRoute : "/users/regulatory-regime";
+            break;
+          case "semester_management":
+            // Quản lý kì học (chỉ admin có)
+            targetUrl = isAdmin ? "/admin/semester-management" : baseRoute;
+            break;
+          case "list_user":
+          case "student_management":
+            // Danh sách học viên (chỉ admin có)
+            targetUrl = isAdmin ? "/admin/list-user" : baseRoute;
+            break;
+          case "statistical":
+            // Thống kê (chỉ admin có)
+            targetUrl = isAdmin ? "/admin/statistical" : baseRoute;
+            break;
+          default:
+            // Mặc định về trang tổng quan
+            targetUrl = baseRoute;
+        }
       }
+
+      router.push(targetUrl);
+    } catch (error) {
+      // Handle error silently
     }
   };
 

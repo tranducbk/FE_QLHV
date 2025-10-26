@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const AchievementContent = () => {
   const [achievement, setAchievement] = useState(null);
@@ -17,52 +15,38 @@ const AchievementContent = () => {
   const { loading, withLoading } = useLoading(true);
 
   const fetchAchievement = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const studentIdParam = searchParams?.get("studentId");
 
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        const studentIdParam = searchParams?.get("studentId");
+      // Nếu có studentId trong params thì dùng, không thì lấy từ user data
+      let targetStudentId = studentIdParam;
+      if (!targetStudentId) {
+        // Lấy thông tin user từ API
+        const userRes = await axiosInstance.get("/user/me");
+        const userId = userRes.data.id;
 
-        // Nếu có studentId trong params thì dùng, không thì lấy từ user data
-        let targetStudentId = studentIdParam;
-        if (!targetStudentId) {
-          // Lấy studentId từ helper route
-          const studentRes = await axios.get(
-            `${BASE_URL}/student/by-user/${decodedToken.id}`,
-            {
-              headers: { token: `Bearer ${token}` },
-            }
-          );
-          targetStudentId = studentRes.data.id;
-        }
-
-        const res = await axios.get(
-          `${BASE_URL}/achievement/${targetStudentId}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+        // Lấy studentId từ helper route
+        const studentRes = await axiosInstance.get(
+          `/student/by-user/${userId}`
         );
-
-        setAchievement(res.data);
-
-        // Fetch recommendations (đề xuất) - sử dụng endpoint cho user
-        try {
-          const recRes = await axios.get(
-            `${BASE_URL}/achievement/${targetStudentId}/recommendations`,
-            {
-              headers: { token: `Bearer ${token}` },
-            }
-          );
-          setRecommendations(recRes.data);
-        } catch (e) {
-          setRecommendations({ suggestions: [] });
-        }
-      } catch (error) {
-        // Handle error silently
+        targetStudentId = studentRes.data.id;
       }
+
+      const res = await axiosInstance.get(`/achievement/${targetStudentId}`);
+
+      setAchievement(res.data);
+
+      // Fetch recommendations (đề xuất) - sử dụng endpoint cho user
+      try {
+        const recRes = await axiosInstance.get(
+          `/achievement/${targetStudentId}/recommendations`
+        );
+        setRecommendations(recRes.data);
+      } catch (e) {
+        setRecommendations({ suggestions: [] });
+      }
+    } catch (error) {
+      // Handle error silently
     }
   };
 

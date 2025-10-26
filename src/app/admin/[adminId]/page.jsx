@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import dayjs from "dayjs";
 import Link from "next/link";
 import DatePicker from "react-datepicker";
@@ -9,8 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 const UserProfile = ({ params }) => {
   const [profile, setProfile] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -79,20 +77,11 @@ const UserProfile = ({ params }) => {
   }, [withLoading]);
 
   const fetchProfile = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/${params.adminId}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setProfile(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get(`/commander/${params.adminId}`);
+      setProfile(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -124,16 +113,10 @@ const UserProfile = ({ params }) => {
 
   const handleSubmit = async (e, commanderId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
-      const response = await axios.put(
-        `${BASE_URL}/commander/${commanderId}`,
-        formData,
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
+      const response = await axiosInstance.put(
+        `/commander/${commanderId}`,
+        formData
       );
       handleNotify(
         "success",

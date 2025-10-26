@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { handleNotify } from "../../../../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 import {
   PlusOutlined,
   EditOutlined,
@@ -49,17 +48,8 @@ export default function UniversityOrganizations() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      const response = await axios.get(
-        `${BASE_URL}/university/${universityId}/organizations`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const response = await axiosInstance.get(
+        `/university/${universityId}/organizations`
       );
 
       setOrganizations(response.data);
@@ -67,11 +57,8 @@ export default function UniversityOrganizations() {
       // Fetch hierarchy data for each organization
       const hierarchyPromises = response.data.map(async (org) => {
         try {
-          const hierarchyResponse = await axios.get(
-            `${BASE_URL}/university/organizations/${org.id}/hierarchy`,
-            {
-              headers: { token: `Bearer ${token}` },
-            }
+          const hierarchyResponse = await axiosInstance.get(
+            `/university/organizations/${org.id}/hierarchy`
           );
           return hierarchyResponse.data;
         } catch (error) {
@@ -100,22 +87,10 @@ export default function UniversityOrganizations() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.post(
-        `${BASE_URL}/university/${universityId}/organizations`,
-        {
-          organizationName: addFormData.organizationName,
-          travelTime: addFormData.travelTime,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
-        }
-      );
+      await axiosInstance.post(`/university/${universityId}/organizations`, {
+        organizationName: addFormData.organizationName,
+        travelTime: addFormData.travelTime,
+      });
 
       fetchData();
       resetAddForm();
@@ -137,20 +112,11 @@ export default function UniversityOrganizations() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.put(
-        `${BASE_URL}/university/organizations/${selectedOrganization.id}`,
+      await axiosInstance.put(
+        `/university/organizations/${selectedOrganization.id}`,
         {
           organizationName: editFormData.organizationName,
           travelTime: editFormData.travelTime,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -181,17 +147,8 @@ export default function UniversityOrganizations() {
 
   const confirmDeleteOrganization = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.delete(
-        `${BASE_URL}/university/organizations/${organizationToDelete.id}`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      await axiosInstance.delete(
+        `/university/organizations/${organizationToDelete.id}`
       );
 
       fetchData();

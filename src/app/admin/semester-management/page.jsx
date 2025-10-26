@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { handleNotify } from "../../../components/notify";
 import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const SemesterManagement = () => {
   const [semesters, setSemesters] = useState([]);
@@ -28,13 +29,8 @@ const SemesterManagement = () => {
   }, []);
 
   const fetchSemesters = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const res = await axios.get(`${BASE_URL}/semester`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const res = await axiosInstance.get(`/semester`);
 
       // Sắp xếp từ năm mới nhất đến cũ, trong cùng năm thì từ kỳ mới nhất đến cũ
       const sortedSemesters = (res.data || []).sort((a, b) => {
@@ -65,8 +61,7 @@ const SemesterManagement = () => {
 
   const handleCreateSemester = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    if (!token || !newTerm || !yearStart || !yearEnd) {
+    if (!newTerm || !yearStart || !yearEnd) {
       handleNotify("warning", "Cảnh báo", "Vui lòng điền đầy đủ thông tin");
       return;
     }
@@ -99,16 +94,10 @@ const SemesterManagement = () => {
     }
 
     try {
-      await axios.post(
-        `${BASE_URL}/semester`,
-        {
-          code: `HK${newTerm}`,
-          schoolYear: schoolYear,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
-        }
-      );
+      await axiosInstance.post(`/semester`, {
+        code: `HK${newTerm}`,
+        schoolYear: schoolYear,
+      });
 
       handleNotify("success", "Thành công", "Đã tạo học kỳ mới");
       setShowCreateSemester(false);
@@ -128,9 +117,7 @@ const SemesterManagement = () => {
 
   const handleUpdateSemester = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     if (
-      !token ||
       !selectedEditSemesterId ||
       !editTerm ||
       !editYearStart ||
@@ -171,16 +158,10 @@ const SemesterManagement = () => {
     }
 
     try {
-      await axios.put(
-        `${BASE_URL}/semester/${selectedEditSemesterId}`,
-        {
-          code: `HK${editTerm}`,
-          schoolYear: schoolYear,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
-        }
-      );
+      await axiosInstance.put(`/semester/${selectedEditSemesterId}`, {
+        code: `HK${editTerm}`,
+        schoolYear: schoolYear,
+      });
 
       handleNotify("success", "Thành công", "Đã cập nhật học kỳ");
       setShowEditSemester(false);
@@ -201,13 +182,10 @@ const SemesterManagement = () => {
   };
 
   const handleDeleteSemester = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !selectedEditSemesterId) return;
+    if (!selectedEditSemesterId) return;
 
     try {
-      await axios.delete(`${BASE_URL}/semester/${selectedEditSemesterId}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/semester/${selectedEditSemesterId}`);
 
       handleNotify("success", "Thành công", "Đã xóa học kỳ");
       setShowConfirmDeleteSemester(false);

@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { handleNotify } from "../../components/notify";
 import { Input } from "antd";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
+import { getRedirectPath } from "@/utils/roleUtils";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -15,66 +14,38 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkToken = () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decodedToken = jwtDecode(token);
-          // Redirect SUPER_ADMIN
-          if (decodedToken.role === "SUPER_ADMIN") {
-            router.replace("/supper_admin");
-            return;
-          }
-          // Check admin thường - redirect ngay không cần gọi API
-          if (decodedToken.admin === true) {
-            router.replace("/admin");
-          } else {
-            router.replace("/users");
-          }
-        } catch (error) {
-          // Handle token validation error
-          localStorage.removeItem("token");
-          localStorage.removeItem("accessToken");
-        }
-      }
-    };
-
-    checkToken();
-  }, [router]);
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const res = await axios.post(`${BASE_URL}/user/login`, {
+      const res = await axiosInstance.post(`/user/login`, {
         username,
         password,
       });
-      const { accessToken } = res.data;
-      localStorage.setItem("token", accessToken);
 
-      const decodedToken = jwtDecode(accessToken);
+      const { user } = res.data;
+
       handleNotify("success", "Thành công!", "Đăng nhập thành công");
 
-      // Redirect ngay lập tức - dùng replace để không quay lại được
-      if (decodedToken.role === "SUPER_ADMIN") {
-        router.replace("/supper_admin");
-      } else if (decodedToken.admin === true) {
-        router.replace("/admin");
-      } else {
-        router.replace("/users");
-      }
+      // Redirect ngay lập tức theo role
+      console.log("User data:", user); // Debug log
+
+      const redirectPath = getRedirectPath(user);
+      console.log("Redirecting to:", redirectPath); // Debug log
+
+      router.replace(redirectPath);
     } catch (error) {
+      console.error("Login error:", error); // Debug log
+
       if (error.response) {
-        handleNotify(
-          "warning",
-          "Cảnh báo!",
-          "Tài khoản hoặc mật khẩu không đúng!"
-        );
+        const errorMessage =
+          error.response.data?.message ||
+          error.response.data ||
+          "Tài khoản hoặc mật khẩu không đúng!";
+        handleNotify("warning", "Cảnh báo!", errorMessage);
       } else {
-        handleNotify("danger", "Lỗi!", error);
+        handleNotify("danger", "Lỗi!", error.message || "Có lỗi xảy ra");
       }
     } finally {
       setIsLoading(false);

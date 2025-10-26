@@ -1,14 +1,12 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
-import { jwtDecode } from "jwt-decode";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { handleNotify } from "../../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const CutRice = () => {
   const [cutRice, setCutRice] = useState(null);
@@ -109,36 +107,24 @@ const CutRice = () => {
 
   // Fetch studentId from userId
   const fetchStudentId = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        const res = await axios.get(
-          `${BASE_URL}/student/by-user/${decodedToken.id}`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
-        );
-        setStudentId(res.data.id);
-        return res.data.id;
-      } catch (error) {
-        console.error("Error fetching studentId:", error);
-        return null;
-      }
+    try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
+      const res = await axiosInstance.get(`/student/by-user/${userId}`);
+      setStudentId(res.data.id);
+      return res.data.id;
+    } catch (error) {
+      console.error("Error fetching studentId:", error);
+      return null;
     }
-    return null;
   };
 
   const fetchCutRice = async (sid) => {
-    const token = localStorage.getItem("token");
-
-    if (token && sid) {
+    if (sid) {
       try {
-        const res = await axios.get(`${BASE_URL}/student/${sid}/cut-rice`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
+        const res = await axiosInstance.get(`/student/${sid}/cut-rice`);
 
         // Đảm bảo response có đúng format
         if (res.data && typeof res.data === "object") {
@@ -156,18 +142,12 @@ const CutRice = () => {
 
   const handleUpdate = async (e, cutRiceId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
-    if (token && studentId) {
+    if (studentId) {
       try {
-        const response = await axios.put(
-          `${BASE_URL}/student/${studentId}/cut-rice/${cutRiceId}`,
-          formUpdateData,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+        const response = await axiosInstance.put(
+          `/student/${studentId}/cut-rice/${cutRiceId}`,
+          formUpdateData
         );
 
         if (response.status === 200) {
@@ -193,17 +173,11 @@ const CutRice = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    if (token && studentId) {
+    if (studentId) {
       try {
-        const response = await axios.post(
-          `${BASE_URL}/student/${studentId}/cut-rice`,
-          formUpdateData,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+        const response = await axiosInstance.post(
+          `/student/${studentId}/cut-rice`,
+          formUpdateData
         );
 
         if (response.status === 201) {

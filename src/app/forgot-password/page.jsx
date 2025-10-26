@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -10,35 +8,29 @@ import {
   ArrowLeftOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const ForgotPassword = () => {
   const router = useRouter();
 
   useEffect(() => {
     const checkToken = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decodedToken = jwtDecode(token);
-          if (decodedToken.admin === true) {
-            await axios.get(`${BASE_URL}/commander/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            router.push("/admin");
-          } else {
-            await axios.get(`${BASE_URL}/student/by-user/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            router.push("/users");
-          }
-        } catch (error) {
-          // Handle token validation error
+      try {
+        // Lấy thông tin user từ API
+        const userRes = await axiosInstance.get("/user/me");
+        const userData = userRes.data;
+
+        if (userData.admin === true) {
+          // Kiểm tra commander role
+          await axiosInstance.get(`/commander/${userData.id}`);
+          router.push("/admin");
+        } else {
+          // Kiểm tra student role
+          await axiosInstance.get(`/student/by-user/${userData.id}`);
+          router.push("/users");
         }
+      } catch (error) {
+        // Handle token validation error - axiosInstance sẽ tự động xử lý
       }
     };
 

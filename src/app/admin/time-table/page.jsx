@@ -1,6 +1,5 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -9,8 +8,7 @@ import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { Select } from "antd";
-
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const TimeTable = () => {
   const router = useRouter();
@@ -25,19 +23,8 @@ const TimeTable = () => {
   const { loading, withLoading } = useLoading(true);
 
   const fetchTimeTable = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      handleNotify("danger", "Lỗi!", "Không tìm thấy token xác thực");
-      return;
-    }
-
     try {
-      const res = await axios.get(`${BASE_URL}/commander/timeTables`, {
-        headers: {
-          token: `Bearer ${token}`,
-        },
-      });
+      const res = await axiosInstance.get("/commander/timeTables");
 
       setTimeTable(res.data);
 
@@ -142,38 +129,29 @@ const TimeTable = () => {
   };
 
   const handleGenerateAutoCutRice = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      // Hiển thị loading
+      handleNotify(
+        "info",
+        "Đang xử lý...",
+        "Đang tạo lịch cắt cơm tự động cho tất cả học viên"
+      );
 
-    if (token) {
-      try {
-        // Hiển thị loading
-        handleNotify(
-          "info",
-          "Đang xử lý...",
-          "Đang tạo lịch cắt cơm tự động cho tất cả học viên"
-        );
+      const response = await axiosInstance.post(
+        "/commander/cutRice/auto-generate",
+        {}
+      );
 
-        const response = await axios.post(
-          `${BASE_URL}/commander/cutRice/auto-generate`,
-          {},
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          handleNotify("success", "Thành công!", response.data.message);
-        }
-      } catch (error) {
-        handleNotify(
-          "danger",
-          "Lỗi!",
-          error.response?.data?.message ||
-            "Có lỗi xảy ra khi tạo lịch cắt cơm tự động"
-        );
+      if (response.status === 200) {
+        handleNotify("success", "Thành công!", response.data.message);
       }
+    } catch (error) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi tạo lịch cắt cơm tự động"
+      );
     }
   };
 
@@ -182,80 +160,73 @@ const TimeTable = () => {
   };
 
   const handleConfirmExport = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      // Hiển thị loading
+      handleNotify(
+        "info",
+        "Đang xử lý...",
+        "Đang tạo file Excel thời khóa biểu kèm lịch cắt cơm"
+      );
 
-    if (token) {
-      try {
-        // Hiển thị loading
-        handleNotify(
-          "info",
-          "Đang xử lý...",
-          "Đang tạo file Excel thời khóa biểu kèm lịch cắt cơm"
-        );
+      const unitParam =
+        selectedUnits.length > 0
+          ? `?unit=${selectedUnits
+              .map((unit) => encodeURIComponent(unit))
+              .join(",")}`
+          : "";
 
-        const unitParam =
-          selectedUnits.length > 0
-            ? `?unit=${selectedUnits
-                .map((unit) => encodeURIComponent(unit))
-                .join(",")}`
-            : "";
-
-        const response = await axios.get(
-          `${BASE_URL}/commander/time-table-with-cut-rice/excel${unitParam}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-            responseType: "blob",
-          }
-        );
-
-        // Lấy tên file từ response header hoặc tạo tên file động
-        const contentDisposition = response.headers["content-disposition"];
-        console.log("Response headers:", response.headers);
-        console.log("Content-Disposition:", contentDisposition);
-
-        let fileName = "thoikhoabieu.xlsx";
-
-        if (contentDisposition) {
-          const fileNameMatch = contentDisposition.match(
-            /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
-          );
-          console.log("Filename match:", fileNameMatch);
-          if (fileNameMatch && fileNameMatch[1]) {
-            fileName = fileNameMatch[1].replace(/['"]/g, "");
-            console.log("Using filename from header:", fileName);
-          }
-        } else if (selectedUnits.length > 0) {
-          // Tạo tên file động nếu không có header
-          const unitNames = selectedUnits
-            .map((unit) => unit.replace(/[^a-zA-Z0-9]/g, ""))
-            .join("_");
-          fileName = `thoikhoabieu_${unitNames}.xlsx`;
-          console.log("Using generated filename:", fileName);
+      const response = await axiosInstance.get(
+        `/commander/time-table-with-cut-rice/excel${unitParam}`,
+        {
+          responseType: "blob",
         }
+      );
 
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
+      // Lấy tên file từ response header hoặc tạo tên file động
+      const contentDisposition = response.headers["content-disposition"];
+      console.log("Response headers:", response.headers);
+      console.log("Content-Disposition:", contentDisposition);
 
-        handleNotify(
-          "success",
-          "Thành công!",
-          "Xuất file Excel thời khóa biểu kèm lịch cắt cơm thành công"
+      let fileName = "thoikhoabieu.xlsx";
+
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(
+          /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
         );
-
-        setShowExportModal(false);
-        setSelectedUnits([]);
-      } catch (error) {
-        const errorMessage =
-          error.response?.data?.message || "Có lỗi xảy ra khi xuất file Excel";
-        handleNotify("danger", "Lỗi!", errorMessage);
+        console.log("Filename match:", fileNameMatch);
+        if (fileNameMatch && fileNameMatch[1]) {
+          fileName = fileNameMatch[1].replace(/['"]/g, "");
+          console.log("Using filename from header:", fileName);
+        }
+      } else if (selectedUnits.length > 0) {
+        // Tạo tên file động nếu không có header
+        const unitNames = selectedUnits
+          .map((unit) => unit.replace(/[^a-zA-Z0-9]/g, ""))
+          .join("_");
+        fileName = `thoikhoabieu_${unitNames}.xlsx`;
+        console.log("Using generated filename:", fileName);
       }
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+
+      handleNotify(
+        "success",
+        "Thành công!",
+        "Xuất file Excel thời khóa biểu kèm lịch cắt cơm thành công"
+      );
+
+      setShowExportModal(false);
+      setSelectedUnits([]);
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Có lỗi xảy ra khi xuất file Excel";
+      handleNotify("danger", "Lỗi!", errorMessage);
     }
   };
 

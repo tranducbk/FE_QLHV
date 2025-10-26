@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { handleNotify } from "../../../../../../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 import {
   PlusOutlined,
   EditOutlined,
@@ -47,17 +46,8 @@ export default function OrganizationEducationLevels() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      const response = await axios.get(
-        `${BASE_URL}/university/organizations/${organizationId}/education-levels`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const response = await axiosInstance.get(
+        `/university/organizations/${organizationId}/education-levels`
       );
 
       setEducationLevels(response.data);
@@ -65,11 +55,8 @@ export default function OrganizationEducationLevels() {
       // Fetch hierarchy data for each education level
       const hierarchyPromises = response.data.map(async (level) => {
         try {
-          const hierarchyResponse = await axios.get(
-            `${BASE_URL}/university/education-levels/${level.id}/hierarchy`,
-            {
-              headers: { token: `Bearer ${token}` },
-            }
+          const hierarchyResponse = await axiosInstance.get(
+            `/university/education-levels/${level.id}/hierarchy`
           );
           return hierarchyResponse.data;
         } catch (error) {
@@ -106,19 +93,10 @@ export default function OrganizationEducationLevels() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.post(
-        `${BASE_URL}/university/organizations/${organizationId}/education-levels`,
+      await axiosInstance.post(
+        `/university/organizations/${organizationId}/education-levels`,
         {
           levelName: addFormData.levelName,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -151,19 +129,10 @@ export default function OrganizationEducationLevels() {
     }
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.put(
-        `${BASE_URL}/university/education-levels/${selectedEducationLevel.id}`,
+      await axiosInstance.put(
+        `/university/education-levels/${selectedEducationLevel.id}`,
         {
           levelName: editFormData.levelName,
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -198,17 +167,8 @@ export default function OrganizationEducationLevels() {
 
   const confirmDeleteEducationLevel = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        handleNotify("danger", "Lỗi!", "Vui lòng đăng nhập lại");
-        return;
-      }
-
-      await axios.delete(
-        `${BASE_URL}/university/education-levels/${educationLevelToDelete.id}`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      await axiosInstance.delete(
+        `/university/education-levels/${educationLevelToDelete.id}`
       );
 
       fetchData();

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import DatePicker from "react-datepicker";
@@ -12,8 +11,7 @@ import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { useModalScroll } from "@/hooks/useModalScroll";
-
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 const CommanderDutySchedule = () => {
   const router = useRouter();
   const [commanderDutySchedule, setCommanderDutySchedule] = useState([]);
@@ -36,32 +34,21 @@ const CommanderDutySchedule = () => {
 
   const handleShowFormEdit = async (id) => {
     setId(id);
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(`/user/commanderDutySchedule/${id}`);
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/user/commanderDutySchedule/${id}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      setEditFormData({
+        fullName: res.data.fullName || "",
+        phoneNumber: res.data.phoneNumber || "",
+        rank: res.data.rank || "",
+        position: res.data.position || "",
+        workDay: res.data.workDay ? new Date(res.data.workDay) : new Date(),
+      });
 
-        setEditFormData({
-          fullName: res.data.fullName || "",
-          phoneNumber: res.data.phoneNumber || "",
-          rank: res.data.rank || "",
-          position: res.data.position || "",
-          workDay: res.data.workDay ? new Date(res.data.workDay) : new Date(),
-        });
-
-        setShowFormEdit(true);
-      } catch (error) {
-        console.log(error);
-        handleNotify("danger", "Lỗi!", "Không thể tải thông tin lịch trực");
-      }
+      setShowFormEdit(true);
+    } catch (error) {
+      console.log(error);
+      handleNotify("danger", "Lỗi!", "Không thể tải thông tin lịch trực");
     }
   };
 
@@ -79,32 +66,19 @@ const CommanderDutySchedule = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        await axios.put(
-          `${BASE_URL}/user/commanderDutySchedule/${id}`,
-          editFormData,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-        handleNotify(
-          "success",
-          "Thành công!",
-          "Chỉnh sửa lịch trực thành công"
-        );
-        setShowFormEdit(false);
-        fetchSchedule();
-      } catch (error) {
-        const errorMessage =
-          error.response?.data?.message || error.message || "Có lỗi xảy ra";
-        handleNotify("danger", "Lỗi!", errorMessage);
-        // Không tắt modal khi có lỗi để người dùng có thể sửa lại
-      }
+    try {
+      await axiosInstance.put(
+        `/user/commanderDutySchedule/${id}`,
+        editFormData
+      );
+      handleNotify("success", "Thành công!", "Chỉnh sửa lịch trực thành công");
+      setShowFormEdit(false);
+      fetchSchedule();
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || error.message || "Có lỗi xảy ra";
+      handleNotify("danger", "Lỗi!", errorMessage);
+      // Không tắt modal khi có lỗi để người dùng có thể sửa lại
     }
   };
 
@@ -122,13 +96,8 @@ const CommanderDutySchedule = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
     try {
-      await axios.post(`${BASE_URL}/user/commanderDutySchedule`, addFormData, {
-        headers: {
-          token: `Bearer ${token}`,
-        },
-      });
+      await axiosInstance.post(`/user/commanderDutySchedule`, addFormData);
       handleNotify("success", "Thành công!", "Thêm lịch trực thành công");
       setShowFormAdd(false);
       setAddFormData({
@@ -153,26 +122,18 @@ const CommanderDutySchedule = () => {
 
   const handleConfirmDelete = (e, id) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      axios
-        .delete(`${BASE_URL}/user/commanderDutySchedule/${id}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        })
-        .then(() => {
-          setCommanderDutySchedule(
-            commanderDutySchedule.schedules.filter(
-              (commanderDutySchedule) => commanderDutySchedule.id !== id
-            )
-          );
-          handleNotify("success", "Thành công!", "Xóa lịch trực thành công");
-          fetchSchedule();
-        })
-        .catch((error) => handleNotify("danger", "Lỗi!", error));
-    }
+    axiosInstance
+      .delete(`/user/commanderDutySchedule/${id}`)
+      .then(() => {
+        setCommanderDutySchedule(
+          commanderDutySchedule.schedules.filter(
+            (commanderDutySchedule) => commanderDutySchedule.id !== id
+          )
+        );
+        handleNotify("success", "Thành công!", "Xóa lịch trực thành công");
+        fetchSchedule();
+      })
+      .catch((error) => handleNotify("danger", "Lỗi!", error));
     setShowConfirm(false);
     setDeleteItem(null);
   };
@@ -193,43 +154,26 @@ const CommanderDutySchedule = () => {
   }, [currentPage, withLoading]);
 
   const fetchSchedule = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(
+        `/user/commanderDutySchedules?page=${currentPage}&fullName=${
+          fullName ? fullName : ""
+        }&date=${date ? date : ""}`
+      );
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/user/commanderDutySchedules?page=${currentPage}&fullName=${
-            fullName ? fullName : ""
-          }&date=${date ? date : ""}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (res.status === 404) setCommanderDutySchedule([]);
-        setCommanderDutySchedule(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+      if (res.status === 404) setCommanderDutySchedule([]);
+      setCommanderDutySchedule(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
   const fetchCommanders = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-        setCommanders(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get(`/commander`);
+      setCommanders(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -240,27 +184,18 @@ const CommanderDutySchedule = () => {
         fullName ? fullName : ""
       }&date=${date ? date : ""}`
     );
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(
+        `/user/commanderDutySchedules?page=${currentPage}&fullName=${
+          fullName ? fullName : ""
+        }&date=${date ? date : ""}`
+      );
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/user/commanderDutySchedules?page=${currentPage}&fullName=${
-            fullName ? fullName : ""
-          }&date=${date ? date : ""}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      if (res.status === 404) setCommanderDutySchedule([]);
 
-        if (res.status === 404) setCommanderDutySchedule([]);
-
-        setCommanderDutySchedule(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+      setCommanderDutySchedule(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 

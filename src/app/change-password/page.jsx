@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { handleNotify } from "../../components/notify";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 import {
   LockOutlined,
   EyeOutlined,
@@ -27,31 +25,27 @@ const ChangePassword = () => {
 
   useEffect(() => {
     const checkToken = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decodedToken = jwtDecode(token);
-          if (decodedToken.admin === true) {
-            await axios.get(`${BASE_URL}/commander/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            setIsLoggedIn(true);
-            setUserType("admin");
-          } else {
-            await axios.get(`${BASE_URL}/student/by-user/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            setIsLoggedIn(true);
-            setUserType("student");
-          }
-        } catch (error) {
-          console.log("Token invalid:", error);
-          localStorage.removeItem("token");
+      try {
+        // Lấy thông tin user từ API
+        const userRes = await axiosInstance.get("/user/me");
+        const userData = userRes.data;
+
+        if (userData.admin === true) {
+          // Kiểm tra commander role
+          await axiosInstance.get(`/commander/${userData.id}`);
+          setIsLoggedIn(true);
+          setUserType("admin");
+        } else {
+          // Kiểm tra student role
+          await axiosInstance.get(`/student/by-user/${userData.id}`);
+          setIsLoggedIn(true);
+          setUserType("student");
         }
+      } catch (error) {
+        // Handle token validation error - axiosInstance sẽ tự động xử lý
+        console.log("Token invalid:", error);
+        setIsLoggedIn(false);
+        setUserType(null);
       }
     };
 
@@ -78,21 +72,15 @@ const ChangePassword = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const decodedToken = jwtDecode(token);
-      await axios.put(
-        `${BASE_URL}/user/${decodedToken.id}`,
-        {
-          password,
-          newPassword,
-          confirmPassword,
-        },
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
-      );
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
+      await axiosInstance.put(`/user/${userId}`, {
+        password,
+        newPassword,
+        confirmPassword,
+      });
       handleNotify("success", "Thành công!", "Đổi mật khẩu thành công");
       router.push("/login");
     } catch (error) {

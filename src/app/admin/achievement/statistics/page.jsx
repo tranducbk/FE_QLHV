@@ -1,12 +1,11 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { handleNotify } from "../../../../components/notify";
 import { Select } from "antd";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const AchievementStatistics = () => {
   const router = useRouter();
@@ -42,119 +41,111 @@ const AchievementStatistics = () => {
   });
 
   const fetchStudentsAndAchievements = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/students`, {
-          headers: { token: `Bearer ${token}` },
-        });
-        setStudents(res.data);
+    try {
+      const res = await axiosInstance.get(`/commander/students`);
+      setStudents(res.data);
 
-        // Fetch achievements for all students
-        const achievementsData = {};
-        let totalAchievements = 0;
-        let totalAdvancedSoldier = 0;
-        let totalCompetitiveSoldier = 0;
-        let totalScientificTopics = 0;
-        let totalScientificInitiatives = 0;
-        let eligibleForMinistryReward = 0;
-        let eligibleForNationalReward = 0;
-        let studentsWithAchievements = 0;
+      // Fetch achievements for all students
+      const achievementsData = {};
+      let totalAchievements = 0;
+      let totalAdvancedSoldier = 0;
+      let totalCompetitiveSoldier = 0;
+      let totalScientificTopics = 0;
+      let totalScientificInitiatives = 0;
+      let eligibleForMinistryReward = 0;
+      let eligibleForNationalReward = 0;
+      let studentsWithAchievements = 0;
 
-        for (const student of res.data) {
-          try {
-            const achievementRes = await axios.get(
-              `${BASE_URL}/achievement/admin/${student.id}`,
-              {
-                headers: { token: `Bearer ${token}` },
-              }
-            );
-            const achievement = achievementRes.data;
-            achievementsData[student.id] = achievement;
-
-            if (achievement.yearlyAchievements.length > 0) {
-              studentsWithAchievements++;
-              totalAchievements += achievement.totalYears;
-              totalAdvancedSoldier += achievement.totalAdvancedSoldier;
-              totalCompetitiveSoldier += achievement.totalCompetitiveSoldier;
-              totalScientificTopics += achievement.totalScientificTopics;
-              totalScientificInitiatives +=
-                achievement.totalScientificInitiatives;
-
-              if (achievement.eligibleForMinistryReward) {
-                eligibleForMinistryReward++;
-              }
-              if (achievement.eligibleForNationalReward) {
-                eligibleForNationalReward++;
-              }
-            }
-          } catch (error) {
-            // If no achievement exists, create default structure
-            achievementsData[student.id] = {
-              studentId: student.id,
-              yearlyAchievements: [],
-              totalYears: 0,
-              totalAdvancedSoldier: 0,
-              totalCompetitiveSoldier: 0,
-              totalScientificTopics: 0,
-              totalScientificInitiatives: 0,
-              eligibleForMinistryReward: false,
-              eligibleForNationalReward: false,
-              nextYearRecommendations: {},
-            };
-          }
-        }
-
-        setAchievements(achievementsData);
-        setStatistics({
-          totalStudents: res.data.length,
-          studentsWithAchievements,
-          totalAchievements,
-          totalAdvancedSoldier,
-          totalCompetitiveSoldier,
-          totalScientificTopics,
-          totalScientificInitiatives,
-          eligibleForMinistryReward,
-          eligibleForNationalReward,
-        });
-
-        // Lấy danh sách các năm học có trong DB (không trùng)
-        const yearsSet = new Set();
-        Object.values(achievementsData).forEach((ach) => {
-          if (ach && Array.isArray(ach.yearlyAchievements)) {
-            ach.yearlyAchievements.forEach((ya) => {
-              if (ya.year) {
-                yearsSet.add(ya.year);
-              }
-            });
-          }
-        });
-        const sortedYears = Array.from(yearsSet)
-          .sort((a, b) => b - a) // Sắp xếp giảm dần (mới nhất trước)
-          .map((year) => ({
-            value: year,
-            label: `${year}-${year + 1}`,
-          }));
-        setAvailableYears(sortedYears);
-
-        // Tự động chọn năm mới nhất nếu chưa có trong danh sách
-        if (sortedYears.length > 0) {
-          const currentSelectedYearExists = sortedYears.some(
-            (y) => y.value === selectedYear
+      for (const student of res.data) {
+        try {
+          const achievementRes = await axiosInstance.get(
+            `/achievement/admin/${student.id}`
           );
-          if (!currentSelectedYearExists) {
-            setSelectedYear(sortedYears[0].value); // Chọn năm đầu tiên (mới nhất)
-          }
-        }
+          const achievement = achievementRes.data;
+          achievementsData[student.id] = achievement;
 
-        // Tính thống kê theo năm được chọn
-        computeYearStats(achievementsData, selectedYear);
-      } catch (error) {
-        // Handle error silently
-        handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu");
-      } finally {
-        setLoading(false);
+          if (achievement.yearlyAchievements.length > 0) {
+            studentsWithAchievements++;
+            totalAchievements += achievement.totalYears;
+            totalAdvancedSoldier += achievement.totalAdvancedSoldier;
+            totalCompetitiveSoldier += achievement.totalCompetitiveSoldier;
+            totalScientificTopics += achievement.totalScientificTopics;
+            totalScientificInitiatives +=
+              achievement.totalScientificInitiatives;
+
+            if (achievement.eligibleForMinistryReward) {
+              eligibleForMinistryReward++;
+            }
+            if (achievement.eligibleForNationalReward) {
+              eligibleForNationalReward++;
+            }
+          }
+        } catch (error) {
+          // If no achievement exists, create default structure
+          achievementsData[student.id] = {
+            studentId: student.id,
+            yearlyAchievements: [],
+            totalYears: 0,
+            totalAdvancedSoldier: 0,
+            totalCompetitiveSoldier: 0,
+            totalScientificTopics: 0,
+            totalScientificInitiatives: 0,
+            eligibleForMinistryReward: false,
+            eligibleForNationalReward: false,
+            nextYearRecommendations: {},
+          };
+        }
       }
+
+      setAchievements(achievementsData);
+      setStatistics({
+        totalStudents: res.data.length,
+        studentsWithAchievements,
+        totalAchievements,
+        totalAdvancedSoldier,
+        totalCompetitiveSoldier,
+        totalScientificTopics,
+        totalScientificInitiatives,
+        eligibleForMinistryReward,
+        eligibleForNationalReward,
+      });
+
+      // Lấy danh sách các năm học có trong DB (không trùng)
+      const yearsSet = new Set();
+      Object.values(achievementsData).forEach((ach) => {
+        if (ach && Array.isArray(ach.yearlyAchievements)) {
+          ach.yearlyAchievements.forEach((ya) => {
+            if (ya.year) {
+              yearsSet.add(ya.year);
+            }
+          });
+        }
+      });
+      const sortedYears = Array.from(yearsSet)
+        .sort((a, b) => b - a) // Sắp xếp giảm dần (mới nhất trước)
+        .map((year) => ({
+          value: year,
+          label: `${year}-${year + 1}`,
+        }));
+      setAvailableYears(sortedYears);
+
+      // Tự động chọn năm mới nhất nếu chưa có trong danh sách
+      if (sortedYears.length > 0) {
+        const currentSelectedYearExists = sortedYears.some(
+          (y) => y.value === selectedYear
+        );
+        if (!currentSelectedYearExists) {
+          setSelectedYear(sortedYears[0].value); // Chọn năm đầu tiên (mới nhất)
+        }
+      }
+
+      // Tính thống kê theo năm được chọn
+      computeYearStats(achievementsData, selectedYear);
+    } catch (error) {
+      // Handle error silently
+      handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -285,14 +276,10 @@ const AchievementStatistics = () => {
 
   const handleAddYearlyAchievement = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(
-        `${BASE_URL}/achievement/admin/${selectedStudentForForm.id}`,
-        addFormData,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const response = await axiosInstance.post(
+        `/achievement/admin/${selectedStudentForForm.id}`,
+        addFormData
       );
       handleNotify("success", "Thành công!", "Thêm khen thưởng thành công");
       setShowFormAdd(false);
@@ -310,14 +297,10 @@ const AchievementStatistics = () => {
 
   const handleUpdateYearlyAchievement = async (e, studentId, year) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
-      await axios.put(
-        `${BASE_URL}/achievement/admin/${studentId}/${year}`,
-        editFormData,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      await axiosInstance.put(
+        `/achievement/admin/${studentId}/${year}`,
+        editFormData
       );
       handleNotify("success", "Thành công!", "Cập nhật khen thưởng thành công");
       setShowFormEdit(false);
@@ -333,11 +316,8 @@ const AchievementStatistics = () => {
   };
 
   const handleDeleteYearlyAchievement = async (studentId, year) => {
-    const token = localStorage.getItem("token");
     try {
-      await axios.delete(`${BASE_URL}/achievement/admin/${studentId}/${year}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/achievement/admin/${studentId}/${year}`);
       handleNotify("success", "Thành công!", "Xóa khen thưởng thành công");
       fetchStudentsAndAchievements();
     } catch (error) {

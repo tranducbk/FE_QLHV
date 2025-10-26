@@ -1,15 +1,13 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
-import { jwtDecode } from "jwt-decode";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { handleNotify } from "../../../components/notify";
-import { BASE_URL } from "@/configs";
 import { TIMETABLE_MESSAGES } from "@/constants/validationMessages";
+import axiosInstance from "@/utils/axiosInstance";
 
 const TimeTable = () => {
   const [timeTable, setTimeTable] = useState([]);
@@ -51,92 +49,79 @@ const TimeTable = () => {
 
   const handleUpdateTimeTable = async (e, timeTableId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
+    // Validate thời gian
+    if (editedTimeTable.startTime && editedTimeTable.endTime) {
+      const startTime = new Date(`2000-01-01T${editedTimeTable.startTime}:00`);
+      const endTime = new Date(`2000-01-01T${editedTimeTable.endTime}:00`);
 
-    if (token) {
-      // Validate thời gian
-      if (editedTimeTable.startTime && editedTimeTable.endTime) {
-        const startTime = new Date(
-          `2000-01-01T${editedTimeTable.startTime}:00`
-        );
-        const endTime = new Date(`2000-01-01T${editedTimeTable.endTime}:00`);
-
-        if (startTime >= endTime) {
-          handleNotify("danger", "Lỗi!", TIMETABLE_MESSAGES.INVALID_TIME);
-          return;
-        }
+      if (startTime >= endTime) {
+        handleNotify("danger", "Lỗi!", TIMETABLE_MESSAGES.INVALID_TIME);
+        return;
       }
+    }
 
-      // Tạo time string từ startTime và endTime
-      const timeString =
-        editedTimeTable.startTime && editedTimeTable.endTime
-          ? `${editedTimeTable.startTime} - ${editedTimeTable.endTime}`
-          : editedTimeTable.time || "";
+    // Tạo time string từ startTime và endTime
+    const timeString =
+      editedTimeTable.startTime && editedTimeTable.endTime
+        ? `${editedTimeTable.startTime} - ${editedTimeTable.endTime}`
+        : editedTimeTable.time || "";
 
-      const formData = {
-        ...editedTimeTable,
-        time: timeString,
-      };
+    const formData = {
+      ...editedTimeTable,
+      time: timeString,
+    };
 
-      try {
-        const decodedToken = jwtDecode(token);
-        const response = await axios.put(
-          `${BASE_URL}/student/${studentId}/time-table/${timeTableId}`,
-          formData,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-        handleNotify(
-          "success",
-          "Thành công!",
-          response.data.message ||
-            "Chỉnh sửa lịch học thành công và đã cập nhật lịch cắt cơm tự động"
-        );
+    try {
+      const response = await axiosInstance.put(
+        `/student/${studentId}/time-table/${timeTableId}`,
+        formData
+      );
+      handleNotify(
+        "success",
+        "Thành công!",
+        response.data.message ||
+          "Chỉnh sửa lịch học thành công và đã cập nhật lịch cắt cơm tự động"
+      );
 
-        // Cập nhật schedule trong state thay vì refresh
-        if (response.data.schedule) {
-          setTimeTable((prev) => {
-            const updated = prev.map((item) =>
-              item.id === timeTableId ? response.data.schedule : item
-            );
-            // Sắp xếp lại theo thứ và thời gian
-            return updated.sort((a, b) => {
-              const dayOrder = {
-                "Thứ 2": 1,
-                "Thứ 3": 2,
-                "Thứ 4": 3,
-                "Thứ 5": 4,
-                "Thứ 6": 5,
-                "Thứ 7": 6,
-                "Chủ nhật": 7,
-              };
-              if (dayOrder[a.day] !== dayOrder[b.day]) {
-                return dayOrder[a.day] - dayOrder[b.day];
-              }
-              return a.startTime.localeCompare(b.startTime);
-            });
+      // Cập nhật schedule trong state thay vì refresh
+      if (response.data.schedule) {
+        setTimeTable((prev) => {
+          const updated = prev.map((item) =>
+            item.id === timeTableId ? response.data.schedule : item
+          );
+          // Sắp xếp lại theo thứ và thời gian
+          return updated.sort((a, b) => {
+            const dayOrder = {
+              "Thứ 2": 1,
+              "Thứ 3": 2,
+              "Thứ 4": 3,
+              "Thứ 5": 4,
+              "Thứ 6": 5,
+              "Thứ 7": 6,
+              "Chủ nhật": 7,
+            };
+            if (dayOrder[a.day] !== dayOrder[b.day]) {
+              return dayOrder[a.day] - dayOrder[b.day];
+            }
+            return a.startTime.localeCompare(b.startTime);
           });
-        }
-
-        setIsOpenTimeTable(false);
-      } catch (error) {
-        console.error("Error updating time table:", error);
-        const errorMessage =
-          error.response?.data?.message ||
-          error.response?.data ||
-          "Có lỗi xảy ra khi cập nhật lịch học";
-        handleNotify("danger", "Lỗi!", errorMessage);
-        setIsOpenTimeTable(false);
+        });
       }
+
+      setIsOpenTimeTable(false);
+    } catch (error) {
+      console.error("Error updating time table:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Có lỗi xảy ra khi cập nhật lịch học";
+      handleNotify("danger", "Lỗi!", errorMessage);
+      setIsOpenTimeTable(false);
     }
   };
 
   const handleAddFormTimeTable = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
     // Validate thời gian
     if (addFormDataTimeTable.startTime && addFormDataTimeTable.endTime) {
@@ -163,14 +148,9 @@ const TimeTable = () => {
     };
 
     try {
-      const response = await axios.post(
-        `${BASE_URL}/student/${studentId}/time-table`,
-        formData,
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
+      const response = await axiosInstance.post(
+        `/student/${studentId}/time-table`,
+        formData
       );
       handleNotify(
         "success",
@@ -221,54 +201,35 @@ const TimeTable = () => {
   };
 
   const handleConfirmDeleteTimeTable = (timeTableId) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      axios
-        .delete(`${BASE_URL}/student/${studentId}/time-table/${timeTableId}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        })
-        .then((response) => {
-          setTimeTable(
-            timeTable.filter((timeTable) => timeTable.id !== timeTableId)
-          );
-          handleNotify(
-            "success",
-            "Thành công!",
-            response.data.message ||
-              "Xóa lịch học thành công và đã cập nhật lịch cắt cơm tự động"
-          );
-          fetchTimeTable();
-        })
-        .catch((error) => {
-          const errorMessage =
-            error.response?.data?.message ||
-            error.response?.data ||
-            "Có lỗi xảy ra khi xóa lịch học";
-          handleNotify("danger", "Lỗi!", errorMessage);
-        });
-    }
+    axiosInstance
+      .delete(`/student/${studentId}/time-table/${timeTableId}`)
+      .then((response) => {
+        setTimeTable(
+          timeTable.filter((timeTable) => timeTable.id !== timeTableId)
+        );
+        handleNotify(
+          "success",
+          "Thành công!",
+          response.data.message ||
+            "Xóa lịch học thành công và đã cập nhật lịch cắt cơm tự động"
+        );
+        fetchTimeTable();
+      })
+      .catch((error) => {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.response?.data ||
+          "Có lỗi xảy ra khi xóa lịch học";
+        handleNotify("danger", "Lỗi!", errorMessage);
+      });
 
     setShowConfirmTimeTable(false);
   };
 
   const fetchTimeTable = async () => {
-    const token = localStorage.getItem("token");
-    console.log("DEBUG - fetchTimeTable - studentId:", studentId);
-    console.log("DEBUG - fetchTimeTable - token:", !!token);
-
-    if (token && studentId) {
+    if (studentId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/student/${studentId}/time-table`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await axiosInstance.get(`/student/${studentId}/time-table`);
         console.log("DEBUG - fetchTimeTable response:", res.data);
 
         // Sắp xếp theo thứ và thời gian bắt đầu
@@ -353,25 +314,19 @@ const TimeTable = () => {
 
   // Lấy studentId từ userId
   const fetchStudentId = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        // Use helper route to convert userId to studentId
-        const res = await axios.get(
-          `${BASE_URL}/student/by-user/${decodedToken.id}`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
-        );
-        setStudentId(res.data.id);
-        return res.data.id;
-      } catch (error) {
-        console.error("Error fetching studentId:", error);
-        return null;
-      }
+    try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
+      // Use helper route to convert userId to studentId
+      const res = await axiosInstance.get(`/student/by-user/${userId}`);
+      setStudentId(res.data.id);
+      return res.data.id;
+    } catch (error) {
+      console.error("Error fetching studentId:", error);
+      return null;
     }
-    return null;
   };
 
   useEffect(() => {

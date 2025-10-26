@@ -1,14 +1,13 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
-import { jwtDecode } from "jwt-decode";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { Select, ConfigProvider, theme } from "antd";
+import axiosInstance from "@/utils/axiosInstance";
 
 import { BASE_URL } from "@/configs";
 const CutRice = () => {
@@ -141,32 +140,24 @@ const CutRice = () => {
   };
 
   const fetchCutRice = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get("/commander/cutRice");
 
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/cutRice`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        // Sắp xếp theo thứ tự lớp từ 1 đến 6
-        const sortedData = res.data.sort((a, b) => {
-          const unitOrder = {
-            "L1 - H5": 1,
-            "L2 - H5": 2,
-            "L3 - H5": 3,
-            "L4 - H5": 4,
-            "L5 - H5": 5,
-            "L6 - H5": 6,
-          };
-          return (unitOrder[a.unit] || 999) - (unitOrder[b.unit] || 999);
-        });
-        setCutRice(sortedData);
-      } catch (error) {
-        console.log(error);
-      }
+      // Sắp xếp theo thứ tự lớp từ 1 đến 6
+      const sortedData = res.data.sort((a, b) => {
+        const unitOrder = {
+          "L1 - H5": 1,
+          "L2 - H5": 2,
+          "L3 - H5": 3,
+          "L4 - H5": 4,
+          "L5 - H5": 5,
+          "L6 - H5": 6,
+        };
+        return (unitOrder[a.unit] || 999) - (unitOrder[b.unit] || 999);
+      });
+      setCutRice(sortedData);
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -189,37 +180,28 @@ const CutRice = () => {
     router.push(`/admin/cut-rice?unit=${newUnit}`);
 
     const fetchDataForUnit = async () => {
-      const token = localStorage.getItem("token");
+      try {
+        const res = await axiosInstance.get(
+          `/commander/cutRice?unit=${newUnit}`
+        );
 
-      if (token) {
-        try {
-          const res = await axios.get(
-            `${BASE_URL}/commander/cutRice?unit=${newUnit}`,
-            {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            }
-          );
+        if (res.status === 404) setCutRice([]);
 
-          if (res.status === 404) setCutRice([]);
-
-          // Sắp xếp theo thứ tự lớp từ 1 đến 6
-          const sortedData = res.data.sort((a, b) => {
-            const unitOrder = {
-              "L1 - H5": 1,
-              "L2 - H5": 2,
-              "L3 - H5": 3,
-              "L4 - H5": 4,
-              "L5 - H5": 5,
-              "L6 - H5": 6,
-            };
-            return (unitOrder[a.unit] || 999) - (unitOrder[b.unit] || 999);
-          });
-          setCutRice(sortedData);
-        } catch (error) {
-          console.log(error);
-        }
+        // Sắp xếp theo thứ tự lớp từ 1 đến 6
+        const sortedData = res.data.sort((a, b) => {
+          const unitOrder = {
+            "L1 - H5": 1,
+            "L2 - H5": 2,
+            "L3 - H5": 3,
+            "L4 - H5": 4,
+            "L5 - H5": 5,
+            "L6 - H5": 6,
+          };
+          return (unitOrder[a.unit] || 999) - (unitOrder[b.unit] || 999);
+        });
+        setCutRice(sortedData);
+      } catch (error) {
+        console.log(error);
       }
     };
 
@@ -248,96 +230,80 @@ const CutRice = () => {
   };
 
   const handleConfirmExportExcelWithSchedule = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const unitParam =
+        exportExcelWithScheduleSelectedUnits.length > 0
+          ? exportExcelWithScheduleSelectedUnits.join(",")
+          : "all";
 
-    if (token) {
-      try {
-        const unitParam =
-          exportExcelWithScheduleSelectedUnits.length > 0
-            ? exportExcelWithScheduleSelectedUnits.join(",")
-            : "all";
+      const response = await axiosInstance.get(
+        `/commander/cutRice/excel-with-schedule?unit=${unitParam}`,
+        {
+          responseType: "blob",
+        }
+      );
 
-        const response = await axios.get(
-          `${BASE_URL}/commander/cutRice/excel-with-schedule?unit=${unitParam}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-            responseType: "blob",
-          }
-        );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
 
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", "");
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-
-        setShowExportExcelWithScheduleModal(false);
-        setExportExcelWithScheduleSelectedUnits([]);
-        handleNotify(
-          "success",
-          "Thành công!",
-          "Xuất file Excel lịch cắt cơm và học tập thành công"
-        );
-      } catch (error) {
-        const errorMessage =
-          error.response?.data?.message || "Có lỗi xảy ra khi xuất file Excel";
-        handleNotify("danger", "Lỗi!", errorMessage);
-      }
+      setShowExportExcelWithScheduleModal(false);
+      setExportExcelWithScheduleSelectedUnits([]);
+      handleNotify(
+        "success",
+        "Thành công!",
+        "Xuất file Excel lịch cắt cơm và học tập thành công"
+      );
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Có lỗi xảy ra khi xuất file Excel";
+      handleNotify("danger", "Lỗi!", errorMessage);
     }
   };
 
   const handleConfirmExport = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const unitParam =
+        exportSelectedUnits.length > 0 ? exportSelectedUnits.join(",") : "all";
 
-    if (token) {
-      try {
-        const unitParam =
-          exportSelectedUnits.length > 0
-            ? exportSelectedUnits.join(",")
-            : "all";
-
-        const response = await axios.get(
-          `${BASE_URL}/commander/cutRice/excel?unit=${unitParam}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-            responseType: "blob",
-          }
-        );
-
-        // Tạo tên file theo đơn vị được chọn
-        let fileName = "Danh_sach_cat_com_he_hoc_vien_5";
-        if (exportSelectedUnits.length > 0) {
-          const unitNames = exportSelectedUnits.map((unit) =>
-            unit.replace(/\s+/g, "_")
-          );
-          fileName += `_${unitNames.join("_")}`;
-        } else {
-          fileName += "_tat_ca_don_vi";
+      const response = await axiosInstance.get(
+        `/commander/cutRice/excel?unit=${unitParam}`,
+        {
+          responseType: "blob",
         }
-        fileName += ".xlsx";
+      );
 
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", fileName);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-
-        setShowExportModal(false);
-        setExportSelectedUnits([]);
-        handleNotify("success", "Thành công!", "Xuất file Excel thành công");
-      } catch (error) {
-        const errorMessage =
-          error.response?.data?.message || "Có lỗi xảy ra khi xuất file Excel";
-        handleNotify("danger", "Lỗi!", errorMessage);
+      // Tạo tên file theo đơn vị được chọn
+      let fileName = "Danh_sach_cat_com_he_hoc_vien_5";
+      if (exportSelectedUnits.length > 0) {
+        const unitNames = exportSelectedUnits.map((unit) =>
+          unit.replace(/\s+/g, "_")
+        );
+        fileName += `_${unitNames.join("_")}`;
+      } else {
+        fileName += "_tat_ca_don_vi";
       }
+      fileName += ".xlsx";
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+
+      setShowExportModal(false);
+      setExportSelectedUnits([]);
+      handleNotify("success", "Thành công!", "Xuất file Excel thành công");
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Có lỗi xảy ra khi xuất file Excel";
+      handleNotify("danger", "Lỗi!", errorMessage);
     }
   };
 
@@ -345,13 +311,9 @@ const CutRice = () => {
     setSelectedStudent(cutRiceItem);
     // Ngăn scroll ở body khi modal mở
     document.body.style.overflow = "hidden";
-    const token = localStorage.getItem("token");
     try {
-      const res = await axios.get(
-        `${BASE_URL}/commander/cutRice/${cutRiceItem.id}`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const res = await axiosInstance.get(
+        `/commander/cutRice/${cutRiceItem.id}`
       );
       // Nếu API trả về mảng, lấy phần tử đầu tiên
       const currentCutRice = Array.isArray(res.data) ? res.data[0] : res.data;
@@ -426,18 +388,12 @@ const CutRice = () => {
 
   const handleUpdateCutRice = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
-    if (token && selectedStudent) {
+    if (selectedStudent) {
       try {
-        const response = await axios.put(
-          `${BASE_URL}/commander/cutRice/${selectedStudent.studentId}`,
-          formData,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+        const response = await axiosInstance.put(
+          `/commander/cutRice/${selectedStudent.studentId}`,
+          formData
         );
 
         if (response.status === 200) {
@@ -456,76 +412,58 @@ const CutRice = () => {
   };
 
   const handleGenerateAutoCutRice = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      // Hiển thị loading
+      handleNotify(
+        "info",
+        "Đang xử lý...",
+        "Đang tạo lịch cắt cơm tự động cho tất cả học viên"
+      );
 
-    if (token) {
-      try {
-        // Hiển thị loading
-        handleNotify(
-          "info",
-          "Đang xử lý...",
-          "Đang tạo lịch cắt cơm tự động cho tất cả học viên"
-        );
+      const response = await axiosInstance.post(
+        `/commander/cutRice/auto-generate`,
+        {}
+      );
 
-        const response = await axios.post(
-          `${BASE_URL}/commander/cutRice/auto-generate`,
-          {},
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          handleNotify("success", "Thành công!", response.data.message);
-          withLoading(fetchCutRice); // Refresh data
-        }
-      } catch (error) {
-        handleNotify(
-          "danger",
-          "Lỗi!",
-          error.response?.data?.message ||
-            "Có lỗi xảy ra khi tạo lịch cắt cơm tự động"
-        );
+      if (response.status === 200) {
+        handleNotify("success", "Thành công!", response.data.message);
+        withLoading(fetchCutRice); // Refresh data
       }
+    } catch (error) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi tạo lịch cắt cơm tự động"
+      );
     }
   };
 
   const handleGenerateAutoCutRiceForStudent = async (cutRiceItem) => {
-    const token = localStorage.getItem("token");
+    try {
+      // Hiển thị loading
+      handleNotify(
+        "info",
+        "Đang xử lý...",
+        "Đang tạo lại lịch cắt cơm tự động cho sinh viên này"
+      );
 
-    if (token) {
-      try {
-        // Hiển thị loading
-        handleNotify(
-          "info",
-          "Đang xử lý...",
-          "Đang tạo lại lịch cắt cơm tự động cho sinh viên này"
-        );
+      const response = await axiosInstance.post(
+        `/commander/cutRice/${cutRiceItem.studentId}/auto-generate`,
+        {}
+      );
 
-        const response = await axios.post(
-          `${BASE_URL}/commander/cutRice/${cutRiceItem.studentId}/auto-generate`,
-          {},
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.status === 200) {
-          handleNotify("success", "Thành công!", response.data.message);
-          withLoading(fetchCutRice); // Refresh data
-        }
-      } catch (error) {
-        handleNotify(
-          "danger",
-          "Lỗi!",
-          error.response?.data?.message ||
-            "Có lỗi xảy ra khi tạo lại lịch cắt cơm tự động"
-        );
+      if (response.status === 200) {
+        handleNotify("success", "Thành công!", response.data.message);
+        withLoading(fetchCutRice); // Refresh data
       }
+    } catch (error) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi tạo lại lịch cắt cơm tự động"
+      );
     }
   };
 

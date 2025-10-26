@@ -1,6 +1,5 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -9,8 +8,7 @@ import Loader from "@/components/loader";
 import { Select } from "antd";
 import { useModalScroll } from "../../../hooks/useModalScroll";
 import { useLoading } from "@/hooks";
-
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const Achievement = () => {
   const router = useRouter();
@@ -33,92 +31,81 @@ const Achievement = () => {
   useModalScroll(showFormAdd || showFormEdit);
 
   const fetchStudents = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        // Lấy danh sách students từ API commander
-        const res = await axios.get(`${BASE_URL}/commander/students`, {
-          headers: { token: `Bearer ${token}` },
-        });
+    try {
+      // Lấy danh sách students từ API commander
+      const res = await axiosInstance.get(`/commander/students`);
 
-        // Đảm bảo res.data là mảng
-        const studentsData = Array.isArray(res.data) ? res.data : [];
-        setStudents(studentsData);
+      // Đảm bảo res.data là mảng
+      const studentsData = Array.isArray(res.data) ? res.data : [];
+      setStudents(studentsData);
 
-        // Fetch achievement cho TỪNG student
-        const achievementsData = {};
-        for (const student of studentsData) {
-          try {
-            const achievementRes = await axios.get(
-              `${BASE_URL}/achievement/admin/${student.id}`,
-              {
-                headers: { token: `Bearer ${token}` },
-              }
-            );
-            achievementsData[student.id] = achievementRes.data;
-          } catch (error) {
-            // If no achievement exists, create default structure
-            achievementsData[student.id] = {
-              studentId: student.id,
-              yearlyAchievements: [],
-              totalYears: 0,
-              totalAdvancedSoldier: 0,
-              totalCompetitiveSoldier: 0,
-              totalScientificTopics: 0,
-              totalScientificInitiatives: 0,
-              eligibleForMinistryReward: false,
-              eligibleForNationalReward: false,
-              nextYearRecommendations: {},
-            };
-          }
+      // Fetch achievement cho TỪNG student
+      const achievementsData = {};
+      for (const student of studentsData) {
+        try {
+          const achievementRes = await axiosInstance.get(
+            `/achievement/admin/${student.id}`
+          );
+          achievementsData[student.id] = achievementRes.data;
+        } catch (error) {
+          // If no achievement exists, create default structure
+          achievementsData[student.id] = {
+            studentId: student.id,
+            yearlyAchievements: [],
+            totalYears: 0,
+            totalAdvancedSoldier: 0,
+            totalCompetitiveSoldier: 0,
+            totalScientificTopics: 0,
+            totalScientificInitiatives: 0,
+            eligibleForMinistryReward: false,
+            eligibleForNationalReward: false,
+            nextYearRecommendations: {},
+          };
         }
-        setAchievements(achievementsData);
-
-        // Fetch recommendations for each student in parallel
-        const recommendationsData = {};
-
-        const recommendationPromises = studentsData.map(async (student) => {
-          try {
-            const recRes = await axios.get(
-              `${BASE_URL}/achievement/admin/${student.id}/recommendations`,
-              {
-                headers: { token: `Bearer ${token}` },
-              }
-            );
-            return { studentId: student.id, data: recRes.data };
-          } catch (error) {
-            return { studentId: student.id, data: { suggestions: [] } };
-          }
-        });
-
-        const recommendationResults = await Promise.all(recommendationPromises);
-        recommendationResults.forEach(({ studentId, data }) => {
-          recommendationsData[studentId] = data;
-        });
-
-        setRecommendations(recommendationsData);
-
-        // Lấy danh sách các năm học có trong DB (không trùng)
-        const yearsSet = new Set();
-        Object.values(achievementsData).forEach((ach) => {
-          if (ach && Array.isArray(ach.yearlyAchievements)) {
-            ach.yearlyAchievements.forEach((ya) => {
-              if (ya.year) {
-                yearsSet.add(ya.year);
-              }
-            });
-          }
-        });
-        const sortedYears = Array.from(yearsSet)
-          .sort((a, b) => b - a) // Sắp xếp giảm dần (mới nhất trước)
-          .map((year) => ({
-            value: year,
-            label: `${year}-${year + 1}`,
-          }));
-        setAvailableYears(sortedYears);
-      } catch (error) {
-        // Handle error silently
       }
+      setAchievements(achievementsData);
+
+      // Fetch recommendations for each student in parallel
+      const recommendationsData = {};
+
+      const recommendationPromises = studentsData.map(async (student) => {
+        try {
+          const recRes = await axiosInstance.get(
+            `/achievement/admin/${student.id}/recommendations`
+          );
+          return { studentId: student.id, data: recRes.data };
+        } catch (error) {
+          return { studentId: student.id, data: { suggestions: [] } };
+        }
+      });
+
+      const recommendationResults = await Promise.all(recommendationPromises);
+      recommendationResults.forEach(({ studentId, data }) => {
+        recommendationsData[studentId] = data;
+      });
+
+      setRecommendations(recommendationsData);
+
+      // Lấy danh sách các năm học có trong DB (không trùng)
+      const yearsSet = new Set();
+      Object.values(achievementsData).forEach((ach) => {
+        if (ach && Array.isArray(ach.yearlyAchievements)) {
+          ach.yearlyAchievements.forEach((ya) => {
+            if (ya.year) {
+              yearsSet.add(ya.year);
+            }
+          });
+        }
+      });
+      const sortedYears = Array.from(yearsSet)
+        .sort((a, b) => b - a) // Sắp xếp giảm dần (mới nhất trước)
+        .map((year) => ({
+          value: year,
+          label: `${year}-${year + 1}`,
+        }));
+      setAvailableYears(sortedYears);
+    } catch (error) {
+      // Handle error silently
     }
   };
 
@@ -164,14 +151,10 @@ const Achievement = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(
-        `${BASE_URL}/achievement/admin/${selectedStudentForForm.id}`,
-        addFormData,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const response = await axiosInstance.post(
+        `/achievement/admin/${selectedStudentForForm.id}`,
+        addFormData
       );
       const message = response.data.message || "Thêm khen thưởng thành công";
       handleNotify("success", "Thành công!", message);
@@ -193,14 +176,10 @@ const Achievement = () => {
 
   const handleUpdateYearlyAchievement = async (e, achievementId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
-      await axios.put(
-        `${BASE_URL}/achievement/admin/${achievementId}`,
-        editFormData,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      await axiosInstance.put(
+        `/achievement/admin/${achievementId}`,
+        editFormData
       );
       handleNotify("success", "Thành công!", "Cập nhật khen thưởng thành công");
       setShowFormEdit(false);
@@ -216,11 +195,8 @@ const Achievement = () => {
   };
 
   const handleDeleteYearlyAchievement = async (achievementId) => {
-    const token = localStorage.getItem("token");
     try {
-      await axios.delete(`${BASE_URL}/achievement/admin/${achievementId}`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/achievement/admin/${achievementId}`);
       handleNotify("success", "Thành công!", "Xóa khen thưởng thành công");
       fetchStudents();
     } catch (error) {

@@ -1,17 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import dayjs from "dayjs";
 import Link from "next/link";
-import { jwtDecode } from "jwt-decode";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import SideBar from "../../../components/sidebar";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 
 const UserProfile = ({ params }) => {
   const [profile, setProfile] = useState(null);
@@ -65,28 +63,19 @@ const UserProfile = ({ params }) => {
 
   // Fetch functions cho cascading dropdowns
   const fetchUniversities = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/university`, {
-          headers: { token: `Bearer ${token}` },
-        });
-        setUniversities(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get("/university");
+      setUniversities(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
   const fetchOrganizations = async (universityId) => {
-    const token = localStorage.getItem("token");
-    if (token && universityId) {
+    if (universityId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/university/${universityId}/organizations`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const res = await axiosInstance.get(
+          `/university/${universityId}/organizations`
         );
         return res.data;
       } catch (error) {
@@ -98,14 +87,10 @@ const UserProfile = ({ params }) => {
   };
 
   const fetchEducationLevels = async (organizationId) => {
-    const token = localStorage.getItem("token");
-    if (token && organizationId) {
+    if (organizationId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/university/organizations/${organizationId}/education-levels`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const res = await axiosInstance.get(
+          `/university/organizations/${organizationId}/education-levels`
         );
         return res.data;
       } catch (error) {
@@ -117,14 +102,10 @@ const UserProfile = ({ params }) => {
   };
 
   const fetchClasses = async (educationLevelId) => {
-    const token = localStorage.getItem("token");
-    if (token && educationLevelId) {
+    if (educationLevelId) {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/university/education-levels/${educationLevelId}/classes`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const res = await axiosInstance.get(
+          `/university/education-levels/${educationLevelId}/classes`
         );
         return res.data;
       } catch (error) {
@@ -408,43 +389,15 @@ const UserProfile = ({ params }) => {
   };
 
   const fetchProfile = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      console.error("No token found in localStorage");
-      handleNotify("Vui lòng đăng nhập để xem thông tin", "error");
-      return;
-    }
-
     try {
-      // Decode token để lấy thông tin user
-      const decoded = jwtDecode(token);
-      console.log("Decoded token:", decoded);
-
-      // Tự động tìm user ID từ các field phổ biến trong token
-      const userId =
-        decoded.id ||          // Ưu tiên id (UUID của user)
-        decoded.sub ||         // Hoặc sub (JWT standard)
-        decoded.userId ||      // Hoặc userId
-        decoded._id;           // Hoặc _id (MongoDB)
-
-      if (!userId) {
-        console.error("No user ID found in token. Token payload:", decoded);
-        handleNotify("Không tìm thấy thông tin người dùng trong token", "error");
-        return;
-      }
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
 
       console.log("Fetching student profile for user ID:", userId);
 
       // Sử dụng endpoint by-user để lấy student từ user ID
-      const apiUrl = `${BASE_URL}/student/by-user/${userId}`;
-      console.log("API URL:", apiUrl);
-
-      const res = await axios.get(apiUrl, {
-        headers: {
-          token: `Bearer ${token}`,
-        },
-      });
+      const res = await axiosInstance.get(`/student/by-user/${userId}`);
 
       console.log("Profile data received:", res.data);
       setProfile(res.data);
@@ -454,9 +407,15 @@ const UserProfile = ({ params }) => {
       console.error("Error status:", error.response?.status);
 
       if (error.response?.status === 404) {
-        handleNotify("Không tìm thấy thông tin học viên. Vui lòng liên hệ quản trị viên.", "error");
+        handleNotify(
+          "Không tìm thấy thông tin học viên. Vui lòng liên hệ quản trị viên.",
+          "error"
+        );
       } else if (error.response?.status === 401) {
-        handleNotify("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại", "error");
+        handleNotify(
+          "Phiên đăng nhập hết hạn, vui lòng đăng nhập lại",
+          "error"
+        );
         // Chuyển hướng về trang login sau 2 giây
         setTimeout(() => {
           window.location.href = "/login";
@@ -491,7 +450,6 @@ const UserProfile = ({ params }) => {
 
   const handleSubmit = async (e, studentId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
       const submitData = {
         ...formData,
@@ -518,14 +476,9 @@ const UserProfile = ({ params }) => {
         })),
       };
 
-      const response = await axios.put(
-        `${BASE_URL}/student/${studentId}`,
-        submitData,
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
+      const response = await axiosInstance.put(
+        `/student/${studentId}`,
+        submitData
       );
       handleNotify(
         "success",

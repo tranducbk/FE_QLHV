@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import axios from "axios";
 import dayjs from "dayjs";
-import { jwtDecode } from "jwt-decode";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
-import { BASE_URL } from "@/configs";
 import { useLoading } from "@/hooks";
+import axiosInstance from "@/utils/axiosInstance";
 
 export default function Home() {
   const [learningResult, setLearningResult] = useState(null);
@@ -24,41 +22,32 @@ export default function Home() {
   const { loading, withLoading } = useLoading(true);
   const [studentId, setStudentId] = useState(null);
 
-  // Helper function to get userId and studentId from token
+  // Helper function to get userId and studentId from API
   const fetchStudentId = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        const res = await axios.get(
-          `${BASE_URL}/student/by-user/${decodedToken.id}`,
-          { headers: { token: `Bearer ${token}` } }
-        );
-        setStudentId(res.data.id);
-        // Return both userId and studentId
-        return { userId: decodedToken.id, studentId: res.data.id };
-      } catch (error) {
-        // Handle error silently
-        return null;
-      }
+    try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
+      // Lấy studentId từ API
+      const studentRes = await axiosInstance.get(`/student/by-user/${userId}`);
+      setStudentId(studentRes.data.id);
+
+      // Return both userId and studentId
+      return { userId: userId, studentId: studentRes.data.id };
+    } catch (error) {
+      // Handle error silently
+      return null;
     }
-    return null;
   };
 
   // Removed: fetchLearningResult - API không tồn tại
   // Dữ liệu learning result đã có trong semesterResults
 
   const fetchSemesterResults = async (userId) => {
-    const token = localStorage.getItem("token");
-
-    if (token && userId) {
+    if (userId) {
       try {
-        const res = await axios.get(`${BASE_URL}/grade/${userId}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
+        const res = await axiosInstance.get(`/grade/${userId}`);
         setSemesterResults(res.data.semesterResults || []);
       } catch (error) {
         // Handle error silently
@@ -67,16 +56,9 @@ export default function Home() {
   };
 
   const fetchTuitionFee = async (sid) => {
-    const token = localStorage.getItem("token");
-
-    if (token && sid) {
+    if (sid) {
       try {
-        const res = await axios.get(`${BASE_URL}/student/${sid}/tuition-fee`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
+        const res = await axiosInstance.get(`/student/${sid}/tuition-fee`);
         setTuitionFee(res.data);
       } catch (error) {
         // Handle error silently
@@ -85,16 +67,9 @@ export default function Home() {
   };
 
   const fetchTimeTable = async (sid) => {
-    const token = localStorage.getItem("token");
-
-    if (token && sid) {
+    if (sid) {
       try {
-        const res = await axios.get(`${BASE_URL}/student/${sid}/time-table`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
+        const res = await axiosInstance.get(`/student/${sid}/time-table`);
         setTimeTable(res.data);
       } catch (error) {
         // Handle error silently
@@ -103,15 +78,9 @@ export default function Home() {
   };
 
   const fetchCutRice = async (sid) => {
-    const token = localStorage.getItem("token");
-
-    if (token && sid) {
+    if (sid) {
       try {
-        const res = await axios.get(`${BASE_URL}/student/${sid}/cut-rice`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
+        const res = await axiosInstance.get(`/student/${sid}/cut-rice`);
 
         if (res.data && typeof res.data === "object") {
           setCutRice(res.data);
@@ -126,14 +95,9 @@ export default function Home() {
   };
 
   const fetchProfile = async (sid) => {
-    const token = localStorage.getItem("token");
-    if (token && sid) {
+    if (sid) {
       try {
-        const res = await axios.get(`${BASE_URL}/student/${sid}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
+        const res = await axiosInstance.get(`/student/${sid}`);
         setProfile(res.data);
       } catch (error) {
         // Handle error silently
@@ -146,16 +110,9 @@ export default function Home() {
   // Removed: fetchVacationSchedule function
 
   const fetchAchievement = async (sid) => {
-    const token = localStorage.getItem("token");
-
-    if (token && sid) {
+    if (sid) {
       try {
-        const res = await axios.get(`${BASE_URL}/achievement/${sid}`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
+        const res = await axiosInstance.get(`/achievement/${sid}`);
         setAchievement(res.data);
       } catch (error) {
         // Handle error silently
@@ -166,38 +123,29 @@ export default function Home() {
   // Removed: fetchHelpCooking function
 
   const fetchSchedule = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
 
-    if (token) {
-      try {
-        const currentDate = new Date();
-        const currentYear = currentDate.getFullYear();
-        const currentMonth = currentDate.getMonth() + 1;
+      const res = await axiosInstance.get(
+        `/user/commanderDutySchedule?page=1&year=${currentYear}&month=${currentMonth}`
+      );
 
-        const res = await axios.get(
-          `${BASE_URL}/user/commanderDutySchedule?page=1&year=${currentYear}&month=${currentMonth}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      // Lấy dữ liệu của phần tử có ngày là ngày hiện tại
+      currentDate.setHours(0, 0, 0, 0); // Đặt giờ, phút, giây, mili giây về 0
 
-        // Lấy dữ liệu của phần tử có ngày là ngày hiện tại
-        currentDate.setHours(0, 0, 0, 0); // Đặt giờ, phút, giây, mili giây về 0
+      const currentSchedule = res.data?.schedules?.find((schedule) => {
+        const scheduleDate = new Date(schedule.workDay);
+        scheduleDate.setHours(0, 0, 0, 0); // Đặt giờ, phút, giây, mili giây về 0
 
-        const currentSchedule = res.data?.schedules?.find((schedule) => {
-          const scheduleDate = new Date(schedule.workDay);
-          scheduleDate.setHours(0, 0, 0, 0); // Đặt giờ, phút, giây, mili giây về 0
+        return scheduleDate.getTime() === currentDate.getTime();
+      });
 
-          return scheduleDate.getTime() === currentDate.getTime();
-        });
-
-        setCommanderDutySchedule(currentSchedule);
-      } catch (error) {
-        // Handle error silently
-        setCommanderDutySchedule(null);
-      }
+      setCommanderDutySchedule(currentSchedule);
+    } catch (error) {
+      // Handle error silently
+      setCommanderDutySchedule(null);
     }
   };
 

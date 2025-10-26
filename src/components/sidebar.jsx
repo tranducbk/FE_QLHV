@@ -1,14 +1,12 @@
 "use client";
 
-import { jwtDecode } from "jwt-decode";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import "core-js/stable/atob";
-import axios from "axios";
 import Link from "next/link";
-import { BASE_URL } from "@/configs";
+import axiosInstance from "@/utils/axiosInstance";
 import { Menu, ConfigProvider, theme, Layout } from "antd";
 import { useThemeContext } from "./ThemeProvider";
+import { isSuperAdmin, isAdmin } from "@/utils/roleUtils";
 
 const { Sider } = Layout;
 import {
@@ -81,49 +79,28 @@ const SideBarContent = () => {
   }, [pathname, searchParams]);
 
   const fetchUserDetail = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const currentUser = userRes.data;
+      setToken(currentUser);
 
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        setToken(decodedToken);
-        if (decodedToken.admin === true) {
-          const res = await axios.get(
-            `${BASE_URL}/commander/${decodedToken.id}`,
-            {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            }
-          );
+      // Sử dụng utility function để kiểm tra role
+      if (isAdmin(currentUser)) {
+        const res = await axiosInstance.get(`/commander/${currentUser.id}`);
+        setUserDetail(res.data);
+      } else {
+        // Get studentId from userId first
+        const studentRes = await axiosInstance.get(
+          `/student/by-user/${currentUser.id}`
+        );
 
-          setUserDetail(res.data);
-        } else {
-          // Get studentId from userId first
-          const studentRes = await axios.get(
-            `${BASE_URL}/student/by-user/${decodedToken.id}`,
-            {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            }
-          );
-
-          const res = await axios.get(
-            `${BASE_URL}/student/${studentRes.data.id}`,
-            {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            }
-          );
-
-          setUserDetail(res.data);
-        }
-      } catch (error) {
-        router.push("/login");
-        // Handle error silently
+        const res = await axiosInstance.get(`/student/${studentRes.data.id}`);
+        setUserDetail(res.data);
       }
+    } catch (error) {
+      router.push("/login");
+      // Handle error silently
     }
   };
 
@@ -194,7 +171,7 @@ const SideBarContent = () => {
   };
 
   // Sidebar cho SUPER_ADMIN - chỉ quản lý admin users
-  if (token?.role === "SUPER_ADMIN") {
+  if (isSuperAdmin(token)) {
     return (
       <Sider
         width={256}
@@ -253,7 +230,7 @@ const SideBarContent = () => {
   }
 
   // Sidebar cho ADMIN thường - quản lý hệ thống
-  if (token?.admin) {
+  if (isAdmin(token)) {
     return (
       <Sider
         width={256}

@@ -1,15 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import axios from "axios";
 import dayjs from "dayjs";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { jwtDecode } from "jwt-decode";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
-import { BASE_URL } from "@/configs";
 import { useLoading } from "@/hooks";
+import axiosInstance from "@/utils/axiosInstance";
 import { Card, Row, Col, Statistic, Progress, Divider, Typography } from "antd";
 import {
   UserOutlined,
@@ -35,18 +33,17 @@ export default function Home() {
 
   // Redirect SUPER_ADMIN về trang quản lý admin users
   useEffect(() => {
-    const token =
-      localStorage.getItem("token") || localStorage.getItem("accessToken");
-    if (token) {
+    const checkUserRole = async () => {
       try {
-        const decodedToken = jwtDecode(token);
-        if (decodedToken.role === "SUPER_ADMIN") {
+        const response = await axiosInstance.get("/user/me");
+        if (response.data?.role === "SUPER_ADMIN") {
           router.push("/supper_admin");
         }
       } catch (error) {
-        // Handle token decoding error
+        // Handle error silently - axiosInstance will redirect to login if needed
       }
-    }
+    };
+    checkUserRole();
   }, [router]);
   const [learningResult, setLearningResult] = useState(null);
   const [student, setStudent] = useState(null);
@@ -72,208 +69,126 @@ export default function Home() {
   ];
 
   const fetchLearningResult = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/learningResultAll`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setLearningResult(res.data);
-      } catch (error) {
-        // Handle error silently
-      }
+    try {
+      const res = await axiosInstance.get("/commander/learningResultAll");
+      setLearningResult(res.data);
+    } catch (error) {
+      // Handle error silently
     }
   };
 
   const fetchStudent = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/students`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setStudent(res.data);
-      } catch (error) {
-        // Handle error silently
-      }
+    try {
+      const res = await axiosInstance.get("/commander/students");
+      setStudent(res.data);
+    } catch (error) {
+      // Handle error silently
     }
   };
 
   const fetchCutRice = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/cutRiceByDate`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setCutRice(res.data);
-      } catch (error) {
-        // Handle error silently
-      }
+    try {
+      const res = await axiosInstance.get("/commander/cutRiceByDate");
+      setCutRice(res.data);
+    } catch (error) {
+      // Handle error silently
     }
   };
 
   const fetchAchievement = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/achievementAll`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setAchievement(res.data);
-      } catch (error) {
-        // Handle error silently
-      }
+    try {
+      const res = await axiosInstance.get("/commander/achievementAll");
+      setAchievement(res.data);
+    } catch (error) {
+      // Handle error silently
     }
   };
 
   const fetchTrainingRatings = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/trainingRatings`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setTrainingRatings(res.data);
-      } catch (error) {
-        // Handle error silently
-        setTrainingRatings([]);
-      }
+    try {
+      const res = await axiosInstance.get("/commander/trainingRatings");
+      setTrainingRatings(res.data);
+    } catch (error) {
+      // Handle error silently
+      setTrainingRatings([]);
     }
   };
 
   const fetchSemesters = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/semester`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setSemesters(res.data || []);
-      } catch (error) {
-        // Handle error silently
-        setSemesters([]);
-      }
+    try {
+      const res = await axiosInstance.get("/semester");
+      setSemesters(res.data || []);
+    } catch (error) {
+      // Handle error silently
+      setSemesters([]);
     }
   };
 
   const fetchDetailedLearningResults = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      // Lấy học kỳ mới nhất trước
+      const semesterRes = await axiosInstance.get("/semester");
+      const semesters = semesterRes.data || [];
 
-    if (token) {
-      try {
-        // Lấy học kỳ mới nhất trước
-        const semesterRes = await axios.get(`${BASE_URL}/semester`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        const semesters = semesterRes.data || [];
-
-        if (semesters.length === 0) {
-          setDetailedLearningResults([]);
-          return;
-        }
-
-        // Tìm học kỳ mới nhất
-        const sortedSemesters = semesters.sort((a, b) => {
-          if (a.schoolYear !== b.schoolYear) {
-            return b.schoolYear.localeCompare(a.schoolYear);
-          }
-          const semesterOrder = { HK1: 1, HK2: 2, HK3: 3 };
-          return (semesterOrder[b.code] || 0) - (semesterOrder[a.code] || 0);
-        });
-
-        const latestSemester = sortedSemesters[0];
-
-        // Lấy kết quả học tập chi tiết cho học kỳ mới nhất
-        const res = await axios.get(
-          `${BASE_URL}/commander/allStudentsGrades?semester=${latestSemester.code}&schoolYear=${latestSemester.schoolYear}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-
-        setDetailedLearningResults(res.data || []);
-      } catch (error) {
-        // Handle error silently
+      if (semesters.length === 0) {
         setDetailedLearningResults([]);
+        return;
       }
+
+      // Tìm học kỳ mới nhất
+      const sortedSemesters = semesters.sort((a, b) => {
+        if (a.schoolYear !== b.schoolYear) {
+          return b.schoolYear.localeCompare(a.schoolYear);
+        }
+        const semesterOrder = { HK1: 1, HK2: 2, HK3: 3 };
+        return (semesterOrder[b.code] || 0) - (semesterOrder[a.code] || 0);
+      });
+
+      const latestSemester = sortedSemesters[0];
+
+      // Lấy kết quả học tập chi tiết cho học kỳ mới nhất
+      const res = await axiosInstance.get(
+        `/commander/allStudentsGrades?semester=${latestSemester.code}&schoolYear=${latestSemester.schoolYear}`
+      );
+
+      setDetailedLearningResults(res.data || []);
+    } catch (error) {
+      // Handle error silently
+      setDetailedLearningResults([]);
     }
   };
 
   const fetchUniversitiesAndOrganizations = async () => {
-    const token = localStorage.getItem("token");
+    try {
+      // Lấy danh sách tất cả universities
+      const universitiesRes = await axiosInstance.get("/university/");
+      const universities = universitiesRes.data || [];
 
-    if (token) {
-      try {
-        // Lấy danh sách tất cả universities
-        const universitiesRes = await axios.get(`${BASE_URL}/university/`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
+      // Lấy hierarchy cho mỗi university
+      const universitiesWithHierarchy = await Promise.all(
+        universities.map(async (university) => {
+          try {
+            const hierarchyRes = await axiosInstance.get(
+              `/university/${university.id}/hierarchy`
+            );
+            return {
+              ...university,
+              organizations: hierarchyRes.data.organizations || [],
+            };
+          } catch (error) {
+            // Handle error silently
+            return {
+              ...university,
+              organizations: [],
+            };
+          }
+        })
+      );
 
-        const universities = universitiesRes.data || [];
-
-        // Lấy hierarchy cho mỗi university
-        const universitiesWithHierarchy = await Promise.all(
-          universities.map(async (university) => {
-            try {
-              const hierarchyRes = await axios.get(
-                `${BASE_URL}/university/${university.id}/hierarchy`,
-                {
-                  headers: {
-                    token: `Bearer ${token}`,
-                  },
-                }
-              );
-              return {
-                ...university,
-                organizations: hierarchyRes.data.organizations || [],
-              };
-            } catch (error) {
-              // Handle error silently
-              return {
-                ...university,
-                organizations: [],
-              };
-            }
-          })
-        );
-
-        setClasses(universitiesWithHierarchy);
-      } catch (error) {
-        // Handle error silently
-        setClasses([]);
-      }
+      setClasses(universitiesWithHierarchy);
+    } catch (error) {
+      // Handle error silently
+      setClasses([]);
     }
   };
 

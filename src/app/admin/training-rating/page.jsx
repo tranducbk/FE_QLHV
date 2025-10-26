@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "@/utils/axiosInstance";
 import Link from "next/link";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
-import { BASE_URL } from "@/configs";
 import { useLoading } from "@/hooks";
 import { TreeSelect, ConfigProvider, theme, Input, Select } from "antd";
 
@@ -58,15 +57,9 @@ const TrainingRating = () => {
   }, [withLoading]);
 
   const fetchInitialData = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const res = await axios.get(
-        `${BASE_URL}/commander/allStudentsForTrainingRating`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const res = await axiosInstance.get(
+        `/commander/allStudentsForTrainingRating`
       );
 
       console.log("Training ratings data:", res.data);
@@ -123,15 +116,9 @@ const TrainingRating = () => {
   };
 
   const fetchTrainingRatingsForYear = async (year) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
-      const res = await axios.get(
-        `${BASE_URL}/commander/allStudentsForTrainingRating?schoolYear=${year}`,
-        {
-          headers: { token: `Bearer ${token}` },
-        }
+      const res = await axiosInstance.get(
+        `/commander/allStudentsForTrainingRating?schoolYear=${year}`
       );
 
       console.log(`Training ratings data for ${year}:`, res.data);
@@ -158,21 +145,15 @@ const TrainingRating = () => {
   };
 
   const handleSubmitUpdate = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || !selectedStudent) return;
-
     try {
       const yearlyResultId = selectedStudent.yearlyResultId || "null";
 
-      const response = await axios.put(
-        `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
+      const response = await axiosInstance.put(
+        `/commander/updateStudentRating/${yearlyResultId}`,
         {
           trainingRating: updateFormData.trainingRating,
           studentId: selectedStudent.studentId,
           schoolYear: selectedStudent.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
-        },
-        {
-          headers: { token: `Bearer ${token}` },
         }
       );
 
@@ -196,7 +177,9 @@ const TrainingRating = () => {
       }
     } catch (error) {
       console.log("Error updating training rating:", error);
-      const errorMsg = error.response?.data?.message || "Không thể cập nhật xếp loại rèn luyện";
+      const errorMsg =
+        error.response?.data?.message ||
+        "Không thể cập nhật xếp loại rèn luyện";
       handleNotify("error", "Lỗi", errorMsg);
     }
   };
@@ -261,9 +244,6 @@ const TrainingRating = () => {
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
     try {
       const filteredStudents = getFilteredStudentsForBulk();
       const studentsToUpdate = filteredStudents.filter((student) =>
@@ -277,15 +257,12 @@ const TrainingRating = () => {
         try {
           const yearlyResultId = student.yearlyResultId || "null";
 
-          const response = await axios.put(
-            `${BASE_URL}/commander/updateStudentRating/${yearlyResultId}`,
+          const response = await axiosInstance.put(
+            `/commander/updateStudentRating/${yearlyResultId}`,
             {
               trainingRating: bulkUpdateData.trainingRating,
               studentId: student.studentId,
               schoolYear: student.schoolYear, // Gửi schoolYear để backend có thể tạo mới nếu cần
-            },
-            {
-              headers: { token: `Bearer ${token}` },
             }
           );
 

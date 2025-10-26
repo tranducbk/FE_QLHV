@@ -12,25 +12,17 @@ const TimeTableDetail = ({ params }) => {
   const { loading, withLoading } = useLoading(true);
 
   const fetchTimeTable = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/${params.studentId}/timeTable`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+    try {
+      const res = await axiosInstance.get(
+        `/commander/${params.studentId}/timeTable`
+      );
 
         setTimeTable(res.data);
       } catch (error) {
         console.log(error);
       }
     }
-  };
+  
 
   useEffect(() => {
     const loadData = async () => {

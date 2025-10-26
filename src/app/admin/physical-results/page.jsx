@@ -8,8 +8,8 @@ import SideBar from "@/components/sidebar";
 import { handleNotify } from "../../../components/notify";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
+import axiosInstance from "@/utils/axiosInstance";
 
-import { BASE_URL } from "@/configs";
 const PhysicalResults = () => {
   const router = useRouter();
   const [physicalResults, setPhysicalResults] = useState(null);
@@ -26,83 +26,55 @@ const PhysicalResults = () => {
   const { loading, withLoading } = useLoading(true);
 
   const handleShowFormUpdate = async (studentId, id) => {
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(
+        `/commander/${studentId}/physicalResult/${id}`
+      );
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/${studentId}/physicalResult/${id}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      setEditFormData({
+        semester: res.data.semester || "",
+        run3000m: res.data.run3000m || "",
+        run100m: res.data.run100m || "",
+        pullUpBar: res.data.pullUpBar || "",
+        swimming100m: res.data.swimming100m || "",
+        practise: res.data.practise || "",
+      });
 
-        setEditFormData({
-          semester: res.data.semester || "",
-          run3000m: res.data.run3000m || "",
-          run100m: res.data.run100m || "",
-          pullUpBar: res.data.pullUpBar || "",
-          swimming100m: res.data.swimming100m || "",
-          practise: res.data.practise || "",
-        });
-
-        setPhysicalResultId(id);
-        setStudentId(studentId);
-        setShowFormEdit(true);
-      } catch (error) {
-        console.log(error);
-        handleNotify(
-          "danger",
-          "Lỗi!",
-          "Không thể tải thông tin kết quả thể lực"
-        );
-      }
+      setPhysicalResultId(id);
+      setStudentId(studentId);
+      setShowFormEdit(true);
+    } catch (error) {
+      console.log(error);
+      handleNotify("danger", "Lỗi!", "Không thể tải thông tin kết quả thể lực");
     }
   };
 
   const handleUpdate = async (e, studentId, id) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        await axios.put(
-          `${BASE_URL}/commander/${studentId}/physicalResult/${id}`,
-          editFormData,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
-        handleNotify(
-          "success",
-          "Thành công!",
-          "Chỉnh sửa kết quả rèn luyện thể lực thành công"
-        );
-        setShowFormEdit(false);
-        fetchPhysicalResults();
-      } catch (error) {
-        handleNotify("danger", "Lỗi!", error);
-        setShowFormEdit(false);
-      }
+    try {
+      await axiosInstance.put(
+        `/commander/${studentId}/physicalResult/${id}`,
+        editFormData
+      );
+      handleNotify(
+        "success",
+        "Thành công!",
+        "Chỉnh sửa kết quả rèn luyện thể lực thành công"
+      );
+      setShowFormEdit(false);
+      fetchPhysicalResults();
+    } catch (error) {
+      handleNotify("danger", "Lỗi!", error);
+      setShowFormEdit(false);
     }
   };
 
   const handleAddFormData = async (e, studentId) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
     try {
-      const response = await axios.post(
-        `${BASE_URL}/commander/physicalResult`,
-        addFormData,
-        {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        }
+      const response = await axiosInstance.post(
+        `/commander/physicalResult`,
+        addFormData
       );
       handleNotify(
         "success",
@@ -119,30 +91,17 @@ const PhysicalResults = () => {
   };
 
   const fetchPhysicalResults = async () => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const res = await axios.get(`${BASE_URL}/commander/physicalResults`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
-
-        setPhysicalResults(res.data);
-      } catch (error) {
-        console.log(error);
-      }
+    try {
+      const res = await axiosInstance.get(`/commander/physicalResults`);
+      setPhysicalResults(res.data);
+    } catch (error) {
+      console.log(error);
     }
   };
 
   const fetchSemesters = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
     try {
-      const res = await axios.get(`${BASE_URL}/semester`, {
-        headers: { token: `Bearer ${token}` },
-      });
+      const res = await axiosInstance.get(`/semester`);
       const list = res.data || [];
       setSemesters(list);
     } catch (error) {
@@ -169,25 +128,16 @@ const PhysicalResults = () => {
     router.push(
       `/admin/physical-results?semester=${semesterCode}&unit=${unit}`
     );
-    const token = localStorage.getItem("token");
+    try {
+      const res = await axiosInstance.get(
+        `/commander/physicalResults?semester=${semesterCode}&unit=${unit}`
+      );
 
-    if (token) {
-      try {
-        const res = await axios.get(
-          `${BASE_URL}/commander/physicalResults?semester=${semesterCode}&unit=${unit}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
-        );
+      if (res.status === 404) setPhysicalResults([]);
 
-        if (res.status === 404) setPhysicalResults([]);
-
-        setPhysicalResults(res.data);
-      } catch (error) {
-        handleNotify("danger", "Lỗi!", error);
-      }
+      setPhysicalResults(res.data);
+    } catch (error) {
+      handleNotify("danger", "Lỗi!", error);
     }
   };
 
@@ -197,33 +147,24 @@ const PhysicalResults = () => {
     setShowConfirm(true);
   };
 
-  const handleConfirmDelete = (physicalResultId, studentId) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      axios
-        .delete(
-          `${BASE_URL}/commander/physicalResult/${studentId}/${physicalResultId}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+  const handleConfirmDelete = async (physicalResultId, studentId) => {
+    try {
+      await axiosInstance.delete(
+        `/commander/physicalResult/${studentId}/${physicalResultId}`
+      );
+      setPhysicalResults(
+        physicalResults.filter(
+          (physicalResult) => physicalResult.id !== physicalResultId
         )
-        .then(() => {
-          setPhysicalResults(
-            physicalResults.filter(
-              (physicalResult) => physicalResult.id !== physicalResultId
-            )
-          );
-          handleNotify(
-            "success",
-            "Thành công!",
-            "Xóa kết quả rèn luyện thể lực thành công"
-          );
-          fetchPhysicalResults();
-        })
-        .catch((error) => handleNotify("danger", "Lỗi!", error));
+      );
+      handleNotify(
+        "success",
+        "Thành công!",
+        "Xóa kết quả rèn luyện thể lực thành công"
+      );
+      fetchPhysicalResults();
+    } catch (error) {
+      handleNotify("danger", "Lỗi!", error);
     }
     setShowConfirm(false);
   };
@@ -234,19 +175,13 @@ const PhysicalResults = () => {
 
   const handleExportFilePdf = async (e, semester) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      try {
-        const response = await axios.get(
-          `${BASE_URL}/commander/physicalResult/pdf?semester=${semester}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-            responseType: "blob",
-          }
-        );
+    try {
+      const response = await axiosInstance.get(
+        `/commander/physicalResult/pdf?semester=${semester}`,
+        {
+          responseType: "blob",
+        }
+      );
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement("a");
         link.href = url;
@@ -262,8 +197,7 @@ const PhysicalResults = () => {
         link.click();
         link.parentNode.removeChild(link);
       } catch (error) {
-        console.error("Lỗi tải xuống file", error);
-      }
+      console.error("Lỗi tải xuống file", error);
     }
   };
 

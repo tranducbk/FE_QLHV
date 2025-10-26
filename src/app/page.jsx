@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode";
+import axiosInstance from "@/utils/axiosInstance";
+import { isAdmin } from "@/utils/roleUtils";
 import {
   GraduationCap,
   Users,
@@ -29,31 +29,27 @@ export default function HomePage() {
 
   useEffect(() => {
     const checkToken = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decodedToken = jwtDecode(token);
-          if (decodedToken.admin === true) {
-            await axios.get(`${BASE_URL}/commander/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            setIsLoggedIn(true);
-            setUserType("admin");
-          } else {
-            await axios.get(`${BASE_URL}/student/by-user/${decodedToken.id}`, {
-              headers: {
-                token: `Bearer ${token}`,
-              },
-            });
-            setIsLoggedIn(true);
-            setUserType("student");
-          }
-        } catch (error) {
-          // Handle token validation error
-          localStorage.removeItem("token");
+      try {
+        // Lấy thông tin user từ API
+        const userRes = await axiosInstance.get("/user/me");
+        const userData = userRes.data;
+
+        // Sử dụng utility function để kiểm tra role
+        if (isAdmin(userData)) {
+          // Kiểm tra commander role
+          await axiosInstance.get(`/commander/${userData.id}`);
+          setIsLoggedIn(true);
+          setUserType("admin");
+        } else {
+          // Kiểm tra student role
+          await axiosInstance.get(`/student/by-user/${userData.id}`);
+          setIsLoggedIn(true);
+          setUserType("student");
         }
+      } catch (error) {
+        // Handle token validation error - axiosInstance sẽ tự động xử lý
+        setIsLoggedIn(false);
+        setUserType(null);
       }
     };
 

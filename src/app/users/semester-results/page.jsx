@@ -1,16 +1,14 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { jwtDecode } from "jwt-decode";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { handleNotify } from "../../../components/notify";
-import { BASE_URL } from "@/configs";
 import { GRADE_MESSAGES } from "@/constants/validationMessages";
+import axiosInstance from "@/utils/axiosInstance";
 
 const SemesterResults = () => {
   const [semesters, setSemesters] = useState([]);
@@ -206,9 +204,6 @@ const SemesterResults = () => {
   };
   const submitSemesterGrades = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    if (!token) return;
-    const userId = jwtDecode(token).id;
     const term = parseTermFromId(gradeSemesterCode);
     const schoolYear = findSchoolYearById(gradeSemesterCode);
 
@@ -260,12 +255,9 @@ const SemesterResults = () => {
       // Kiểm tra xem có đang chỉnh sửa hay thêm mới
       if (editingSemester) {
         // Cập nhật học kỳ hiện có - sử dụng API grade với studentId
-        const response = await axios.put(
-          `${BASE_URL}/student/${studentId}/grades/${term}/${schoolYear}`,
-          payload,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const response = await axiosInstance.put(
+          `/student/${studentId}/grades/${term}/${schoolYear}`,
+          payload
         );
         handleNotify(
           "success",
@@ -304,12 +296,9 @@ const SemesterResults = () => {
         ]);
       } else {
         // Thêm mới học kỳ - sử dụng API grade với studentId
-        const response = await axios.post(
-          `${BASE_URL}/student/${studentId}/grades`,
-          payload,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
+        const response = await axiosInstance.post(
+          `/student/${studentId}/grades`,
+          payload
         );
         handleNotify(
           "success",
@@ -398,16 +387,13 @@ const SemesterResults = () => {
     }
   };
 
-
   const handleDeleteLearn = (id) => {
     setLearnId(id);
     setShowConfirmLearn(true);
   };
 
   const handleConfirmDeleteLearn = (learnId) => {
-    const token = localStorage.getItem("token");
-
-    if (token && studentId) {
+    if (studentId) {
       // Tìm semester data từ learnId
       const semester = learningResult.find((item) => item.id === learnId);
       if (!semester) {
@@ -415,14 +401,9 @@ const SemesterResults = () => {
         return;
       }
 
-      axios
+      axiosInstance
         .delete(
-          `${BASE_URL}/student/${studentId}/grades/${semester.semester}/${semester.schoolYear}`,
-          {
-            headers: {
-              token: `Bearer ${token}`,
-            },
-          }
+          `/student/${studentId}/grades/${semester.semester}/${semester.schoolYear}`
         )
         .then(() => {
           handleNotify(
@@ -445,17 +426,9 @@ const SemesterResults = () => {
   };
 
   const fetchLearningResult = async () => {
-    const token = localStorage.getItem("token");
-    console.log("DEBUG - fetchLearningResult - studentId:", studentId);
-    console.log("DEBUG - fetchLearningResult - token:", !!token);
-
-    if (token && studentId) {
+    if (studentId) {
       try {
-        const res = await axios.get(`${BASE_URL}/student/${studentId}/grades`, {
-          headers: {
-            token: `Bearer ${token}`,
-          },
-        });
+        const res = await axiosInstance.get(`/student/${studentId}/grades`);
         console.log("DEBUG - fetchLearningResult response:", res.data);
         console.log(
           "DEBUG - fetchLearningResult subjects:",
@@ -484,25 +457,19 @@ const SemesterResults = () => {
 
   // Lấy studentId từ userId
   const fetchStudentId = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const decodedToken = jwtDecode(token);
-        // Use helper route to convert userId to studentId
-        const res = await axios.get(
-          `${BASE_URL}/student/by-user/${decodedToken.id}`,
-          {
-            headers: { token: `Bearer ${token}` },
-          }
-        );
-        setStudentId(res.data.id);
-        return res.data.id;
-      } catch (error) {
-        console.error("Error fetching studentId:", error);
-        return null;
-      }
+    try {
+      // Lấy thông tin user từ API
+      const userRes = await axiosInstance.get("/user/me");
+      const userId = userRes.data.id;
+
+      // Use helper route to convert userId to studentId
+      const res = await axiosInstance.get(`/student/by-user/${userId}`);
+      setStudentId(res.data.id);
+      return res.data.id;
+    } catch (error) {
+      console.error("Error fetching studentId:", error);
+      return null;
     }
-    return null;
   };
 
   useEffect(() => {
@@ -524,12 +491,8 @@ const SemesterResults = () => {
   // fetch danh sách học kỳ cho user
   useEffect(() => {
     const fetchSemesters = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
       try {
-        const res = await axios.get(`${BASE_URL}/semester`, {
-          headers: { token: `Bearer ${token}` },
-        });
+        const res = await axiosInstance.get(`/semester`);
         const list = (res.data || []).sort((a, b) =>
           (b.createdAt || "").localeCompare(a.createdAt || "")
         );

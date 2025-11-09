@@ -586,7 +586,7 @@ const CutRice = () => {
                         htmlFor="unit"
                         className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300"
                       >
-                        Chọn lớp
+                        Chọn đơn vị
                       </label>
                       <select
                         id="unit"
@@ -594,13 +594,13 @@ const CutRice = () => {
                         onChange={(e) => handleUnitChange(e.target.value)}
                         className="bg-gray-50 border w-56 border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pb-1 pt-1.5 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       >
-                        <option value="">Tất cả</option>
-                        <option value="L1 - H5">Lớp 1</option>
-                        <option value="L2 - H5">Lớp 2</option>
-                        <option value="L3 - H5">Lớp 3</option>
-                        <option value="L4 - H5">Lớp 4</option>
-                        <option value="L5 - H5">Lớp 5</option>
-                        <option value="L6 - H5">Lớp 6</option>
+                        <option value="">Tất cả đơn vị</option>
+                        <option value="L1 - H5">L1 - H5</option>
+                        <option value="L2 - H5">L2 - H5</option>
+                        <option value="L3 - H5">L3 - H5</option>
+                        <option value="L4 - H5">L4 - H5</option>
+                        <option value="L5 - H5">L5 - H5</option>
+                        <option value="L6 - H5">L6 - H5</option>
                       </select>
                     </div>
                   </div>

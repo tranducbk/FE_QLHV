@@ -6,7 +6,6 @@ import Chart from "chart.js/auto";
 import Link from "next/link";
 import { Select } from "antd";
 const Statictical = () => {
-  const chartRef1 = useRef(null);
   const chartRef2 = useRef(null);
   const chartRef3 = useRef(null);
   const [learningClassification, setLearningClassification] = useState([]);
@@ -15,7 +14,7 @@ const Statictical = () => {
     schoolYear: null,
     data: [],
   });
-  const [classStatsByYear, setClassStatsByYear] = useState({
+  const [trainingRatingStatsByYear, setTrainingRatingStatsByYear] = useState({
     schoolYear: null,
     data: [],
   });
@@ -51,30 +50,44 @@ const Statictical = () => {
     }
   };
 
-  // Lấy thống kê theo NĂM HỌC mới nhất và gom nhóm theo mức GPA
-  const fetchLearningResultByYear = async () => {
+  // Lấy thống kê theo NĂM HỌC và gom nhóm theo mức GPA
+  const fetchLearningResultByYear = async (yearToFetch = null) => {
     try {
-      // Lấy danh sách năm học, chọn năm mới nhất
+      // Lấy danh sách năm học
       const yearsRes = await axiosInstance.get(
         `/commander/yearlyResults/years`
       );
       const years = yearsRes.data?.years || [];
       setAvailableSchoolYears(years);
-      const latestYear = years[0] || null;
-      if (!selectedYear && latestYear) {
-        setSelectedYear(latestYear);
-      }
-      if (!latestYear) {
+
+      // Nếu không có năm nào, reset và return
+      if (years.length === 0) {
         setLearningResultByYear({ schoolYear: null, data: [] });
-        setTopStudentsLatestYear({ schoolYear: null, topStudents: [] });
+        setTrainingRatingStatsByYear({ schoolYear: null, data: [] });
+        if (!selectedYear) {
+          setTopStudentsLatestYear({ schoolYear: null, topStudents: [] });
+        }
         return;
       }
 
-      // Lấy dữ liệu theo năm học mới nhất
+      // Xác định năm học cần lấy: ưu tiên yearToFetch, sau đó selectedYear, cuối cùng là năm mới nhất
+      const targetYear = yearToFetch || selectedYear || years[0];
+
+      // Set selectedYear nếu chưa có
+      if (!selectedYear && targetYear) {
+        setSelectedYear(targetYear);
+      }
+
+      // Lấy dữ liệu theo năm học được chọn
       const resultsRes = await axiosInstance.get(
-        `/commander/yearlyResults?schoolYear=${encodeURIComponent(latestYear)}`
+        `/commander/yearlyResults?schoolYear=${encodeURIComponent(targetYear)}`
       );
-      const results = resultsRes.data?.results || [];
+      let results = resultsRes.data?.results || [];
+
+      // Lọc theo đơn vị nếu có filter
+      if (filterUnits && filterUnits.length > 0) {
+        results = results.filter((r) => filterUnits.includes(r.unit));
+      }
 
       // Gom nhóm theo thang điểm hệ 4 (giống biểu đồ theo học kỳ)
       const buckets = [
@@ -94,28 +107,34 @@ const Statictical = () => {
         else buckets[4].count++;
       });
 
-      setLearningResultByYear({ schoolYear: latestYear, data: buckets });
+      setLearningResultByYear({ schoolYear: targetYear, data: buckets });
 
-      // Gom số lượng theo ĐƠN VỊ để vẽ biểu đồ theo đơn vị
-      const classCountsMap = new Map();
+      // Gom số lượng theo XẾP LOẠI RÈN LUYỆN để vẽ biểu đồ (chỉ 4 loại: Yếu, Trung bình, Khá, Tốt)
+      const trainingRatingCounts = {
+        Tốt: 0,
+        Khá: 0,
+        "Trung bình": 0,
+        Yếu: 0,
+      };
+
       results.forEach((r) => {
-        const unitName = r.unit || r.unitName || "Chưa có đơn vị";
-        classCountsMap.set(unitName, (classCountsMap.get(unitName) || 0) + 1);
+        const rating = r.trainingRating;
+        if (rating && trainingRatingCounts.hasOwnProperty(rating)) {
+          trainingRatingCounts[rating]++;
+        }
       });
-      // Bảo đảm luôn đủ 6 đơn vị theo thứ tự cố định
-      const expectedUnits = [
-        "L1 - H5",
-        "L2 - H5",
-        "L3 - H5",
-        "L4 - H5",
-        "L5 - H5",
-        "L6 - H5",
+
+      const trainingRatingData = [
+        { rating: "Yếu", count: trainingRatingCounts["Yếu"] },
+        { rating: "Trung bình", count: trainingRatingCounts["Trung bình"] },
+        { rating: "Khá", count: trainingRatingCounts["Khá"] },
+        { rating: "Tốt", count: trainingRatingCounts["Tốt"] },
       ];
-      const classData = expectedUnits.map((unit) => ({
-        className: unit,
-        count: classCountsMap.get(unit) || 0,
-      }));
-      setClassStatsByYear({ schoolYear: latestYear, data: classData });
+
+      setTrainingRatingStatsByYear({
+        schoolYear: targetYear,
+        data: trainingRatingData,
+      });
     } catch (error) {
       console.log(error);
     }
@@ -123,7 +142,7 @@ const Statictical = () => {
 
   const fetchTopStudentsLatestYear = async (year) => {
     try {
-      const url = `${BASE_URL}/commander/topStudents/latestYear${
+      const url = `/commander/topStudents/latestYear${
         year ? `?schoolYear=${encodeURIComponent(year)}` : ""
       }`;
       const res = await axiosInstance.get(url);
@@ -145,8 +164,17 @@ const Statictical = () => {
   useEffect(() => {
     if (selectedYear) {
       fetchTopStudentsLatestYear(selectedYear);
+      // Cập nhật biểu đồ khi chọn năm học mới
+      fetchLearningResultByYear(selectedYear);
     }
   }, [selectedYear]);
+
+  useEffect(() => {
+    // Cập nhật biểu đồ khi filter đơn vị thay đổi
+    if (selectedYear) {
+      fetchLearningResultByYear(selectedYear);
+    }
+  }, [filterUnits]);
 
   useEffect(() => {
     const ctx2 = document.getElementById("acquisitions2").getContext("2d");
@@ -158,17 +186,37 @@ const Statictical = () => {
       chartRef3.current.destroy();
     }
 
+    const chartData = learningResultByYear?.data || [];
+    const colorMap = {
+      Yếu: { bg: "rgba(239, 68, 68, 0.2)", border: "rgba(239, 68, 68, 1)" },
+      "Trung bình": {
+        bg: "rgba(234, 179, 8, 0.2)",
+        border: "rgba(234, 179, 8, 1)",
+      },
+      Khá: { bg: "rgba(59, 130, 246, 0.2)", border: "rgba(59, 130, 246, 1)" },
+      Giỏi: { bg: "rgba(34, 197, 94, 0.2)", border: "rgba(34, 197, 94, 1)" },
+      "Xuất sắc": {
+        bg: "rgba(168, 85, 247, 0.2)",
+        border: "rgba(168, 85, 247, 1)",
+      },
+    };
+
     chartRef2.current = new Chart(ctx2, {
       type: "bar",
       data: {
-        labels:
-          learningResultByYear?.data?.map((row) => row.classification) || [],
+        labels: chartData.map((row) => row.classification),
         datasets: [
           {
             label: "Số học viên",
-            data: learningResultByYear?.data?.map((row) => row.count) || [],
-            backgroundColor: "rgba(255, 99, 132, 0.2)",
-            borderColor: "rgba(255, 99, 132, 1)",
+            data: chartData.map((row) => row.count),
+            backgroundColor: chartData.map(
+              (row) =>
+                colorMap[row.classification]?.bg || "rgba(156, 163, 175, 0.2)"
+            ),
+            borderColor: chartData.map(
+              (row) =>
+                colorMap[row.classification]?.border || "rgba(156, 163, 175, 1)"
+            ),
             borderWidth: 1,
           },
         ],
@@ -182,21 +230,63 @@ const Statictical = () => {
             },
           },
         },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return context.label + ": " + context.parsed.y + " học viên";
+              },
+            },
+          },
+        },
       },
     });
 
-    // Biểu đồ theo đơn vị
+    // Biểu đồ thống kê rèn luyện (chỉ 4 loại: Yếu, Trung bình, Khá, Tốt)
+    const trainingRatingData = trainingRatingStatsByYear?.data || [];
+    const trainingRatingColorMap = {
+      Tốt: { bg: "rgba(34, 197, 94, 0.2)", border: "rgba(34, 197, 94, 1)" },
+      Khá: { bg: "rgba(59, 130, 246, 0.2)", border: "rgba(59, 130, 246, 1)" },
+      "Trung bình": {
+        bg: "rgba(234, 179, 8, 0.2)",
+        border: "rgba(234, 179, 8, 1)",
+      },
+      Yếu: { bg: "rgba(239, 68, 68, 0.2)", border: "rgba(239, 68, 68, 1)" },
+    };
+
+    // Sắp xếp từ thấp đến cao: Yếu -> Trung bình -> Khá -> Tốt
+    const ratingOrder = ["Yếu", "Trung bình", "Khá", "Tốt"];
+    const sortedTrainingRatingData = [...trainingRatingData].sort((a, b) => {
+      const indexA = ratingOrder.indexOf(a.rating);
+      const indexB = ratingOrder.indexOf(b.rating);
+      // Nếu không tìm thấy trong order, đặt ở cuối
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
+
     const ctx3 = document.getElementById("acquisitions3").getContext("2d");
     chartRef3.current = new Chart(ctx3, {
       type: "bar",
       data: {
-        labels: classStatsByYear?.data?.map((row) => row.className) || [],
+        labels: sortedTrainingRatingData.map((row) => row.rating),
         datasets: [
           {
-            label: "Số học viên theo đơn vị",
-            data: classStatsByYear?.data?.map((row) => row.count) || [],
-            backgroundColor: "rgba(99, 102, 241, 0.2)",
-            borderColor: "rgba(99, 102, 241, 1)",
+            label: "Số học viên",
+            data: sortedTrainingRatingData.map((row) => row.count),
+            backgroundColor: sortedTrainingRatingData.map(
+              (row) =>
+                trainingRatingColorMap[row.rating]?.bg ||
+                "rgba(156, 163, 175, 0.2)"
+            ),
+            borderColor: sortedTrainingRatingData.map(
+              (row) =>
+                trainingRatingColorMap[row.rating]?.border ||
+                "rgba(156, 163, 175, 1)"
+            ),
             borderWidth: 1,
           },
         ],
@@ -206,6 +296,18 @@ const Statictical = () => {
           y: {
             beginAtZero: true,
             ticks: { stepSize: 1 },
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                return context.label + ": " + context.parsed.y + " học viên";
+              },
+            },
           },
         },
       },
@@ -219,7 +321,7 @@ const Statictical = () => {
         chartRef3.current.destroy();
       }
     };
-  }, [learningResultByYear, classStatsByYear]);
+  }, [learningResultByYear, trainingRatingStatsByYear]);
 
   const handleExportFileWord = async (e, maxSemester) => {
     e.preventDefault();
@@ -375,8 +477,8 @@ const Statictical = () => {
               <div className="text-center ml-8">
                 <canvas id="acquisitions3" width="450" height="395"></canvas>
                 <div className="text-sm font-bold text-indigo-600 dark:text-indigo-400 pt-2 pb-1">
-                  Biểu đồ thống kê số lượng theo đơn vị năm{" "}
-                  {classStatsByYear?.schoolYear || "(Chưa có dữ liệu)"}
+                  Biểu đồ thống kê xếp loại rèn luyện năm{" "}
+                  {trainingRatingStatsByYear?.schoolYear || "(Chưa có dữ liệu)"}
                 </div>
               </div>
             </div>
@@ -404,7 +506,7 @@ const Statictical = () => {
                 </div>
                 <div>
                   <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Đơn vị
+                    Chọn đơn vị
                   </label>
                   <Select
                     mode="multiple"

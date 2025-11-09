@@ -431,7 +431,7 @@ const YearlyStatistics = () => {
   const schoolYearOptions = [
     { label: "Tất cả các năm", value: "all" },
     ...schoolYears.map((year) => ({
-      label: `Năm học ${year}`,
+      label: year,
       value: year,
     })),
   ];

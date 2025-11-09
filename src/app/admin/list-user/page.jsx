@@ -3070,7 +3070,7 @@ const ListUser = () => {
                     </div>
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Đơn vị
+                        Chọn đơn vị
                       </label>
                       <Select
                         value={unit || ""}
@@ -3079,7 +3079,7 @@ const ListUser = () => {
                         style={{ width: 200, height: 36 }}
                         allowClear
                         options={[
-                          { value: "", label: "Tất cả" },
+                          { value: "", label: "Tất cả đơn vị" },
                           { value: "L1 - H5", label: "L1 - H5" },
                           { value: "L2 - H5", label: "L2 - H5" },
                           { value: "L3 - H5", label: "L3 - H5" },
@@ -4476,14 +4476,14 @@ const ListUser = () => {
                 <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Lọc theo đơn vị
+                      Chọn đơn vị
                     </label>
                     <select
                       value={graduationFilterUnit}
                       onChange={(e) => setGraduationFilterUnit(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="all">Tất cả các đơn vị</option>
+                      <option value="all">Tất cả đơn vị</option>
                       <option value="L1 - H5">L1 - H5</option>
                       <option value="L2 - H5">L2 - H5</option>
                       <option value="L3 - H5">L3 - H5</option>

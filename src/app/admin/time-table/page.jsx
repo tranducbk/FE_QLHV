@@ -357,7 +357,7 @@ const TimeTable = () => {
                   </div>
                   <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Lọc theo đơn vị
+                      Chọn đơn vị
                     </label>
                     <Select
                       value={unit || ""}

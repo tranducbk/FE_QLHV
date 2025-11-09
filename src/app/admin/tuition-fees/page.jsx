@@ -185,7 +185,7 @@ const TuitionFees = () => {
     }
 
     // Lọc theo lớp
-    if (selectedClass && selectedClass !== "Tất cả các lớp") {
+    if (selectedClass && selectedClass !== "Tất cả đơn vị") {
       filtered = filtered.filter((item) => {
         return item.unit === selectedClass;
       });
@@ -303,108 +303,6 @@ const TuitionFees = () => {
     }
   };
 
-  const handleExportFilePdf = async () => {
-    try {
-      // Tạo tham số cho API
-      const semesterParam =
-        exportSelectedSemesters.length > 0
-          ? exportSelectedSemesters
-              .map((semesterId) => {
-                const semester = semesters.find((s) => s.id === semesterId);
-                return semester?.code;
-              })
-              .join(",")
-          : "all";
-
-      const schoolYearParam =
-        exportSelectedSemesters.length > 0
-          ? exportSelectedSemesters
-              .map((semesterId) => {
-                const semester = semesters.find((s) => s.id === semesterId);
-                return semester?.schoolYear;
-              })
-              .filter(Boolean)
-              .join(",")
-          : "all";
-
-      const unitParam =
-        exportSelectedUnits.length > 0 ? exportSelectedUnits.join(",") : "all";
-
-      console.log("Frontend - Export parameters:", {
-        semesterParam,
-        schoolYearParam,
-        unitParam,
-        exportSelectedSemesters,
-        exportSelectedUnits,
-      });
-
-      const response = await axiosInstance.get(
-        `/commander/tuitionFee/pdf?semester=${semesterParam}&schoolYear=${schoolYearParam}&unit=${unitParam}`,
-        {
-          responseType: "blob",
-        }
-      );
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      // Tạo tên file động dựa trên các tham số được chọn
-      let fileName = "Thong_ke_hoc_phi_he_hoc_vien_5";
-
-      // Thêm thông tin học kỳ
-      if (exportSelectedSemesters.length > 0) {
-        const semesterCodes = exportSelectedSemesters
-          .map((semesterId) => {
-            const semester = semesters.find((s) => s.id === semesterId);
-            return semester?.code;
-          })
-          .filter(Boolean);
-        fileName += `_${semesterCodes.join("_")}`;
-      } else {
-        fileName += "_tat_ca_hoc_ky";
-      }
-
-      // Thêm thông tin năm học
-      if (exportSelectedSemesters.length > 0) {
-        const schoolYears = exportSelectedSemesters
-          .map((semesterId) => {
-            const semester = semesters.find((s) => s.id === semesterId);
-            return semester?.schoolYear;
-          })
-          .filter(Boolean);
-        // Loại bỏ các năm học trùng lặp
-        const uniqueSchoolYears = [...new Set(schoolYears)];
-        fileName += `_${uniqueSchoolYears.join("_")}`;
-      } else {
-        fileName += "_tat_ca_nam_hoc";
-      }
-
-      // Thêm thông tin đơn vị
-      if (exportSelectedUnits.length > 0) {
-        fileName += `_${exportSelectedUnits.join("_")}`;
-      } else {
-        fileName += "_tat_ca_don_vi";
-      }
-
-      fileName += ".pdf";
-
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-
-      // Đóng modal và reset
-      setShowExportModal(false);
-      setExportSelectedSemesters([]);
-      setExportSelectedUnits([]);
-
-      handleNotify("success", "Thành công", "Đã xuất file PDF");
-    } catch (error) {
-      console.error("Lỗi tải xuống file", error);
-      handleNotify("error", "Lỗi", "Không thể xuất file PDF");
-    }
-  };
-
   const handleExportFileWord = async () => {
     try {
       // Tạo tham số cho API
@@ -440,8 +338,14 @@ const TuitionFees = () => {
         exportSelectedUnits,
       });
 
+      // Encode các tham số để tránh lỗi với ký tự đặc biệt
+      const params = new URLSearchParams();
+      params.append("semester", semesterParam);
+      params.append("schoolYear", schoolYearParam);
+      params.append("unit", unitParam);
+
       const response = await axiosInstance.get(
-        `/commander/tuitionFee/word?semester=${semesterParam}&schoolYear=${schoolYearParam}&unit=${unitParam}`,
+        `/commander/tuitionFee/word?${params.toString()}`,
         {
           responseType: "blob",
         }
@@ -665,7 +569,7 @@ const TuitionFees = () => {
                     htmlFor="class"
                     className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
-                    Chọn lớp
+                    Chọn đơn vị
                   </label>
                   <ConfigProvider
                     theme={{
@@ -680,7 +584,7 @@ const TuitionFees = () => {
                     }}
                   >
                     <Select
-                      placeholder="Chọn lớp"
+                      placeholder="Chọn đơn vị"
                       allowClear
                       style={{ width: 160, height: 36 }}
                       value={selectedClass || undefined}
@@ -692,7 +596,7 @@ const TuitionFees = () => {
                         borderRadius: 8,
                       }}
                       options={[
-                        { value: "Tất cả các lớp", label: "Tất cả các lớp" },
+                        { value: "Tất cả đơn vị", label: "Tất cả đơn vị" },
                         { value: "L1 - H5", label: "L1 - H5" },
                         { value: "L2 - H5", label: "L2 - H5" },
                         { value: "L3 - H5", label: "L3 - H5" },
@@ -940,14 +844,14 @@ const TuitionFees = () => {
         </div>
       </div>
 
-      {/* Modal xuất PDF */}
+      {/* Modal xuất Word */}
       {showExportModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
           <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Xuất PDF học phí
+                Xuất Word học phí
               </h2>
               <button
                 onClick={() => {
@@ -995,7 +899,7 @@ const TuitionFees = () => {
                       treeData={treeData}
                       treeCheckable
                       showCheckedStrategy={TreeSelect.SHOW_PARENT}
-                      placeholder="Chọn học kỳ để xuất PDF"
+                      placeholder="Chọn học kỳ"
                       allowClear
                       showSearch={false}
                       style={{ width: "100%" }}
@@ -1050,7 +954,7 @@ const TuitionFees = () => {
                   >
                     <Select
                       mode="multiple"
-                      placeholder="Chọn đơn vị để xuất PDF"
+                      placeholder="Chọn đơn vị"
                       allowClear
                       style={{ width: "100%" }}
                       value={exportSelectedUnits}
@@ -1098,7 +1002,7 @@ const TuitionFees = () => {
                         <li>
                           Có thể chọn nhiều học kỳ và nhiều đơn vị cùng lúc
                         </li>
-                        <li>File PDF sẽ được tải xuống tự động</li>
+                        <li>File Word sẽ được tải xuống tự động</li>
                       </ul>
                     </div>
                   </div>
@@ -1119,43 +1023,10 @@ const TuitionFees = () => {
                 </button>
                 <button
                   type="button"
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg focus:ring-4 focus:outline-none focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800 flex items-center"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg focus:ring-4 focus:outline-none focus:ring-green-300 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800"
                   onClick={handleExportFileWord}
                 >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  Xuất Word
-                </button>
-                <button
-                  type="button"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 flex items-center"
-                  onClick={handleExportFilePdf}
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                    />
-                  </svg>
-                  Xuất PDF
+                  Xuất file
                 </button>
               </div>
             </div>

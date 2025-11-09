@@ -130,12 +130,11 @@ const SideBarContent = () => {
     }
 
     // Admin: Auto open submenu if current path is in submenu
+    // Chỉ mở submenu "learning" cho các path thực sự nằm trong submenu đó
     if (
       currentPath.startsWith("/admin/time-table") ||
       currentPath.startsWith("/admin/learning-results") ||
       currentPath.startsWith("/admin/party-rating") ||
-      currentPath.startsWith("/admin/training-rating") ||
-      currentPath.startsWith("/admin/semester-management") ||
       currentPath.startsWith("/admin/tuition-fees") ||
       currentPath.startsWith("/admin/yearly-statistics")
     ) {
@@ -153,6 +152,8 @@ const SideBarContent = () => {
     } else if (currentPath.startsWith("/supper_admin")) {
       setOpenKeys([]);
     } else {
+      // Các mục độc lập như /admin/training-rating, /admin/semester-management, /admin/cut-rice, etc.
+      // không nằm trong submenu nào, nên không mở submenu
       setOpenKeys([]);
     }
   };

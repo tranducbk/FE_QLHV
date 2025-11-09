@@ -58,49 +58,38 @@ const TrainingRating = () => {
 
   const fetchInitialData = async () => {
     try {
-      const res = await axiosInstance.get(
-        `/commander/allStudentsForTrainingRating`
+      // Lấy danh sách năm học từ API (lấy tất cả năm học có trong YearlyResult)
+      const yearsRes = await axiosInstance.get(
+        `/commander/yearlyResults/years`
       );
+      const availableYears = yearsRes.data?.years || [];
 
-      console.log("Training ratings data:", res.data);
+      // Sắp xếp năm học từ mới nhất đến cũ nhất
+      const sortedYears = availableYears.sort((a, b) => b.localeCompare(a));
+      setSchoolYears(sortedYears);
 
-      const processedData = res.data || [];
-
-      const allSchoolYears = new Set();
-      processedData.forEach((item) => {
-        if (
-          item.schoolYear &&
-          item.schoolYear !== "Tất cả" &&
-          item.schoolYear !== "Chưa có dữ liệu"
-        ) {
-          allSchoolYears.add(item.schoolYear);
-        }
-      });
-
-      const uniqueSchoolYears = Array.from(allSchoolYears).sort((a, b) =>
-        b.localeCompare(a)
-      );
-
-      setSchoolYears(uniqueSchoolYears);
-      setTrainingRatings(processedData);
-
-      const units = [
-        ...new Set(
-          processedData
-            .map((item) => item.unit)
-            .filter((unit) => unit && unit.trim())
-        ),
-      ];
-      setAvailableUnits(units);
-
-      if (uniqueSchoolYears.length > 0) {
-        // Tự động chọn năm học mới nhất
-        const latest = uniqueSchoolYears[0];
-        setSelectedSchoolYear(latest);
-        await fetchTrainingRatingsForYear(latest);
+      if (sortedYears.length > 0) {
+        // Tự động chọn năm học mới nhất và lấy dữ liệu theo năm đó
+        const latestYear = sortedYears[0];
+        setSelectedSchoolYear(latestYear);
+        // Lấy dữ liệu theo năm mới nhất
+        await fetchTrainingRatingsForYear(latestYear);
       } else {
         // Nếu không có năm học nào, hiển thị tất cả sinh viên
         setSelectedSchoolYear("all");
+        const res = await axiosInstance.get(
+          `/commander/allStudentsForTrainingRating`
+        );
+        const processedData = res.data || [];
+        setTrainingRatings(processedData);
+        const units = [
+          ...new Set(
+            processedData
+              .map((item) => item.unit)
+              .filter((unit) => unit && unit.trim())
+          ),
+        ];
+        setAvailableUnits(units);
       }
     } catch (error) {
       console.log("Error fetching initial data:", error);
@@ -305,7 +294,7 @@ const TrainingRating = () => {
 
   const schoolYearOptions = [
     ...schoolYears.map((year) => ({
-      label: `Năm học ${year}`,
+      label: year,
       value: year,
     })),
   ];
@@ -418,21 +407,8 @@ const TrainingRating = () => {
                 </div>
                 <button
                   onClick={handleBulkUpdate}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors duration-200 flex items-center"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors duration-200"
                 >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
-                    />
-                  </svg>
                   Cập nhật đồng loạt
                 </button>
               </div>
@@ -471,7 +447,7 @@ const TrainingRating = () => {
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Đơn vị
+                        Chọn đơn vị
                       </label>
                       <ConfigProvider
                         theme={{
@@ -488,6 +464,7 @@ const TrainingRating = () => {
                         <Select
                           value={selectedUnit}
                           onChange={setSelectedUnit}
+                          placeholder="Chọn đơn vị"
                           style={{ width: 128, height: 36 }}
                           options={[
                             { value: "all", label: "Tất cả đơn vị" },
@@ -816,10 +793,10 @@ const TrainingRating = () => {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
               <div className="space-y-6">
                 {/* Bộ lọc và tìm kiếm */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Lọc theo đơn vị
+                      Chọn đơn vị
                     </label>
                     <ConfigProvider
                       theme={{
@@ -831,7 +808,8 @@ const TrainingRating = () => {
                       <Select
                         value={bulkFilterUnit}
                         onChange={setBulkFilterUnit}
-                        style={{ width: "100%" }}
+                        placeholder="Chọn đơn vị"
+                        style={{ width: "100%", height: "40px" }}
                         options={[
                           { value: "all", label: "Tất cả đơn vị" },
                           ...availableUnits.map((u) => ({
@@ -852,24 +830,25 @@ const TrainingRating = () => {
                       value={bulkSearchTerm}
                       onChange={(e) => setBulkSearchTerm(e.target.value)}
                       placeholder="Nhập tên hoặc mã sinh viên..."
-                      className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 h-[40px]"
                     />
                   </div>
+                </div>
 
-                  <div className="flex items-end space-x-2">
-                    <button
-                      onClick={handleSelectAllStudents}
-                      className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors duration-200"
-                    >
-                      Chọn tất cả
-                    </button>
-                    <button
-                      onClick={handleDeselectAllStudents}
-                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors duration-200"
-                    >
-                      Bỏ chọn tất cả
-                    </button>
-                  </div>
+                {/* Nút chọn tất cả / Bỏ chọn tất cả */}
+                <div className="flex items-center justify-end gap-2 mb-4">
+                  <button
+                    onClick={handleSelectAllStudents}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors duration-200"
+                  >
+                    Chọn tất cả
+                  </button>
+                  <button
+                    onClick={handleDeselectAllStudents}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition-colors duration-200"
+                  >
+                    Bỏ chọn tất cả
+                  </button>
                 </div>
 
                 {/* Thông tin cập nhật */}
@@ -929,7 +908,7 @@ const TrainingRating = () => {
                                 : ""
                             }`}
                           >
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-3 flex-1">
                               <input
                                 type="checkbox"
                                 checked={selectedStudentsForBulk.includes(
@@ -938,17 +917,40 @@ const TrainingRating = () => {
                                 onChange={() => handleSelectStudent(student.id)}
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                               />
-                              <div>
+                              <div className="flex-1">
                                 <div className="font-medium text-gray-900 dark:text-white">
                                   {student.fullName}
                                 </div>
                                 <div className="text-sm text-gray-500 dark:text-gray-400">
                                   {student.studentCode} - {student.className}
                                 </div>
+                                {student.trainingRating && (
+                                  <div className="text-xs mt-1">
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Đã đánh giá:{" "}
+                                    </span>
+                                    <span
+                                      className={`font-medium ${
+                                        student.trainingRating === "Tốt"
+                                          ? "text-green-600 dark:text-green-400"
+                                          : student.trainingRating === "Khá"
+                                          ? "text-blue-600 dark:text-blue-400"
+                                          : student.trainingRating ===
+                                            "Trung bình"
+                                          ? "text-yellow-600 dark:text-yellow-400"
+                                          : student.trainingRating === "Yếu"
+                                          ? "text-red-600 dark:text-red-400"
+                                          : "text-gray-600 dark:text-gray-400"
+                                      }`}
+                                    >
+                                      {student.trainingRating}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {student.unit}
+                            <div className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                              <div>{student.unit}</div>
                             </div>
                           </div>
                         ))
@@ -991,6 +993,10 @@ const TrainingRating = () => {
           background-color: rgb(255 255 255) !important;
           border-color: rgb(209 213 219) !important; /* gray-300 */
           color: rgb(17 24 39) !important; /* gray-900 */
+          height: 40px !important;
+          min-height: 40px !important;
+          display: flex !important;
+          align-items: center !important;
         }
         .ant-select .ant-select-selection-placeholder {
           color: rgb(107 114 128) !important; /* gray-500 */
@@ -1042,6 +1048,10 @@ const TrainingRating = () => {
           background-color: rgb(55 65 81) !important; /* gray-700 */
           border-color: rgb(75 85 99) !important; /* gray-600 */
           color: rgb(255 255 255) !important;
+          height: 40px !important;
+          min-height: 40px !important;
+          display: flex !important;
+          align-items: center !important;
         }
         .dark .ant-select .ant-select-selection-placeholder {
           color: rgb(156 163 175) !important; /* gray-400 */

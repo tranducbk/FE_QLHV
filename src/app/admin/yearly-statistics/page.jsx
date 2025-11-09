@@ -400,7 +400,7 @@ const YearlyStatistics = () => {
   const schoolYearOptions = [
     { label: "Tất cả các năm", value: "all" },
     ...schoolYears.map((year) => ({
-      label: `Năm học ${year}`,
+      label: year,
       value: year,
     })),
   ];
@@ -595,7 +595,7 @@ const YearlyStatistics = () => {
 
                     <Col xs={24} sm={12} md={4} lg={3}>
                       <label className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Đơn vị
+                        Chọn đơn vị
                       </label>
                       <ConfigProvider
                         theme={{
@@ -612,6 +612,7 @@ const YearlyStatistics = () => {
                         <Select
                           value={selectedUnit}
                           onChange={setSelectedUnit}
+                          placeholder="Chọn đơn vị"
                           style={{ width: "100%", height: 36 }}
                           options={[
                             { value: "all", label: "Tất cả đơn vị" },

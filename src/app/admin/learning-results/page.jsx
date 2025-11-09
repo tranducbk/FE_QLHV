@@ -601,7 +601,7 @@ const LearningResults = () => {
 
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Đơn vị
+                        Chọn đơn vị
                       </label>
                       <ConfigProvider
                         theme={{
@@ -618,6 +618,7 @@ const LearningResults = () => {
                         <Select
                           value={selectedUnit}
                           onChange={setSelectedUnit}
+                          placeholder="Chọn đơn vị"
                           style={{ width: 160, height: 36 }}
                           options={[
                             { value: "all", label: "Tất cả đơn vị" },

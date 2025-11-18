@@ -15,16 +15,23 @@ const AdminManagement = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL"); // ALL, ADMIN, USER
+  const [unitFilter, setUnitFilter] = useState("ALL"); // ALL hoặc tên đơn vị
+  const [units, setUnits] = useState([]); // Danh sách các đơn vị
+  const [pageSize, setPageSize] = useState(10);
   const [showForm, setShowForm] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    role: "ADMIN",
+    confirmPassword: "",
+    role: "USER",
   });
 
   // Disable scroll khi có modal mở
@@ -32,7 +39,12 @@ const AdminManagement = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, searchTerm, roleFilter]);
+  }, [currentPage, searchTerm, roleFilter, unitFilter, pageSize]);
+
+  // Fetch danh sách đơn vị khi component mount
+  useEffect(() => {
+    fetchUnits();
+  }, []);
 
   const fetchUsers = async () => {
     try {
@@ -44,6 +56,8 @@ const AdminManagement = () => {
           page: currentPage,
           search: searchTerm,
           role: roleFilter !== "ALL" ? roleFilter : undefined,
+          unit: unitFilter !== "ALL" ? unitFilter : undefined,
+          pageSize: pageSize,
         },
       });
 
@@ -82,8 +96,12 @@ const AdminManagement = () => {
     setFormData({
       username: "",
       password: "",
-      role: "ADMIN",
+      confirmPassword: "",
+      role: "USER",
     });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setErrorMessage("");
     setShowForm(true);
   };
 
@@ -92,8 +110,12 @@ const AdminManagement = () => {
     setFormData({
       username: user.username,
       password: "",
+      confirmPassword: "",
       role: user.role,
     });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setErrorMessage("");
     setShowForm(true);
   };
 
@@ -125,15 +147,41 @@ const AdminManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Reset error message
+    setErrorMessage("");
+
     // Validation - chỉ bắt buộc username và password
     if (!formData.username || formData.username.trim().length < 4) {
-      handleNotify("warning", "Cảnh báo!", "Username phải có ít nhất 4 ký tự");
+      const errorMsg = "Username phải có ít nhất 4 ký tự";
+      setErrorMessage(errorMsg);
       return;
     }
 
+    // Validation cho mật khẩu khi tạo mới
     if (!editingUser && (!formData.password || formData.password.length < 6)) {
-      handleNotify("warning", "Cảnh báo!", "Mật khẩu phải có ít nhất 6 ký tự");
+      const errorMsg = "Mật khẩu phải có ít nhất 6 ký tự";
+      setErrorMessage(errorMsg);
       return;
+    }
+
+    if (!editingUser && formData.password !== formData.confirmPassword) {
+      const errorMsg = "Mật khẩu và xác nhận mật khẩu không khớp";
+      setErrorMessage(errorMsg);
+      return;
+    }
+
+    // Validation cho mật khẩu khi chỉnh sửa (nếu có nhập mật khẩu mới)
+    if (editingUser && formData.password) {
+      if (formData.password.length < 6) {
+        const errorMsg = "Mật khẩu mới phải có ít nhất 6 ký tự";
+        setErrorMessage(errorMsg);
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        const errorMsg = "Mật khẩu mới và xác nhận mật khẩu không khớp";
+        setErrorMessage(errorMsg);
+        return;
+      }
     }
 
     try {
@@ -156,10 +204,14 @@ const AdminManagement = () => {
       }
 
       setShowForm(false);
+      setErrorMessage("");
       fetchUsers();
     } catch (error) {
       console.error("Lỗi lưu tài khoản:", error);
-      handleNotify("danger", "Lỗi!", error.response?.data?.message || "Lỗi!");
+      const errorMsg =
+        error.response?.data?.message ||
+        "Không thể lưu tài khoản. Vui lòng thử lại!";
+      setErrorMessage(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -170,8 +222,44 @@ const AdminManagement = () => {
     setCurrentPage(1);
   };
 
+  const fetchUnits = async () => {
+    try {
+      // Fetch tất cả users để lấy danh sách đơn vị
+      const response = await axiosInstance.get(`/user/admin-users/list`, {
+        params: {
+          page: 1,
+          pageSize: 1000, // Lấy nhiều để có đủ danh sách đơn vị
+        },
+      });
+
+      // Lấy danh sách đơn vị từ users
+      const unitSet = new Set();
+      (response.data.users || []).forEach((user) => {
+        if (user.unit && user.unit.trim()) {
+          unitSet.add(user.unit.trim());
+        }
+      });
+
+      // Sắp xếp và set units
+      const sortedUnits = Array.from(unitSet).sort();
+      setUnits(sortedUnits);
+    } catch (error) {
+      console.error("Error fetching units:", error);
+    }
+  };
+
   const handleRoleFilter = (e) => {
     setRoleFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleUnitFilter = (e) => {
+    setUnitFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (e) => {
+    setPageSize(parseInt(e.target.value));
     setCurrentPage(1);
   };
 
@@ -241,8 +329,22 @@ const AdminManagement = () => {
                     className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white min-w-[150px]"
                   >
                     <option value="ALL">Tất cả quyền</option>
-                    <option value="ADMIN">ADMIN</option>
                     <option value="USER">USER</option>
+                    <option value="ADMIN">ADMIN</option>
+                  </select>
+
+                  {/* Unit Filter */}
+                  <select
+                    value={unitFilter}
+                    onChange={handleUnitFilter}
+                    className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white min-w-[180px]"
+                  >
+                    <option value="ALL">Tất cả đơn vị</option>
+                    {units.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -308,7 +410,7 @@ const AdminManagement = () => {
                             className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                           >
                             <td className="px-6 py-4 text-center font-medium text-gray-900 dark:text-white">
-                              {index + 1}
+                              {(currentPage - 1) * pageSize + index + 1}
                             </td>
                             <td className="px-6 py-4">
                               <img
@@ -361,31 +463,59 @@ const AdminManagement = () => {
               )}
 
               {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t dark:border-gray-600">
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Trang trước
-                    </button>
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
+              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t dark:border-gray-600">
+                <div className="flex items-center justify-between gap-4">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Trang trước
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm">
                       Trang {currentPage} / {totalPages}
                     </span>
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Trang sau
-                    </button>
+                    <div className="relative">
+                      <select
+                        value={pageSize}
+                        onChange={handlePageSizeChange}
+                        className="appearance-none pl-4 pr-10 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-500 transition-all shadow-sm cursor-pointer"
+                      >
+                        <option value={5}>5 / trang</option>
+                        <option value={10}>10 / trang</option>
+                        <option value={20}>20 / trang</option>
+                        <option value={50}>50 / trang</option>
+                        <option value={100}>100 / trang</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg
+                          className="w-4 h-4 text-gray-400 dark:text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Trang sau
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
@@ -422,23 +552,33 @@ const AdminManagement = () => {
                   {editingUser ? "Chỉnh sửa tài khoản" : "Thêm tài khoản mới"}
                 </h3>
 
+                {errorMessage && (
+                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {errorMessage}
+                    </p>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  {/* Username & Password */}
+                  {/* Username */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Username <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) =>
+                        setFormData({ ...formData, username: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                      placeholder="Nhập username"
+                    />
+                  </div>
+
+                  {/* Password */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Username <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.username}
-                        onChange={(e) =>
-                          setFormData({ ...formData, username: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                        placeholder="Nhập username"
-                      />
-                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {editingUser
@@ -448,15 +588,135 @@ const AdminManagement = () => {
                           <span className="text-red-500">*</span>
                         )}
                       </label>
-                      <input
-                        type="password"
-                        value={formData.password}
-                        onChange={(e) =>
-                          setFormData({ ...formData, password: e.target.value })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-                        placeholder="Nhập mật khẩu"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={formData.password}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              password: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                          placeholder="Nhập mật khẩu"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          {showPassword ? (
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {editingUser
+                          ? "Xác nhận mật khẩu mới"
+                          : "Xác nhận mật khẩu"}
+                        {!editingUser && (
+                          <span className="text-red-500">*</span>
+                        )}
+                        {editingUser && formData.password && (
+                          <span className="text-red-500">*</span>
+                        )}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={formData.confirmPassword}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              confirmPassword: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                          placeholder={
+                            editingUser
+                              ? "Nhập lại mật khẩu mới"
+                              : "Nhập lại mật khẩu"
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                        >
+                          {showConfirmPassword ? (
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -476,8 +736,8 @@ const AdminManagement = () => {
                       {editingUser && editingUser.role === "SUPER_ADMIN" && (
                         <option value="SUPER_ADMIN">SUPER ADMIN</option>
                       )}
-                      <option value="ADMIN">ADMIN</option>
                       <option value="USER">USER</option>
+                      <option value="ADMIN">ADMIN</option>
                     </select>
                   </div>
 

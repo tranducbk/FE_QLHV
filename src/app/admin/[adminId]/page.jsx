@@ -37,9 +37,10 @@ const UserProfile = ({ params }) => {
           ? new Date(profile.probationaryPartyMember)
           : null,
         organization: profile.organization || "HVKHQS",
-        fullPartyMember: profile.officialPartyMember
-          ? new Date(profile.officialPartyMember)
-          : null,
+        fullPartyMember:
+          profile.fullPartyMember || profile.officialPartyMember
+            ? new Date(profile.fullPartyMember || profile.officialPartyMember)
+            : null,
         positionParty: profile.positionParty || "Ủy viên",
         email: profile.email || "",
         hometown: profile.hometown || "",
@@ -114,9 +115,26 @@ const UserProfile = ({ params }) => {
   const handleSubmit = async (e, commanderId) => {
     e.preventDefault();
     try {
+      // Format dates to ISO string before sending
+      const submitData = {
+        ...formData,
+        birthday: formData.birthday
+          ? formData.birthday.toISOString()
+          : null,
+        dateOfEnlistment: formData.dateOfEnlistment
+          ? formData.dateOfEnlistment.toISOString()
+          : null,
+        probationaryPartyMember: formData.probationaryPartyMember
+          ? formData.probationaryPartyMember.toISOString()
+          : null,
+        fullPartyMember: formData.fullPartyMember
+          ? formData.fullPartyMember.toISOString()
+          : null,
+      };
+
       const response = await axiosInstance.put(
         `/commander/${commanderId}`,
-        formData
+        submitData
       );
       handleNotify(
         "success",
@@ -394,10 +412,10 @@ const UserProfile = ({ params }) => {
                               Đảng viên chính thức:
                             </span>
                             <span className="text-gray-900 dark:text-white">
-                              {profile?.officialPartyMember
-                                ? dayjs(profile?.officialPartyMember).format(
-                                    "DD/MM/YYYY"
-                                  )
+                              {profile?.fullPartyMember || profile?.officialPartyMember
+                                ? dayjs(
+                                    profile?.fullPartyMember || profile?.officialPartyMember
+                                  ).format("DD/MM/YYYY")
                                 : ""}
                             </span>
                           </div>
@@ -644,6 +662,8 @@ const UserProfile = ({ params }) => {
                             onChange={handleChange}
                             className="bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                           >
+                            <option value="Thiếu úy">Thiếu úy</option>
+                            <option value="Trung úy">Trung úy</option>
                             <option value="Thượng úy">Thượng úy</option>
                             <option value="Đại úy">Đại úy</option>
                             <option value="Thiếu tá">Thiếu tá</option>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { Pagination, Select } from "antd";
 import { handleNotify } from "@/components/notify";
 import { useModalScroll } from "@/hooks/useModalScroll";
 import axiosInstance from "@/utils/axiosInstance";
@@ -13,6 +14,7 @@ const AdminManagement = () => {
   const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0); // Tổng số items cho antd Pagination
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL"); // ALL, ADMIN, USER
   const [unitFilter, setUnitFilter] = useState("ALL"); // ALL hoặc tên đơn vị
@@ -71,6 +73,22 @@ const AdminManagement = () => {
 
       setUsers(sortedUsers);
       setTotalPages(response.data.totalPages || 1);
+      // Backend trả về totalCount, nếu không có thì tính từ totalPages
+      if (response.data.totalCount !== undefined) {
+        setTotal(response.data.totalCount);
+      } else if (response.data.total !== undefined) {
+        // Fallback: nếu có total thì dùng
+        setTotal(response.data.total);
+      } else {
+        // Ước tính từ totalPages * pageSize
+        // Nếu đang ở trang cuối và số items < pageSize, tính chính xác
+        const totalPagesCount = response.data.totalPages || 1;
+        if (currentPage === totalPagesCount && sortedUsers.length < pageSize) {
+          setTotal((currentPage - 1) * pageSize + sortedUsers.length);
+        } else {
+          setTotal(totalPagesCount * pageSize);
+        }
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
       if (error.response?.status === 403) {
@@ -258,9 +276,16 @@ const AdminManagement = () => {
     setCurrentPage(1);
   };
 
-  const handlePageSizeChange = (e) => {
-    setPageSize(parseInt(e.target.value));
+  const handlePageSizeChange = (value) => {
+    setPageSize(value);
     setCurrentPage(1);
+  };
+
+  const handlePageChange = (page, size) => {
+    setCurrentPage(page);
+    if (size && size !== pageSize) {
+      setPageSize(size);
+    }
   };
 
   const getRoleBadge = (role) => {
@@ -281,6 +306,181 @@ const AdminManagement = () => {
 
   return (
     <>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+          /* Ant Design Select Styles */
+          .ant-select .ant-select-selector {
+            background-color: rgb(255 255 255) !important;
+            border-color: rgb(209 213 219) !important;
+            color: rgb(17 24 39) !important;
+          }
+          .ant-select .ant-select-selection-placeholder {
+            color: rgb(156 163 175) !important;
+          }
+          .ant-select-single .ant-select-selector .ant-select-selection-item {
+            color: rgb(17 24 39) !important;
+          }
+          .ant-select-arrow {
+            color: rgb(107 114 128) !important;
+          }
+          .ant-select-dropdown {
+            background-color: rgb(255 255 255) !important;
+            border-color: rgb(209 213 219) !important;
+          }
+          .ant-select-item {
+            color: rgb(17 24 39) !important;
+          }
+          .ant-select-item-option-active {
+            background-color: rgb(239 246 255) !important;
+          }
+          .ant-select-item-option-selected {
+            background-color: rgb(59 130 246) !important;
+            color: rgb(255 255 255) !important;
+          }
+
+          /* Dark mode Select */
+          .dark .ant-select .ant-select-selector {
+            background-color: rgb(55 65 81) !important;
+            border-color: rgb(75 85 99) !important;
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-select .ant-select-selection-placeholder {
+            color: rgb(156 163 175) !important;
+          }
+          .dark .ant-select-single .ant-select-selector .ant-select-selection-item {
+            background-color: transparent !important;
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-select-arrow {
+            color: rgb(209 213 219) !important;
+          }
+          .dark .ant-select-dropdown {
+            background-color: rgb(31 41 55) !important;
+            border-color: rgb(55 65 81) !important;
+          }
+          .dark .ant-select-item {
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-select-item-option-active {
+            background-color: rgb(55 65 81) !important;
+          }
+          .dark .ant-select-item-option-selected {
+            background-color: rgb(59 130 246) !important;
+            color: rgb(255 255 255) !important;
+          }
+
+          /* Ant Design Pagination Styles */
+          .ant-pagination {
+            color: rgb(17 24 39) !important;
+          }
+          .ant-pagination-item {
+            background-color: rgb(255 255 255) !important;
+            border-color: rgb(209 213 219) !important;
+          }
+          .ant-pagination-item a {
+            color: rgb(17 24 39) !important;
+          }
+          .ant-pagination-item:hover {
+            border-color: rgb(59 130 246) !important;
+          }
+          .ant-pagination-item:hover a {
+            color: rgb(59 130 246) !important;
+          }
+          .ant-pagination-item-active {
+            background-color: rgb(59 130 246) !important;
+            border-color: rgb(59 130 246) !important;
+          }
+          .ant-pagination-item-active a {
+            color: rgb(255 255 255) !important;
+          }
+          .ant-pagination-prev,
+          .ant-pagination-next {
+            background-color: rgb(255 255 255) !important;
+            border-color: rgb(209 213 219) !important;
+          }
+          .ant-pagination-prev:hover,
+          .ant-pagination-next:hover {
+            border-color: rgb(59 130 246) !important;
+          }
+          .ant-pagination-prev:hover button,
+          .ant-pagination-next:hover button {
+            color: rgb(59 130 246) !important;
+          }
+          .ant-pagination-prev button,
+          .ant-pagination-next button {
+            color: rgb(17 24 39) !important;
+          }
+          .ant-pagination-prev.ant-pagination-disabled,
+          .ant-pagination-next.ant-pagination-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+          .ant-pagination-jump-prev,
+          .ant-pagination-jump-next {
+            color: rgb(17 24 39) !important;
+          }
+          .ant-pagination-options {
+            color: rgb(17 24 39) !important;
+          }
+          .ant-pagination-total-text {
+            color: rgb(17 24 39) !important;
+          }
+
+          /* Dark mode Pagination */
+          .dark .ant-pagination {
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-pagination-item {
+            background-color: rgb(55 65 81) !important;
+            border-color: rgb(75 85 99) !important;
+          }
+          .dark .ant-pagination-item a {
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-pagination-item:hover {
+            border-color: rgb(59 130 246) !important;
+          }
+          .dark .ant-pagination-item:hover a {
+            color: rgb(59 130 246) !important;
+          }
+          .dark .ant-pagination-item-active {
+            background-color: rgb(59 130 246) !important;
+            border-color: rgb(59 130 246) !important;
+          }
+          .dark .ant-pagination-item-active a {
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-pagination-prev,
+          .dark .ant-pagination-next {
+            background-color: rgb(55 65 81) !important;
+            border-color: rgb(75 85 99) !important;
+          }
+          .dark .ant-pagination-prev:hover,
+          .dark .ant-pagination-next:hover {
+            border-color: rgb(59 130 246) !important;
+          }
+          .dark .ant-pagination-prev:hover button,
+          .dark .ant-pagination-next:hover button {
+            color: rgb(59 130 246) !important;
+          }
+          .dark .ant-pagination-prev button,
+          .dark .ant-pagination-next button {
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-pagination-jump-prev,
+          .dark .ant-pagination-jump-next {
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-pagination-options {
+            color: rgb(255 255 255) !important;
+          }
+          .dark .ant-pagination-total-text {
+            color: rgb(255 255 255) !important;
+          }
+        `,
+        }}
+      />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="p-6">
@@ -462,58 +662,39 @@ const AdminManagement = () => {
                 </div>
               )}
 
-              {/* Pagination */}
+              {/* Pagination với Ant Design */}
               <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t dark:border-gray-600">
-                <div className="flex items-center justify-between gap-4">
-                  <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Trang trước
-                  </button>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm">
-                      Trang {currentPage} / {totalPages}
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      Hiển thị:
                     </span>
-                    <div className="relative">
-                      <select
-                        value={pageSize}
-                        onChange={handlePageSizeChange}
-                        className="appearance-none pl-4 pr-10 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none hover:bg-gray-50 dark:hover:bg-gray-500 transition-all shadow-sm cursor-pointer"
-                      >
-                        <option value={5}>5 / trang</option>
-                        <option value={10}>10 / trang</option>
-                        <option value={20}>20 / trang</option>
-                        <option value={50}>50 / trang</option>
-                        <option value={100}>100 / trang</option>
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg
-                          className="w-4 h-4 text-gray-400 dark:text-gray-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
+                    <Select
+                      value={pageSize}
+                      onChange={handlePageSizeChange}
+                      style={{ width: 120 }}
+                      options={[
+                        { value: 5, label: "5 / trang" },
+                        { value: 10, label: "10 / trang" },
+                        { value: 20, label: "20 / trang" },
+                        { value: 50, label: "50 / trang" },
+                        { value: 100, label: "100 / trang" },
+                      ]}
+                    />
                   </div>
-                  <button
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  <Pagination
+                    current={currentPage}
+                    total={total}
+                    pageSize={pageSize}
+                    onChange={handlePageChange}
+                    onShowSizeChange={handlePageChange}
+                    showSizeChanger={false}
+                    showQuickJumper
+                    showTotal={(total, range) =>
+                      `${range[0]}-${range[1]} của ${total} mục`
                     }
-                    disabled={currentPage === totalPages}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Trang sau
-                  </button>
+                    className="dark-pagination"
+                  />
                 </div>
               </div>
             </div>

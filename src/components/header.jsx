@@ -33,7 +33,7 @@ import {
 import TabNotification from "./tabNotification";
 import { ThemeToggle } from "./ThemeToggle";
 import { useThemeContext } from "./ThemeProvider";
-import axiosInstance from "@/utils/axiosInstance";
+import axiosInstance, { clearAuthData } from "@/utils/axiosInstance";
 import { isAdmin } from "@/utils/roleUtils";
 
 const { Header: AntHeader } = Layout;
@@ -153,10 +153,15 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
+      // Gọi logout API để revoke token trên server
       await axiosInstance.post(`/user/logout`);
-      router.push("/login");
     } catch (error) {
-      // Logout failed, nhưng vẫn redirect về login
+      // Ignore error, vẫn clear token ở frontend
+    } finally {
+      // Luôn clear TẤT CẢ token ở frontend (localStorage và cookies)
+      clearAuthData();
+
+      // Redirect về login
       router.push("/login");
     }
   };
@@ -799,10 +804,12 @@ const Header = () => {
         onClose={() => setMobileMenuOpen(false)}
         open={mobileMenuOpen}
         width={280}
-        bodyStyle={{ padding: 0 }}
-        headerStyle={{
-          background: themeToken.colorBgContainer,
-          borderBottom: `1px solid ${themeToken.colorBorder}`,
+        styles={{
+          body: { padding: 0 },
+          header: {
+            background: themeToken.colorBgContainer,
+            borderBottom: `1px solid ${themeToken.colorBorder}`,
+          },
         }}
       >
         <Menu

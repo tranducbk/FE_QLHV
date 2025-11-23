@@ -1,9 +1,5 @@
 "use client";
-
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import axiosInstance from "@/utils/axiosInstance";
-import { isAdmin } from "@/utils/roleUtils";
 import {
   GraduationCap,
   Users,
@@ -21,52 +17,31 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { BASE_URL } from "@/configs";
+import { getRedirectPathFromStorage } from "@/utils/roleUtils";
+import { handleNotify } from "@/components/notify";
 
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState(null);
-  const router = useRouter();
 
   useEffect(() => {
-    const checkToken = async () => {
-      try {
-        console.log("🔍 Checking token on home page...");
+    // Kiểm tra accessToken trong localStorage
+    if (typeof window !== "undefined") {
+      const accessToken = localStorage.getItem("accessToken");
+      setIsLoggedIn(!!accessToken);
 
-        // Lấy thông tin user từ API
-        const userRes = await axiosInstance.get("/user/me");
-        const userData = userRes.data;
-
-        console.log("🔍 User data:", userData);
-
-        // Sử dụng utility function để kiểm tra role
-        if (isAdmin(userData)) {
-          console.log("🔍 User is admin, checking commander...");
-          // Kiểm tra commander role
-          await axiosInstance.get(`/commander/${userData.id}`);
-          setIsLoggedIn(true);
-          setUserType("admin");
-          console.log("✅ Admin user logged in");
-        } else {
-          console.log("🔍 User is student, checking student...");
-          // Kiểm tra student role
-          await axiosInstance.get(`/student/by-user/${userData.id}`);
-          setIsLoggedIn(true);
-          setUserType("student");
-          console.log("✅ Student user logged in");
-        }
-      } catch (error) {
-        console.log(
-          "❌ Token check failed:",
-          error.response?.status,
-          error.message
+      // Kiểm tra và hiện thông báo session expired nếu có flag
+      const showNotification = sessionStorage.getItem(
+        "showSessionExpiredNotification"
+      );
+      if (showNotification === "true") {
+        sessionStorage.removeItem("showSessionExpiredNotification");
+        handleNotify(
+          "warning",
+          "Phiên đăng nhập đã hết hạn",
+          "Vui lòng đăng nhập lại để tiếp tục sử dụng"
         );
-        // Handle token validation error - axiosInstance sẽ tự động xử lý
-        setIsLoggedIn(false);
-        setUserType(null);
       }
-    };
-
-    checkToken();
+    }
   }, []);
   return (
     <div
@@ -114,7 +89,7 @@ export default function HomePage() {
               </a>
               {isLoggedIn ? (
                 <a
-                  href={userType === "admin" ? "/admin" : "/users"}
+                  href={getRedirectPathFromStorage()}
                   className="bg-white text-blue-600 px-4 py-2 rounded-full font-semibold hover:bg-white/90 transition-colors"
                 >
                   Quản lý Học Viên
@@ -152,13 +127,7 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <a
-                  href={
-                    isLoggedIn
-                      ? userType === "admin"
-                        ? "/admin"
-                        : "/users"
-                      : "/login"
-                  }
+                  href={isLoggedIn ? getRedirectPathFromStorage() : "/login"}
                   className="bg-white text-blue-600 px-8 py-4 rounded-full font-semibold hover:bg-white/90 transition-all hover:scale-105 flex items-center justify-center group shadow-lg"
                 >
                   {isLoggedIn ? "Quản lý Học Viên" : "Truy cập hệ thống"}
@@ -364,11 +333,7 @@ export default function HomePage() {
                     label: isLoggedIn
                       ? "Quản lý Học Viên"
                       : "Truy cập hệ thống",
-                    href: isLoggedIn
-                      ? userType === "admin"
-                        ? "/admin"
-                        : "/users"
-                      : "/login",
+                    href: isLoggedIn ? getRedirectPathFromStorage() : "/login",
                   },
                   { label: "Tính năng", href: "#features" },
                   { label: "Về chúng tôi", href: "#about" },

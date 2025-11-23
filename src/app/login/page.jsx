@@ -26,13 +26,12 @@ const Login = () => {
 
       const { user, accessToken, refreshToken } = res.data;
 
-      // Fallback: Nếu cookies không có, lưu vào localStorage
-      setTimeout(() => {
-        if (!document.cookie.includes("accessToken")) {
-          localStorage.setItem("accessToken", accessToken);
-          localStorage.setItem("refreshToken", refreshToken);
-        }
-      }, 100);
+      // Lưu accessToken và role vào localStorage (fallback)
+      // refreshToken chỉ lưu trong httpOnly cookie (bảo mật hơn)
+      localStorage.setItem("accessToken", accessToken);
+      if (user?.role) {
+        localStorage.setItem("userRole", user.role);
+      }
 
       handleNotify("success", "Thành công!", "Đăng nhập thành công");
 

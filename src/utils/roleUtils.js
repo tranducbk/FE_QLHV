@@ -71,3 +71,24 @@ export const getRoleDisplayName = (user) => {
       return user?.isAdmin ? "Admin" : "Học viên";
   }
 };
+
+/**
+ * Get redirect path based on role from localStorage
+ * @returns {string} - Redirect path
+ */
+export const getRedirectPathFromStorage = () => {
+  if (typeof window === "undefined") return "/login";
+
+  const role = localStorage.getItem("userRole");
+
+  if (role === "SUPER_ADMIN") {
+    return "/supper_admin";
+  } else if (role === "ADMIN") {
+    return "/admin";
+  } else if (role === "USER") {
+    return "/users";
+  }
+
+  // Fallback
+  return "/login";
+};

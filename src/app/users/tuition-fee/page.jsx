@@ -8,6 +8,7 @@ import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { handleNotify } from "../../../components/notify";
 import axiosInstance from "@/utils/axiosInstance";
+import { ConfigProvider, Select, theme } from "antd";
 
 const TuitionFee = () => {
   const [tuitionFee, setTuitionFee] = useState([]);
@@ -21,6 +22,7 @@ const TuitionFee = () => {
   const [addFormDataTuitionFee, setAddFormDataTuitionFee] = useState({});
   const { loading, withLoading } = useLoading(true);
   const [studentId, setStudentId] = useState(null);
+  const [isDark, setIsDark] = useState(false);
 
   // Format hiển thị số tiền: 1.000.000 (chỉ hiển thị, state lưu chuỗi số thô)
   const formatNumberWithDots = (value) => {
@@ -45,23 +47,48 @@ const TuitionFee = () => {
     return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
   };
 
+  // Kiểm tra xem học phí đã thanh toán chưa
+  const isPaidStatus = (status) => {
+    const s = String(status || "").toLowerCase();
+    return s.includes("đã thanh toán") || s.includes("đã đóng");
+  };
+
+  // Kiểm tra trùng học kỳ + năm học
+  const checkDuplicateTuitionFee = (semesterCode, schoolYear, excludeId = null) => {
+    return tuitionFee.some(
+      (fee) =>
+        fee.semester === semesterCode &&
+        fee.schoolYear === schoolYear &&
+        fee.id !== excludeId
+    );
+  };
+
   const handleEditTuitionFee = async (id) => {
     setFeeId(id);
     try {
       const res = await axiosInstance.get(`/student/${studentId}/tuition-fee`);
       const item = (res.data || []).find((t) => t.id === id);
       if (item) {
+        // Kiểm tra nếu đã thanh toán thì không cho chỉnh sửa
+        if (isPaidStatus(item.status)) {
+          handleNotify(
+            "warning",
+            "Cảnh báo",
+            "Không thể chỉnh sửa học phí đã thanh toán"
+          );
+          return;
+        }
         setEditedTuitionFee({
           semester: item.semester || selectedSemester,
           content: item.content || "",
           totalAmount: item.totalAmount || "",
           status: item.status || "Chưa thanh toán",
         });
+        setIsOpenTuitionFee(true);
       }
     } catch (e) {
       handleNotify("danger", "Lỗi!", e.message);
     }
-    setIsOpenTuitionFee(true);
   };
 
   const handleUpdateTuitionFee = async (e, tuitionFeeId) => {
@@ -76,13 +103,24 @@ const TuitionFee = () => {
 
     // Tìm semester để lấy schoolYear
     const selectedSemesterData = semesters.find((s) => s.id === semester);
+    const semesterCode = selectedSemesterData?.code || semester;
     const schoolYear =
       selectedSemesterData?.schoolYear || editedTuitionFee.schoolYear;
+
+    // Kiểm tra trùng học kỳ + năm học (trừ chính học phí đang sửa)
+    if (checkDuplicateTuitionFee(semesterCode, schoolYear, tuitionFeeId)) {
+      handleNotify(
+        "warning",
+        "Cảnh báo",
+        `Học phí cho ${semesterCode} - ${schoolYear} đã tồn tại. Vui lòng xóa học phí trùng trước khi cập nhật.`
+      );
+      return;
+    }
 
     try {
       const payload = {
         ...editedTuitionFee,
-        semester: selectedSemesterData?.code || semester,
+        semester: semesterCode,
         schoolYear: schoolYear,
       };
       await axiosInstance.put(
@@ -114,13 +152,24 @@ const TuitionFee = () => {
 
     // Tìm semester để lấy schoolYear
     const selectedSemesterData = semesters.find((s) => s.id === semester);
+    const semesterCode = selectedSemesterData?.code || semester;
     const schoolYear =
       selectedSemesterData?.schoolYear || addFormDataTuitionFee.schoolYear;
+
+    // Kiểm tra trùng học kỳ + năm học
+    if (checkDuplicateTuitionFee(semesterCode, schoolYear)) {
+      handleNotify(
+        "warning",
+        "Cảnh báo",
+        `Học phí cho ${semesterCode} - ${schoolYear} đã tồn tại. Vui lòng xóa học phí cũ trước khi thêm mới.`
+      );
+      return;
+    }
 
     try {
       const payload = {
         ...addFormDataTuitionFee,
-        semester: selectedSemesterData?.code || semester,
+        semester: semesterCode,
         schoolYear: schoolYear,
         status: "Chưa thanh toán",
       };
@@ -133,6 +182,7 @@ const TuitionFee = () => {
       setShowFormAddTuitionFee(false);
       // Reset form
       setAddFormDataTuitionFee({});
+      fetchTuitionFee();
     } catch (error) {
       setShowFormAddTuitionFee(false);
       const errorMessage =
@@ -252,12 +302,99 @@ const TuitionFee = () => {
     fetchTuitionFee();
   }, [selectedSemester]);
 
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDarkMode = document.documentElement.classList.contains("dark");
+      setIsDark(isDarkMode);
+    };
+
+    // Kiểm tra theme ban đầu
+    checkDarkMode();
+
+    // Theo dõi thay đổi theme
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   if (loading) {
     return <Loader text="Đang tải thông tin học tập..." />;
   }
 
   return (
-    <>
+    <ConfigProvider
+      key={isDark ? "dark" : "light"}
+      theme={{
+        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+      }}
+    >
+      <style jsx global>{`
+        /* Select styles - Light mode */
+        .ant-select .ant-select-selector {
+          background-color: rgb(249 250 251) !important; /* gray-50 */
+          border-color: rgb(209 213 219) !important; /* gray-300 */
+          color: rgb(17 24 39) !important; /* gray-900 */
+        }
+        .ant-select .ant-select-selection-placeholder {
+          color: rgb(107 114 128) !important; /* gray-500 */
+        }
+        .ant-select-arrow,
+        .ant-select-clear {
+          color: rgb(107 114 128) !important;
+        }
+        .ant-select-dropdown {
+          background-color: rgb(255 255 255) !important;
+          border-color: rgb(229 231 235) !important; /* gray-200 */
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-item {
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.12) !important; /* blue-500/12 */
+          color: rgb(30 58 138) !important;
+        }
+        .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.18) !important; /* blue-500/18 */
+          color: rgb(30 58 138) !important;
+          font-weight: 600 !important;
+        }
+
+        /* Select styles - Dark mode */
+        .dark .ant-select .ant-select-selector {
+          background-color: rgb(55 65 81) !important; /* gray-700 */
+          border-color: rgb(75 85 99) !important; /* gray-600 */
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select .ant-select-selection-placeholder {
+          color: rgb(156 163 175) !important; /* gray-400 */
+        }
+        .dark .ant-select-arrow,
+        .dark .ant-select-clear {
+          color: rgb(209 213 219) !important; /* gray-300 */
+        }
+        .dark .ant-select-dropdown {
+          background-color: rgb(31 41 55) !important; /* gray-800 */
+          border-color: rgb(55 65 81) !important; /* gray-700 */
+        }
+        .dark .ant-select-item {
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.25) !important; /* blue-500/25 */
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.35) !important; /* blue-500/35 */
+          color: rgb(255 255 255) !important;
+          font-weight: 600 !important;
+        }
+      `}</style>
       <div className="flex">
         <div>
           <SideBar />
@@ -318,13 +455,13 @@ const TuitionFee = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <select
-                    value={selectedSemester}
-                    onChange={(e) => setSelectedSemester(e.target.value)}
-                    className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2 transition-colors duration-200"
-                  >
-                    <option value="">Tất cả học kỳ</option>
-                    {semesters
+                  <Select
+                    value={selectedSemester || undefined}
+                    onChange={(value) => setSelectedSemester(value || "")}
+                    placeholder="Tất cả học kỳ"
+                    allowClear
+                    style={{ width: 200 }}
+                    options={semesters
                       .sort((a, b) => {
                         const yearComparison = b.schoolYear.localeCompare(
                           a.schoolYear
@@ -338,12 +475,11 @@ const TuitionFee = () => {
                           : 0;
                         return semesterB - semesterA;
                       })
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.code} - {s.schoolYear}
-                        </option>
-                      ))}
-                  </select>
+                      .map((s) => ({
+                        label: `${s.code} - ${s.schoolYear}`,
+                        value: s.id,
+                      }))}
+                  />
                   <button
                     onClick={() => setShowFormAddTuitionFee(true)}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-3 border border-blue-600 hover:border-blue-700 rounded-lg transition-colors duration-200 flex items-center text-xs"
@@ -431,7 +567,17 @@ const TuitionFee = () => {
                               <button
                                 type="button"
                                 onClick={() => handleEditTuitionFee(item.id)}
-                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200"
+                                disabled={isPaidStatus(item.status)}
+                                title={
+                                  isPaidStatus(item.status)
+                                    ? "Không thể chỉnh sửa học phí đã thanh toán"
+                                    : "Chỉnh sửa"
+                                }
+                                className={`p-2 rounded-lg transition-colors duration-200 ${
+                                  isPaidStatus(item.status)
+                                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                                    : "text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                }`}
                               >
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -450,6 +596,7 @@ const TuitionFee = () => {
                               </button>
                               <button
                                 onClick={() => handleDeleteFee(item.id)}
+                                title="Xóa"
                                 className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200"
                               >
                                 <svg
@@ -850,7 +997,7 @@ const TuitionFee = () => {
           </div>
         </div>
       )}
-    </>
+    </ConfigProvider>
   );
 };
 

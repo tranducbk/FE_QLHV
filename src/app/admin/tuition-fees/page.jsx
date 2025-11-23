@@ -264,25 +264,33 @@ const TuitionFees = () => {
   }, 0);
 
   const formatNumberWithCommas = (number) => {
-    if (number == null) {
-      return "0";
-    }
-    // Loại bỏ tất cả ký tự không phải số trước khi format
-    let numStr = number.toString().replace(/[^0-9]/g, "");
-
-    if (!numStr || numStr === "0") {
+    // Nếu null hoặc undefined, trả về "0"
+    if (number == null || number === undefined) {
       return "0";
     }
 
-    // Tách chuỗi thành các mảng con với 3 ký tự
-    let parts = [];
-    while (numStr.length > 3) {
-      parts.unshift(numStr.slice(-3));
-      numStr = numStr.slice(0, -3);
+    // Chuyển thành số
+    let numValue;
+    if (typeof number === "number") {
+      // Nếu là số, lấy phần nguyên
+      numValue = Math.floor(number);
+    } else if (typeof number === "string") {
+      // Nếu là string, loại bỏ tất cả ký tự không phải số và dấu chấm thập phân
+      // Ví dụ: "1.400.000" -> "1400000", "1400000.00" -> "1400000"
+      const cleaned = number.replace(/\./g, "").replace(/,/g, "");
+      numValue = cleaned ? Math.floor(parseFloat(cleaned)) : 0;
+    } else {
+      return "0";
     }
-    parts.unshift(numStr);
 
-    return parts.join(".");
+    // Kiểm tra NaN
+    if (isNaN(numValue)) {
+      return "0";
+    }
+
+    // Format với dấu chấm (.) cho hàng nghìn (chuẩn Việt Nam)
+    // Ví dụ: 1400000 -> "1.400.000"
+    return numValue.toLocaleString("vi-VN");
   };
 
   const updatePaymentStatus = async (studentId, feeId, nextStatus) => {

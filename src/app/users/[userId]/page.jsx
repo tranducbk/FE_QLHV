@@ -32,6 +32,7 @@ const UserProfile = ({ params }) => {
     fullName: "",
     birthday: null,
     occupation: "",
+    isDeceased: false,
   });
   // State để điều khiển hiển thị form
   const [showFamilyForm, setShowFamilyForm] = useState(false);
@@ -309,6 +310,7 @@ const UserProfile = ({ params }) => {
             fullName: member.fullName || "",
             birthday: member.birthday ? new Date(member.birthday) : null,
             occupation: member.occupation || "",
+            isDeceased: member.isDeceased || false,
           })
         );
         setFamilyMembers(formattedFamilyMembers);
@@ -461,10 +463,12 @@ const UserProfile = ({ params }) => {
         educationLevel: selectedLevel, // Trình độ đã chọn
         class: selectedClass?.id || selectedClass, // Lớp đã chọn - gửi ObjectId
         familyMembers: familyMembers.map((member) => ({
+          id: member.id,
           relationship: member.relationship,
           fullName: member.fullName,
           birthday: member.birthday,
           occupation: member.occupation,
+          isDeceased: member.isDeceased || false,
         })),
         foreignRelations: foreignRelations.map((relation) => ({
           relationship: relation.relationship,
@@ -533,6 +537,7 @@ const UserProfile = ({ params }) => {
         fullName: "",
         birthday: null,
         occupation: "",
+        isDeceased: false,
       });
     }
   };
@@ -1050,6 +1055,26 @@ const UserProfile = ({ params }) => {
                                       {member.occupation}
                                     </span>
                                   </div>
+                                  {member.isDeceased && (
+                                    <div className="flex items-center mt-2">
+                                      <svg
+                                        className="w-4 h-4 text-red-600 dark:text-red-400 mr-2"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth="2"
+                                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                        />
+                                      </svg>
+                                      <span className="text-sm font-semibold text-red-600 dark:text-red-400">
+                                        Đã chết
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -1902,6 +1927,27 @@ const UserProfile = ({ params }) => {
                                 placeholder="vd: Kỹ sư, Bác sĩ..."
                               />
                             </div>
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                name="isDeceased"
+                                id="isDeceased"
+                                checked={familyFormData.isDeceased}
+                                onChange={(e) =>
+                                  setFamilyFormData({
+                                    ...familyFormData,
+                                    isDeceased: e.target.checked,
+                                  })
+                                }
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                              />
+                              <label
+                                htmlFor="isDeceased"
+                                className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                              >
+                                Đã chết
+                              </label>
+                            </div>
                           </div>
                         )}
                         {showFamilyForm && (
@@ -1950,6 +1996,11 @@ const UserProfile = ({ params }) => {
                                         : "Chưa có dữ liệu"}
                                     </p>
                                     <p>Nghề nghiệp: {member.occupation}</p>
+                                    {member.isDeceased && (
+                                      <p className="text-red-600 dark:text-red-400 font-semibold mt-1">
+                                        ⚠️ Đã chết
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               ))}

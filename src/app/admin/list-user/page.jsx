@@ -71,6 +71,7 @@ const ListUser = () => {
     fullName: "",
     birthday: null,
     occupation: "",
+    isDeceased: false,
   });
 
   // State cho yếu tố nước ngoài
@@ -643,6 +644,7 @@ const ListUser = () => {
             fullName: member.fullName || "",
             birthday: member.birthday ? new Date(member.birthday) : null,
             occupation: member.occupation || "",
+            isDeceased: member.isDeceased || false,
           })
         );
         setFamilyMembers(formattedFamilyMembers);
@@ -733,10 +735,12 @@ const ListUser = () => {
         "https://i.pinimg.com/736x/81/09/3a/81093a0429e25b0ff579fa41aa96c421.jpg",
       // Thêm thông tin gia đình và yếu tố nước ngoài
       familyMembers: familyMembers.map((member) => ({
+        id: member.id,
         relationship: member.relationship,
         fullName: member.fullName,
         birthday: member.birthday,
         occupation: member.occupation,
+        isDeceased: member.isDeceased || false,
       })),
       foreignRelations: foreignRelations.map((relation) => ({
         relationship: relation.relationship,
@@ -829,6 +833,7 @@ const ListUser = () => {
       fullName: "",
       birthday: null,
       occupation: "",
+      isDeceased: false,
     });
     setShowFamilyForm(false);
   };
@@ -1458,6 +1463,13 @@ const ListUser = () => {
                                     </span>{" "}
                                     {member.occupation || "Chưa có dữ liệu"}
                                   </div>
+                                  {member.isDeceased && (
+                                    <div className="mb-2">
+                                      <span className="text-red-600 dark:text-red-400 font-semibold">
+                                        ⚠️ Đã chết
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               )
                             )}
@@ -2453,6 +2465,27 @@ const ListUser = () => {
                                       placeholder="vd: Làm ruộng, Công nhân..."
                                     />
                                   </div>
+                                  <div className="w-full flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      name="isDeceased"
+                                      id="isDeceased"
+                                      checked={familyFormData.isDeceased}
+                                      onChange={(e) =>
+                                        setFamilyFormData({
+                                          ...familyFormData,
+                                          isDeceased: e.target.checked,
+                                        })
+                                      }
+                                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                    />
+                                    <label
+                                      htmlFor="isDeceased"
+                                      className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                                    >
+                                      Đã chết
+                                    </label>
+                                  </div>
                                 </div>
                                 <div className="mt-4 flex justify-end">
                                   <button
@@ -2490,6 +2523,11 @@ const ListUser = () => {
                                       <span className="text-gray-500 ml-2">
                                         - {member.occupation}
                                       </span>
+                                      {member.isDeceased && (
+                                        <span className="text-red-600 dark:text-red-400 ml-2 font-semibold">
+                                          (Đã chết)
+                                        </span>
+                                      )}
                                     </div>
                                     <button
                                       type="button"
@@ -4127,6 +4165,27 @@ const ListUser = () => {
                                     placeholder="vd: Làm ruộng, Công nhân..."
                                   />
                                 </div>
+                                <div className="w-full flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    name="isDeceased"
+                                    id="isDeceased2"
+                                    checked={familyFormData.isDeceased}
+                                    onChange={(e) =>
+                                      setFamilyFormData({
+                                        ...familyFormData,
+                                        isDeceased: e.target.checked,
+                                      })
+                                    }
+                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                  />
+                                  <label
+                                    htmlFor="isDeceased2"
+                                    className="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                                  >
+                                    Đã chết
+                                  </label>
+                                </div>
                               </div>
                               <div className="mt-4 flex justify-end">
                                 <button
@@ -4170,6 +4229,11 @@ const ListUser = () => {
                                         Nghề nghiệp:
                                       </span>{" "}
                                       {member.occupation}
+                                      {member.isDeceased && (
+                                        <span className="text-red-600 dark:text-red-400 ml-2 font-semibold">
+                                          (Đã chết)
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                   <button

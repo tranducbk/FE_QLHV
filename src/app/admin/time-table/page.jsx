@@ -298,39 +298,13 @@ const TimeTable = () => {
                     className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 border border-green-600 hover:border-green-700 rounded-lg transition-colors duration-200 flex items-center"
                     onClick={handleGenerateAutoCutRice}
                   >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
                     Tạo lịch cắt cơm tự động
                   </button>
                   <button
                     className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-2 mr-4 border border-purple-600 hover:border-purple-700 rounded-lg transition-colors duration-200 flex items-center"
                     onClick={handleExportTimeTableWithCutRice}
                   >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Xuất TKB + Cắt cơm
+                    Xuất TKB & Lịch cắt cơm
                   </button>
                 </div>
               </div>

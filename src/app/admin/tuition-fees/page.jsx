@@ -35,6 +35,8 @@ const TuitionFees = () => {
   });
   const [isDark, setIsDark] = useState(false);
   const { loading, withLoading } = useLoading(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const getSemesterLabel = (s) => {
     if (!s) return "";
@@ -257,6 +259,17 @@ const TuitionFees = () => {
     const semesterB = semesterOrder[b.semester] || 999;
     return semesterA - semesterB;
   });
+  // Tính toán dữ liệu phân trang
+  const getPaginatedResults = () => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return {
+      data: filteredTuitionFees.slice(startIndex, endIndex),
+      total: filteredTuitionFees.length,
+      totalPages: Math.ceil(filteredTuitionFees.length / pageSize),
+    };
+  };
+
   const filteredTotalSum = filteredTuitionFees.reduce((sum, item) => {
     const digits = String(item.totalAmount || "").replace(/[^0-9]/g, "");
     const val = digits ? parseInt(digits, 10) : 0;
@@ -568,7 +581,10 @@ const TuitionFees = () => {
                           </span>
                         );
                       }}
-                      onChange={(values) => setSelectedSemesters(values)}
+                      onChange={(values) => {
+                        setSelectedSemesters(values);
+                        setCurrentPage(1);
+                      }}
                     />
                   </ConfigProvider>
                 </div>
@@ -596,7 +612,10 @@ const TuitionFees = () => {
                       allowClear
                       style={{ width: 160, height: 36 }}
                       value={selectedClass || undefined}
-                      onChange={(value) => setSelectedClass(value || "")}
+                      onChange={(value) => {
+                        setSelectedClass(value || "");
+                        setCurrentPage(1);
+                      }}
                       dropdownStyle={{
                         backgroundColor: isDark ? "#1f2937" : "#ffffff",
                         color: isDark ? "#e5e7eb" : "#111827",
@@ -717,8 +736,8 @@ const TuitionFees = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredTuitionFees && filteredTuitionFees.length > 0 ? (
-                      filteredTuitionFees.map((item) => (
+                    {getPaginatedResults().data.length > 0 ? (
+                      getPaginatedResults().data.map((item) => (
                         <tr
                           key={item.id}
                           className="hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -847,6 +866,177 @@ const TuitionFees = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Phân trang */}
+              {getPaginatedResults().total > 0 && (
+                <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Hiển thị:
+                      </label>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 px-2 py-1"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        kết quả/trang
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      Trang {currentPage} / {getPaginatedResults().totalPages} (
+                      {getPaginatedResults().total} kết quả)
+                    </div>
+                  </div>
+                  <nav aria-label="Page navigation">
+                    <ul className="list-style-none flex">
+                      <li>
+                        <button
+                          className={`relative mr-1 block rounded bg-transparent px-3 py-1.5 font-bold text-sm transition-all duration-300 ${
+                            currentPage <= 1
+                              ? "opacity-50 cursor-not-allowed text-gray-400"
+                              : "hover:bg-blue-200 dark:hover:bg-blue-800 text-gray-700 dark:text-gray-300"
+                          }`}
+                          onClick={() => {
+                            if (currentPage > 1) {
+                              setCurrentPage(currentPage - 1);
+                            }
+                          }}
+                          disabled={currentPage <= 1}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="1.5"
+                            stroke="currentColor"
+                            className="w-5 h-5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15.75 19.5 8.25 12l7.5-7.5"
+                            />
+                          </svg>
+                        </button>
+                      </li>
+                      {(() => {
+                        const totalPages = getPaginatedResults().totalPages;
+                        if (totalPages === 0) return null;
+                        if (totalPages <= 7) {
+                          return Array.from(
+                            { length: totalPages },
+                            (_, i) => i + 1
+                          ).map((pageNumber) => (
+                            <li key={pageNumber}>
+                              <button
+                                className={`relative mr-1 block rounded bg-transparent px-3 py-1.5 font-bold text-sm transition-all duration-300 ${
+                                  currentPage === pageNumber
+                                    ? "bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300"
+                                    : "hover:bg-blue-200 dark:hover:bg-blue-800 text-gray-700 dark:text-gray-300"
+                                }`}
+                                onClick={() => setCurrentPage(pageNumber)}
+                              >
+                                {pageNumber}
+                              </button>
+                            </li>
+                          ));
+                        }
+                        const visiblePages = [];
+                        if (currentPage <= 4) {
+                          for (let i = 1; i <= 5; i++) visiblePages.push(i);
+                          visiblePages.push("ellipsis");
+                          visiblePages.push(totalPages);
+                        } else if (currentPage >= totalPages - 3) {
+                          visiblePages.push(1);
+                          visiblePages.push("ellipsis");
+                          for (let i = totalPages - 4; i <= totalPages; i++)
+                            visiblePages.push(i);
+                        } else {
+                          visiblePages.push(1);
+                          visiblePages.push("ellipsis");
+                          for (
+                            let i = currentPage - 1;
+                            i <= currentPage + 1;
+                            i++
+                          )
+                            visiblePages.push(i);
+                          visiblePages.push("ellipsis");
+                          visiblePages.push(totalPages);
+                        }
+                        return visiblePages.map((pageNumber, index) => {
+                          if (pageNumber === "ellipsis") {
+                            return (
+                              <li key={`ellipsis-${index}`}>
+                                <span className="relative mr-1 block rounded bg-transparent px-3 py-1.5 font-bold text-sm text-gray-700 dark:text-gray-300">
+                                  ...
+                                </span>
+                              </li>
+                            );
+                          }
+                          return (
+                            <li key={pageNumber}>
+                              <button
+                                className={`relative mr-1 block rounded bg-transparent px-3 py-1.5 font-bold text-sm transition-all duration-300 ${
+                                  currentPage === pageNumber
+                                    ? "bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300"
+                                    : "hover:bg-blue-200 dark:hover:bg-blue-800 text-gray-700 dark:text-gray-300"
+                                }`}
+                                onClick={() => setCurrentPage(pageNumber)}
+                              >
+                                {pageNumber}
+                              </button>
+                            </li>
+                          );
+                        });
+                      })()}
+                      <li>
+                        <button
+                          className={`relative block rounded bg-transparent px-3 py-1.5 font-bold text-sm transition-all duration-300 ${
+                            currentPage >= getPaginatedResults().totalPages
+                              ? "opacity-50 cursor-not-allowed text-gray-400"
+                              : "hover:bg-blue-200 dark:hover:bg-blue-800 text-gray-700 dark:text-gray-300"
+                          }`}
+                          onClick={() => {
+                            if (
+                              currentPage < getPaginatedResults().totalPages
+                            ) {
+                              setCurrentPage(currentPage + 1);
+                            }
+                          }}
+                          disabled={
+                            currentPage >= getPaginatedResults().totalPages
+                          }
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="1.5"
+                            stroke="currentColor"
+                            className="w-5 h-5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                            />
+                          </svg>
+                        </button>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+              )}
             </div>
           </div>
         </div>

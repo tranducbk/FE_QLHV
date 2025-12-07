@@ -78,8 +78,12 @@ const AdminProposalGradeResults = () => {
   }, [withLoading]);
 
   // Get unique values for filters
-  const uniqueSemesters = [...new Set(allResults.map((r) => r.semester))].sort();
-  const uniqueSchoolYears = [...new Set(allResults.map((r) => r.schoolYear))].sort().reverse();
+  const uniqueSemesters = [
+    ...new Set(allResults.map((r) => r.semester)),
+  ].sort();
+  const uniqueSchoolYears = [...new Set(allResults.map((r) => r.schoolYear))]
+    .sort()
+    .reverse();
 
   // Filter results và sắp xếp theo ngày cập nhật mới nhất
   const filteredResults = allResults
@@ -326,6 +330,40 @@ const AdminProposalGradeResults = () => {
 
   return (
     <>
+      {/* CSS cho Input đồng bộ với dark mode */}
+      <style jsx global>{`
+        /* Input styles - Light mode */
+        .ant-input {
+          background-color: rgb(249 250 251) !important; /* gray-50 */
+          border-color: rgb(209 213 219) !important; /* gray-300 */
+          color: rgb(17 24 39) !important; /* gray-900 */
+          border-radius: 8px !important;
+          border-width: 1px !important;
+        }
+        .ant-input::placeholder {
+          color: rgb(156 163 175) !important; /* gray-400 */
+        }
+        .ant-input:focus,
+        .ant-input-focused {
+          border-color: rgb(37 99 235) !important; /* blue-600 */
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+        }
+
+        /* Input styles - Dark mode */
+        .dark .ant-input {
+          background-color: rgb(31 41 55) !important; /* gray-800 */
+          border-color: rgb(75 85 99) !important; /* gray-600 */
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-input::placeholder {
+          color: rgb(156 163 175) !important; /* gray-400 */
+        }
+        .dark .ant-input:focus,
+        .dark .ant-input-focused {
+          border-color: rgb(37 99 235) !important; /* blue-600 */
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+        }
+      `}</style>
       <div className="flex">
         <div>
           <SideBar />
@@ -399,12 +437,27 @@ const AdminProposalGradeResults = () => {
               <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Chờ duyệt</p>
-                    <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{statusCounts.pending}</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Chờ duyệt
+                    </p>
+                    <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                      {statusCounts.pending}
+                    </p>
                   </div>
                   <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6 text-yellow-600 dark:text-yellow-400">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      className="w-6 h-6 text-yellow-600 dark:text-yellow-400"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -412,12 +465,27 @@ const AdminProposalGradeResults = () => {
               <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Đã duyệt</p>
-                    <p className="text-3xl font-bold text-green-600 dark:text-green-400">{statusCounts.approved}</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Đã duyệt
+                    </p>
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                      {statusCounts.approved}
+                    </p>
                   </div>
                   <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6 text-green-600 dark:text-green-400">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      className="w-6 h-6 text-green-600 dark:text-green-400"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -425,12 +493,27 @@ const AdminProposalGradeResults = () => {
               <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Từ chối</p>
-                    <p className="text-3xl font-bold text-red-600 dark:text-red-400">{statusCounts.rejected}</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Từ chối
+                    </p>
+                    <p className="text-3xl font-bold text-red-600 dark:text-red-400">
+                      {statusCounts.rejected}
+                    </p>
                   </div>
                   <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6 text-red-600 dark:text-red-400">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      className="w-6 h-6 text-red-600 dark:text-red-400"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -438,14 +521,30 @@ const AdminProposalGradeResults = () => {
               <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tổng cộng</p>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Tổng cộng
+                    </p>
                     <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                      {statusCounts.total || statusCounts.pending + statusCounts.approved + statusCounts.rejected}
+                      {statusCounts.total ||
+                        statusCounts.pending +
+                          statusCounts.approved +
+                          statusCounts.rejected}
                     </p>
                   </div>
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6 text-blue-600 dark:text-blue-400">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -511,7 +610,9 @@ const AdminProposalGradeResults = () => {
               <div className="p-5 border-b border-gray-200 dark:border-gray-700">
                 <ConfigProvider
                   theme={{
-                    algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+                    algorithm: isDark
+                      ? theme.darkAlgorithm
+                      : theme.defaultAlgorithm,
                     token: {
                       colorPrimary: "#2563eb",
                       borderRadius: 8,

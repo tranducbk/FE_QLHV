@@ -212,8 +212,10 @@ export default function OrganizationEducationLevels() {
   // Transform data for table display with rowSpan
   const transformDataForTable = () => {
     const tableData = [];
+    let educationLevelIndex = 0;
 
     filteredHierarchyData.forEach((levelData) => {
+      const currentLevelNumber = educationLevelIndex++;
       const { educationLevel, classes } = levelData;
 
       if (classes.length === 0) {
@@ -222,6 +224,7 @@ export default function OrganizationEducationLevels() {
           educationLevel: educationLevel,
           class: null,
           classesCount: classes.length,
+          educationLevelNumber: currentLevelNumber,
           rowSpan: {
             educationLevel: 1,
             class: 0,
@@ -234,6 +237,7 @@ export default function OrganizationEducationLevels() {
             educationLevel: educationLevel,
             class: classItem,
             classesCount: classes.length,
+            educationLevelNumber: currentLevelNumber,
             rowSpan: {
               educationLevel: classIndex === 0 ? classes.length : 0,
               class: 1,
@@ -393,6 +397,9 @@ export default function OrganizationEducationLevels() {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                          STT
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           Chương trình đào tạo
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
@@ -407,6 +414,21 @@ export default function OrganizationEducationLevels() {
                       {tableData.length > 0 ? (
                         tableData.map((row, index) => {
                           const cells = [];
+
+                          // STT cell - chỉ hiển thị ở hàng đầu tiên của education level
+                          if (row.rowSpan.educationLevel > 0) {
+                            cells.push(
+                              <td
+                                key="stt"
+                                rowSpan={row.rowSpan.educationLevel}
+                                className="px-4 py-4 text-center border-r border-gray-200 dark:border-gray-600"
+                              >
+                                <div className="text-sm text-gray-900 dark:text-white">
+                                  {row.educationLevelNumber + 1}
+                                </div>
+                              </td>
+                            );
+                          }
 
                           // Education Level cell
                           if (row.rowSpan.educationLevel > 0) {
@@ -508,7 +530,7 @@ export default function OrganizationEducationLevels() {
                       ) : (
                         <tr>
                           <td
-                            colSpan="3"
+                            colSpan="4"
                             className="px-4 py-4 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
                           >
                             <div className="flex flex-col items-center">

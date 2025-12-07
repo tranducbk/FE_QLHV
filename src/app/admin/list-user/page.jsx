@@ -1317,7 +1317,7 @@ const ListUser = () => {
                               : "Chưa có dữ liệu"}
                           </div>
                           <div className="mb-2 text-gray-900 dark:text-white">
-                            <span className="font-bold">Trường:</span>{" "}
+                            <span className="font-bold">Cơ sở đào tạo:</span>{" "}
                             {profileUniversity?.universityName ||
                               profileDetail?.university?.universityName ||
                               profileDetail?.university ||
@@ -2038,7 +2038,7 @@ const ListUser = () => {
                                 htmlFor="university"
                                 className="block mb-2 text-sm font-medium dark:text-white"
                               >
-                                Trường
+                                Cơ sở đào tạo
                               </label>
                               <select
                                 id="university"

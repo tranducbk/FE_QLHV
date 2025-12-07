@@ -349,7 +349,7 @@ body::-webkit-scrollbar,
 /* Notification Dropdown Scrollbar Styles */
 .notification-dropdown-menu {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
 .notification-dropdown-menu::-webkit-scrollbar {
@@ -358,7 +358,7 @@ body::-webkit-scrollbar,
 }
 
 .notification-dropdown-menu::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f1f5f9;
   border-radius: 10px;
 }
 
@@ -374,7 +374,12 @@ body::-webkit-scrollbar,
 
 /* Dark mode scrollbar for notification dropdown */
 .dark .notification-dropdown-menu {
-  scrollbar-color: #4b5563 transparent;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+.dark .notification-dropdown-menu::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 10px;
 }
 
 .dark .notification-dropdown-menu::-webkit-scrollbar-thumb {

@@ -298,7 +298,7 @@ export default function Universities() {
                       />
                     </svg>
                     <div className="ms-1 text-sm font-medium text-gray-500 md:ms-2 dark:text-gray-400">
-                      Quản lý Trường Đại Học
+                      Quản lý Cơ sở đào tạo
                     </div>
                   </div>
                 </li>
@@ -338,7 +338,7 @@ export default function Universities() {
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
                   >
                     <PlusOutlined />
-                    Thêm Trường
+                    Thêm Cơ sở đào tạo
                   </button>
                 </div>
               </div>
@@ -363,6 +363,12 @@ export default function Universities() {
                   <table className="table-auto w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
+                        >
+                          STT
+                        </th>
                         <th
                           scope="col"
                           className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
@@ -397,7 +403,10 @@ export default function Universities() {
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredUniversities.length > 0 ? (
-                        filteredUniversities.map((university) => {
+                        (() => {
+                          let universityIndex = 0;
+                          return filteredUniversities.flatMap((university) => {
+                            const currentUniversityNumber = universityIndex++;
                           // Tạo mảng các hàng cho university này
                           const rows = [];
 
@@ -530,8 +539,23 @@ export default function Universities() {
                             }
                           });
 
-                          return rows.map((row, index) => {
+                          return rows.map((row, rowIdx) => {
                             const cells = [];
+
+                            // STT Column - chỉ hiển thị ở hàng đầu tiên của university
+                            if (row.isUniversityStart) {
+                              cells.push(
+                                <td
+                                  key="stt"
+                                  rowSpan={row.universityRowSpan}
+                                  className="px-4 py-4 text-center border-r border-gray-200 dark:border-gray-600"
+                                >
+                                  <div className="text-sm text-gray-900 dark:text-white">
+                                    {currentUniversityNumber + 1}
+                                  </div>
+                                </td>
+                              );
+                            }
 
                             // University Column
                             if (row.isUniversityStart) {
@@ -670,18 +694,19 @@ export default function Universities() {
 
                             return (
                               <tr
-                                key={`${row.university.id}-${index}`}
+                                key={`${row.university.id}-${rowIdx}`}
                                 className="border-b border-gray-200 dark:border-gray-600"
                               >
                                 {cells}
                               </tr>
                             );
                           });
-                        })
+                          });
+                        })()
                       ) : (
                         <tr>
                           <td
-                            colSpan="5"
+                            colSpan="6"
                             className="px-6 py-4 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
                           >
                             <div className="flex flex-col items-center">
@@ -706,7 +731,7 @@ export default function Universities() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Thêm Trường Đại Học
+                Thêm Cơ sở đào tạo
               </h2>
               <button
                 onClick={resetAddForm}
@@ -719,7 +744,7 @@ export default function Universities() {
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Mã trường *
+                  Mã cơ sở đào tạo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -728,13 +753,13 @@ export default function Universities() {
                     handleAddInputChange("universityCode", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Nhập mã trường"
+                  placeholder="Nhập mã cơ sở đào tạo"
                   required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tên cơ sở đào tạo *
+                  Tên cơ sở đào tạo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -773,7 +798,7 @@ export default function Universities() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Chỉnh sửa Trường Đại Học
+                Chỉnh sửa Cơ sở đào tạo
               </h2>
               <button
                 onClick={resetEditForm}
@@ -786,7 +811,7 @@ export default function Universities() {
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Mã trường *
+                  Mã cơ sở đào tạo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -795,13 +820,13 @@ export default function Universities() {
                     handleEditInputChange("universityCode", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Nhập mã trường"
+                  placeholder="Nhập mã cơ sở đào tạo"
                   required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tên cơ sở đào tạo *
+                  Tên cơ sở đào tạo <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -860,7 +885,7 @@ export default function Universities() {
                 {universityToDelete?.universityName}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Mã trường:</strong> {universityToDelete?.universityCode}
+                <strong>Mã cơ sở đào tạo:</strong> {universityToDelete?.universityCode}
               </div>
             </div>
 

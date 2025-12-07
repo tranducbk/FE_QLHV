@@ -16,6 +16,7 @@ const TrainingRating = () => {
   const { loading, withLoading } = useLoading(true);
   const [selectedUnit, setSelectedUnit] = useState("all");
   const [availableUnits, setAvailableUnits] = useState([]);
+  const [ratingFilter, setRatingFilter] = useState("all"); // all, Tốt, Khá, Trung bình, Yếu, notRated
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [updateFormData, setUpdateFormData] = useState({
@@ -58,6 +59,20 @@ const TrainingRating = () => {
     loadData();
   }, [withLoading]);
 
+  // Chặn scroll body khi modal mở
+  useEffect(() => {
+    if (showUpdateModal || showBulkUpdateModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    // Cleanup khi component unmount
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showUpdateModal, showBulkUpdateModal]);
+
   const fetchInitialData = async () => {
     try {
       // Lấy danh sách năm học từ API (lấy tất cả năm học có trong YearlyResult)
@@ -77,21 +92,9 @@ const TrainingRating = () => {
         // Lấy dữ liệu theo năm mới nhất
         await fetchTrainingRatingsForYear(latestYear);
       } else {
-        // Nếu không có năm học nào, hiển thị tất cả sinh viên
+        // Nếu không có năm học nào, hiển thị tất cả sinh viên có kết quả học tập
         setSelectedSchoolYear("all");
-        const res = await axiosInstance.get(
-          `/commander/allStudentsForTrainingRating`
-        );
-        const processedData = res.data || [];
-        setTrainingRatings(processedData);
-        const units = [
-          ...new Set(
-            processedData
-              .map((item) => item.unit)
-              .filter((unit) => unit && unit.trim())
-          ),
-        ];
-        setAvailableUnits(units);
+        await fetchAllTrainingRatings();
       }
     } catch (error) {
       console.log("Error fetching initial data:", error);
@@ -104,7 +107,11 @@ const TrainingRating = () => {
   const handleSchoolYearChange = (newSchoolYear) => {
     setSelectedSchoolYear(newSchoolYear);
     setCurrentPage(1);
-    fetchTrainingRatingsForYear(newSchoolYear);
+    if (newSchoolYear === "all") {
+      fetchAllTrainingRatings();
+    } else {
+      fetchTrainingRatingsForYear(newSchoolYear);
+    }
   };
 
   const fetchTrainingRatingsForYear = async (year) => {
@@ -113,7 +120,6 @@ const TrainingRating = () => {
         `/commander/allStudentsForTrainingRating?schoolYear=${year}`
       );
 
-      console.log(`Training ratings data for ${year}:`, res.data);
       const data = res.data || [];
       setTrainingRatings(data);
       const units = [
@@ -128,12 +134,38 @@ const TrainingRating = () => {
     }
   };
 
+  const fetchAllTrainingRatings = async () => {
+    try {
+      // Gọi API không có schoolYear để backend trả về tất cả dữ liệu (mảng trực tiếp)
+      const res = await axiosInstance.get(
+        `/commander/allStudentsForTrainingRating`
+      );
+
+      // Khi không có pageSize, backend trả về mảng trực tiếp, không phải object
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data?.trainingRatings || [];
+      setTrainingRatings(data);
+      const units = [
+        ...new Set(
+          data.map((item) => item.unit).filter((unit) => unit && unit.trim())
+        ),
+      ];
+      setAvailableUnits(units);
+    } catch (error) {
+      console.log("Error fetching all training ratings:", error);
+      setTrainingRatings([]);
+    }
+  };
+
   const handleUpdateRating = (row) => {
     setSelectedStudent(row);
     setUpdateFormData({
       trainingRating: row.trainingRating || "",
     });
     setShowUpdateModal(true);
+    // Ngăn scroll body khi modal mở
+    document.body.style.overflow = "hidden";
   };
 
   const handleSubmitUpdate = async () => {
@@ -160,6 +192,8 @@ const TrainingRating = () => {
         setUpdateFormData({
           trainingRating: "",
         });
+        // Khôi phục scroll body khi đóng modal
+        document.body.style.overflow = "unset";
 
         if (selectedSchoolYear === "all") {
           fetchInitialData();
@@ -184,6 +218,8 @@ const TrainingRating = () => {
     });
     setBulkFilterUnit("all");
     setBulkSearchTerm("");
+    // Ngăn scroll body khi modal mở
+    document.body.style.overflow = "hidden";
   };
 
   const getFilteredStudentsForBulk = () => {
@@ -277,6 +313,8 @@ const TrainingRating = () => {
         );
         setShowBulkUpdateModal(false);
         setSelectedStudentsForBulk([]);
+        // Khôi phục scroll body khi đóng modal
+        document.body.style.overflow = "unset";
         if (selectedSchoolYear === "all") {
           fetchInitialData();
         } else {
@@ -296,6 +334,7 @@ const TrainingRating = () => {
   };
 
   const schoolYearOptions = [
+    { label: "Tất cả", value: "all" },
     ...schoolYears.map((year) => ({
       label: year,
       value: year,
@@ -316,10 +355,22 @@ const TrainingRating = () => {
         item.unit === selectedUnit ||
         item.className === selectedUnit;
 
-      // Lọc theo năm học được chọn
-      const matchesSchoolYear = item.schoolYear === selectedSchoolYear;
+      // Lọc theo năm học được chọn (nếu không phải "all")
+      const matchesSchoolYear =
+        selectedSchoolYear === "all" || item.schoolYear === selectedSchoolYear;
 
-      return matchesSearch && matchesUnit && matchesSchoolYear;
+      // Lọc theo xếp loại rèn luyện
+      const matchesRating =
+        ratingFilter === "all" ||
+        (ratingFilter === "notRated" && !item.trainingRating) ||
+        (ratingFilter !== "notRated" && item.trainingRating === ratingFilter);
+
+      return (
+        matchesSearch &&
+        matchesUnit &&
+        matchesSchoolYear &&
+        matchesRating
+      );
     });
 
     return filtered.sort((a, b) => {
@@ -483,7 +534,7 @@ const TrainingRating = () => {
                             setCurrentPage(1);
                           }}
                           placeholder="Chọn đơn vị"
-                          style={{ width: 128, height: 36 }}
+                          style={{ width: 160, height: 36 }}
                           options={[
                             { value: "all", label: "Tất cả đơn vị" },
                             { value: "L1 - H5", label: "L1 - H5" },
@@ -492,6 +543,44 @@ const TrainingRating = () => {
                             { value: "L4 - H5", label: "L4 - H5" },
                             { value: "L5 - H5", label: "L5 - H5" },
                             { value: "L6 - H5", label: "L6 - H5" },
+                          ]}
+                        />
+                      </ConfigProvider>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Xếp loại
+                      </label>
+                      <ConfigProvider
+                        theme={{
+                          algorithm: isDark
+                            ? theme.darkAlgorithm
+                            : theme.defaultAlgorithm,
+                          token: {
+                            colorPrimary: "#2563eb",
+                            borderRadius: 8,
+                            controlOutline: "rgba(37,99,235,0.2)",
+                          },
+                        }}
+                      >
+                        <Select
+                          value={ratingFilter}
+                          onChange={(value) => {
+                            setRatingFilter(value);
+                            setCurrentPage(1);
+                          }}
+                          placeholder="Chọn xếp loại"
+                          style={{ width: 180, height: 36 }}
+                          options={[
+                            { value: "all", label: "Tất cả" },
+                            {
+                              value: "notRated",
+                              label: "Chưa cập nhật",
+                            },
+                            { value: "Tốt", label: "Tốt" },
+                            { value: "Khá", label: "Khá" },
+                            { value: "Trung bình", label: "Trung bình" },
+                            { value: "Yếu", label: "Yếu" },
                           ]}
                         />
                       </ConfigProvider>
@@ -508,7 +597,7 @@ const TrainingRating = () => {
                           setCurrentPage(1);
                         }}
                         placeholder="Tên hoặc mã sinh viên..."
-                        className="bg-gray-50 dark:bg-gray-700 border w-48 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block h-9 px-3"
+                        className="bg-gray-50 dark:bg-gray-700 border w-64 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block h-9 px-3"
                       />
                     </div>
                     <div>
@@ -516,6 +605,7 @@ const TrainingRating = () => {
                         onClick={() => {
                           setSearchTerm("");
                           setSelectedUnit("all");
+                          setRatingFilter("all");
                           setCurrentPage(1);
                         }}
                         className="h-9 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center justify-center"
@@ -544,19 +634,16 @@ const TrainingRating = () => {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                          STT
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           ĐƠN VỊ
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           HỌ VÀ TÊN
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          MÃ SINH VIÊN
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          LỚP
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          TRƯỜNG
+                          CƠ SỞ ĐÀO TẠO
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           NĂM HỌC
@@ -571,25 +658,41 @@ const TrainingRating = () => {
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {getPaginatedResults().data.length > 0 ? (
-                        getPaginatedResults().data.map((item) => (
+                        getPaginatedResults().data.map((item, index) => (
                           <tr
                             key={`${item.id}-${item.schoolYear}`}
                             className="hover:bg-gray-50 dark:hover:bg-gray-700"
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.unit || "Chưa có đơn vị"}
+                              {(currentPage - 1) * pageSize + index + 1}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div className="font-medium">{item.fullName}</div>
+                              {(() => {
+                                const unit = item.unit || "";
+                                // Convert "L1 - H5" to "L1-H5" format
+                                if (unit.includes(" - ")) {
+                                  return unit.replace(" - ", "-");
+                                }
+                                return unit || "Chưa có đơn vị";
+                              })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.studentCode || "Chưa có mã SV"}
+                              <div>
+                                <div className="font-medium">{item.fullName}</div>
+                                <div className="text-xs text-gray-500">
+                                  Mã: {item.studentCode || "Chưa có mã SV"}
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.className || "Chưa có lớp"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.university || "Chưa có trường"}
+                              <div>
+                                <div className="font-medium">
+                                  {item.className || "Chưa có lớp"}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {item.university || "Chưa có cơ sở đào tạo"}
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
                               {item.schoolYear}
@@ -647,7 +750,7 @@ const TrainingRating = () => {
                       ) : (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="7"
                             className="text-center py-8 text-gray-500 dark:text-gray-400"
                           >
                             <div className="flex flex-col items-center">
@@ -871,6 +974,8 @@ const TrainingRating = () => {
                   setUpdateFormData({
                     trainingRating: "",
                   });
+                  // Khôi phục scroll body khi đóng modal
+                  document.body.style.overflow = "unset";
                 }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
@@ -934,6 +1039,8 @@ const TrainingRating = () => {
                     setUpdateFormData({
                       trainingRating: "",
                     });
+                    // Khôi phục scroll body khi đóng modal
+                    document.body.style.overflow = "unset";
                   }}
                 >
                   Hủy
@@ -964,6 +1071,8 @@ const TrainingRating = () => {
                 onClick={() => {
                   setShowBulkUpdateModal(false);
                   setSelectedStudentsForBulk([]);
+                  // Khôi phục scroll body khi đóng modal
+                  document.body.style.overflow = "unset";
                 }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
@@ -1165,6 +1274,8 @@ const TrainingRating = () => {
                 onClick={() => {
                   setShowBulkUpdateModal(false);
                   setSelectedStudentsForBulk([]);
+                  // Khôi phục scroll body khi đóng modal
+                  document.body.style.overflow = "unset";
                 }}
               >
                 Hủy

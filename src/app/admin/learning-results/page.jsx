@@ -800,9 +800,6 @@ const LearningResults = () => {
                           HỌ VÀ TÊN
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          LỚP
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           HỌC KỲ
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
@@ -827,7 +824,7 @@ const LearningResults = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="10"
+                            colSpan="9"
                             className="text-center py-8 text-gray-500 dark:text-gray-400"
                           >
                             <div className="flex flex-col items-center">
@@ -876,14 +873,16 @@ const LearningResults = () => {
                                 <div className="text-xs text-gray-500">
                                   Mã: {item.studentCode || "Chưa có mã SV"}
                                 </div>
+                                <div className="text-xs text-gray-500">
+                                  {item.className || "Chưa có lớp"}
+                                </div>
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.className || "Chưa có lớp"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
                               {item.hasNoResults ? (
-                                <span className="text-gray-400 italic">Chưa có kết quả</span>
+                                <span className="text-gray-400 italic">
+                                  Chưa có kết quả
+                                </span>
                               ) : (
                                 `${item.semester} NH ${item.schoolYear}`
                               )}
@@ -998,7 +997,7 @@ const LearningResults = () => {
                       ) : (
                         <tr>
                           <td
-                            colSpan="10"
+                            colSpan="9"
                             className="text-center py-8 text-gray-500 dark:text-gray-400"
                           >
                             <div className="flex flex-col items-center">

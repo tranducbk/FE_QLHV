@@ -193,8 +193,10 @@ export default function UniversityOrganizations() {
   // Transform data for table display with rowSpan
   const transformDataForTable = () => {
     const tableData = [];
+    let organizationIndex = 0;
 
     filteredHierarchyData.forEach((orgData) => {
+      const currentOrgNumber = organizationIndex++;
       const { organization, educationLevels } = orgData;
 
       // Chuẩn hóa thành các block theo chương trình, mỗi block có số hàng = max(1, số lớp)
@@ -231,6 +233,7 @@ export default function UniversityOrganizations() {
             organization,
             educationLevel: blk.educationLevel,
             class: row.class,
+            organizationNumber: currentOrgNumber,
             rowSpan: {
               organization: orgCellPlaced ? 0 : totalOrgRows,
               educationLevel: levelCellPlaced ? 0 : blk.rows.length,
@@ -368,6 +371,9 @@ export default function UniversityOrganizations() {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                          STT
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           Tên trường/khoa/viện
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
@@ -388,6 +394,21 @@ export default function UniversityOrganizations() {
                       {tableData.length > 0 ? (
                         tableData.map((row, index) => {
                           const cells = [];
+
+                          // STT cell - chỉ hiển thị ở hàng đầu tiên của organization
+                          if (row.rowSpan.organization > 0) {
+                            cells.push(
+                              <td
+                                key="stt"
+                                rowSpan={row.rowSpan.organization}
+                                className="px-4 py-4 text-center border-r border-gray-200 dark:border-gray-600"
+                              >
+                                <div className="text-sm text-gray-900 dark:text-white">
+                                  {row.organizationNumber + 1}
+                                </div>
+                              </td>
+                            );
+                          }
 
                           // Organization cell
                           if (row.rowSpan.organization > 0) {

@@ -19,6 +19,8 @@ const PartyRating = () => {
   const { loading, withLoading } = useLoading(true);
   const [selectedUnit, setSelectedUnit] = useState("all");
   const [availableUnits, setAvailableUnits] = useState([]);
+  const [partyMemberFilter, setPartyMemberFilter] = useState("all"); // all, isPartyMember, notPartyMember
+  const [ratingFilter, setRatingFilter] = useState("all"); // all, HTXSNV, HTTNV, HTNV, KHTNV, notRated
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [updateFormData, setUpdateFormData] = useState({
@@ -82,21 +84,9 @@ const PartyRating = () => {
         // Lấy dữ liệu theo năm mới nhất
         await fetchPartyRatingsForYear(latestYear);
       } else {
-        // Nếu không có năm học nào, hiển thị tất cả sinh viên
+        // Nếu không có năm học nào, hiển thị tất cả sinh viên có kết quả học tập
         setSelectedSchoolYear("all");
-        const res = await axiosInstance.get(
-          `/commander/allStudentsForPartyRating`
-        );
-        const processedData = res.data || [];
-        setPartyRatings(processedData);
-        const units = [
-          ...new Set(
-            processedData
-              .map((item) => item.unit)
-              .filter((unit) => unit && unit.trim())
-          ),
-        ];
-        setAvailableUnits(units);
+        await fetchAllPartyRatings();
       }
     } catch (error) {
       console.log("Error fetching initial data:", error);
@@ -109,17 +99,22 @@ const PartyRating = () => {
   const handleSchoolYearChange = (newSchoolYear) => {
     setSelectedSchoolYear(newSchoolYear);
     setCurrentPage(1);
-    fetchPartyRatingsForYear(newSchoolYear);
+    if (newSchoolYear === "all") {
+      fetchAllPartyRatings();
+    } else {
+      fetchPartyRatingsForYear(newSchoolYear);
+    }
   };
 
   const fetchPartyRatingsForYear = async (year) => {
     try {
+      // Gọi API không có phân trang để lấy tất cả học viên có kết quả học tập
       const res = await axiosInstance.get(
-        `/commander/allStudentsForPartyRating?schoolYear=${year}`
+        `/commander/allStudentsForPartyRating?schoolYear=${year}&pageSize=10000`
       );
 
-      console.log(`Party ratings data for ${year}:`, res.data);
-      const data = res.data || [];
+      // Nếu API trả về object với partyRatings, lấy partyRatings, nếu không lấy trực tiếp
+      const data = res.data?.partyRatings || res.data || [];
       setPartyRatings(data);
       const units = [
         ...new Set(
@@ -129,6 +124,30 @@ const PartyRating = () => {
       setAvailableUnits(units);
     } catch (error) {
       console.log("Error fetching party ratings for year:", error);
+      setPartyRatings([]);
+    }
+  };
+
+  const fetchAllPartyRatings = async () => {
+    try {
+      // Gọi API không có schoolYear và không có pageSize để backend trả về tất cả dữ liệu (mảng trực tiếp)
+      const res = await axiosInstance.get(
+        `/commander/allStudentsForPartyRating`
+      );
+
+      // Khi không có pageSize, backend trả về mảng trực tiếp, không phải object
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data?.partyRatings || [];
+      setPartyRatings(data);
+      const units = [
+        ...new Set(
+          data.map((item) => item.unit).filter((unit) => unit && unit.trim())
+        ),
+      ];
+      setAvailableUnits(units);
+    } catch (error) {
+      console.log("Error fetching all party ratings:", error);
       setPartyRatings([]);
     }
   };
@@ -310,6 +329,7 @@ const PartyRating = () => {
   };
 
   const schoolYearOptions = [
+    { label: "Tất cả", value: "all" },
     ...schoolYears.map((year) => ({
       label: year,
       value: year,
@@ -330,10 +350,34 @@ const PartyRating = () => {
         item.unit === selectedUnit ||
         item.className === selectedUnit;
 
-      // Lọc theo năm học được chọn
-      const matchesSchoolYear = item.schoolYear === selectedSchoolYear;
+      // Lọc theo năm học được chọn (nếu không phải "all")
+      const matchesSchoolYear =
+        selectedSchoolYear === "all" || item.schoolYear === selectedSchoolYear;
 
-      return matchesSearch && matchesUnit && matchesSchoolYear;
+      // Lọc theo trạng thái đảng viên
+      const matchesPartyMember =
+        partyMemberFilter === "all" ||
+        (partyMemberFilter === "isPartyMember" &&
+          item.positionParty &&
+          item.positionParty !== "Không") ||
+        (partyMemberFilter === "notPartyMember" &&
+          (!item.positionParty || item.positionParty === "Không"));
+
+      // Lọc theo xếp loại
+      const matchesRating =
+        ratingFilter === "all" ||
+        (ratingFilter === "notRated" &&
+          (!item.partyRating || !item.partyRating?.rating)) ||
+        (ratingFilter !== "notRated" &&
+          item.partyRating?.rating === ratingFilter);
+
+      return (
+        matchesSearch &&
+        matchesUnit &&
+        matchesSchoolYear &&
+        matchesPartyMember &&
+        matchesRating
+      );
     });
 
     return filtered.sort((a, b) => {
@@ -512,6 +556,91 @@ const PartyRating = () => {
                     </div>
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Trạng thái Đảng viên
+                      </label>
+                      <ConfigProvider
+                        theme={{
+                          algorithm: isDark
+                            ? theme.darkAlgorithm
+                            : theme.defaultAlgorithm,
+                          token: {
+                            colorPrimary: "#2563eb",
+                            borderRadius: 8,
+                            controlOutline: "rgba(37,99,235,0.2)",
+                          },
+                        }}
+                      >
+                        <Select
+                          value={partyMemberFilter}
+                          onChange={(value) => {
+                            setPartyMemberFilter(value);
+                            setCurrentPage(1);
+                          }}
+                          placeholder="Chọn trạng thái"
+                          style={{ width: 200, height: 36 }}
+                          options={[
+                            { value: "all", label: "Tất cả" },
+                            {
+                              value: "isPartyMember",
+                              label: "Là Đảng viên",
+                            },
+                            {
+                              value: "notPartyMember",
+                              label: "Chưa là Đảng viên",
+                            },
+                          ]}
+                        />
+                      </ConfigProvider>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Xếp loại
+                      </label>
+                      <ConfigProvider
+                        theme={{
+                          algorithm: isDark
+                            ? theme.darkAlgorithm
+                            : theme.defaultAlgorithm,
+                          token: {
+                            colorPrimary: "#2563eb",
+                            borderRadius: 8,
+                            controlOutline: "rgba(37,99,235,0.2)",
+                          },
+                        }}
+                      >
+                        <Select
+                          value={ratingFilter}
+                          onChange={(value) => {
+                            setRatingFilter(value);
+                            setCurrentPage(1);
+                          }}
+                          placeholder="Chọn xếp loại"
+                          style={{ width: 220, height: 36 }}
+                          options={[
+                            { value: "all", label: "Tất cả" },
+                            {
+                              value: "notRated",
+                              label: "Chưa cập nhật",
+                            },
+                            {
+                              value: "HTXSNV",
+                              label: "HTXSNV",
+                            },
+                            {
+                              value: "HTTNV",
+                              label: "HTTNV",
+                            },
+                            { value: "HTNV", label: "HTNV" },
+                            {
+                              value: "KHTNV",
+                              label: "KHTNV",
+                            },
+                          ]}
+                        />
+                      </ConfigProvider>
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                         Tìm kiếm
                       </label>
                       <input
@@ -530,6 +659,8 @@ const PartyRating = () => {
                         onClick={() => {
                           setSearchTerm("");
                           setSelectedUnit("all");
+                          setPartyMemberFilter("all");
+                          setRatingFilter("all");
                           setCurrentPage(1);
                         }}
                         className="h-9 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center"
@@ -558,19 +689,16 @@ const PartyRating = () => {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                          STT
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           ĐƠN VỊ
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           HỌ VÀ TÊN
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          MÃ SINH VIÊN
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          LỚP
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          TRƯỜNG
+                          CƠ SỞ ĐÀO TẠO
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           NĂM HỌC
@@ -587,7 +715,7 @@ const PartyRating = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="7"
                             className="text-center py-8 text-gray-500 dark:text-gray-400"
                           >
                             <div className="flex flex-col items-center">
@@ -616,25 +744,36 @@ const PartyRating = () => {
                           </td>
                         </tr>
                       ) : getPaginatedResults().data.length > 0 ? (
-                        getPaginatedResults().data.map((item) => (
+                        getPaginatedResults().data.map((item, index) => (
                           <tr
                             key={`${item.id}-${item.schoolYear}`}
                             className="hover:bg-gray-50 dark:hover:bg-gray-700"
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                              {(currentPage - 1) * pageSize + index + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
                               {item.unit || "Chưa có đơn vị"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              <div className="font-medium">{item.fullName}</div>
+                              <div>
+                                <div className="font-medium">
+                                  {item.fullName}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Mã: {item.studentCode || "Chưa có mã SV"}
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.studentCode || "Chưa có mã SV"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.className || "Chưa có lớp"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.university || "Chưa có trường"}
+                              <div>
+                                <div className="font-medium">
+                                  {item.className || "Chưa có lớp"}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {item.university || "Chưa có cơ sở đào tạo"}
+                                </div>
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
                               {item.schoolYear}
@@ -706,7 +845,7 @@ const PartyRating = () => {
                       ) : (
                         <tr>
                           <td
-                            colSpan="8"
+                            colSpan="7"
                             className="text-center py-8 text-gray-500 dark:text-gray-400"
                           >
                             <div className="flex flex-col items-center">

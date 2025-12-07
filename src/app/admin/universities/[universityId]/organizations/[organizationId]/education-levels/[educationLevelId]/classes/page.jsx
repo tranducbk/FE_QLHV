@@ -326,6 +326,9 @@ export default function EducationLevelClasses() {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                          STT
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           Tên lớp
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
@@ -338,11 +341,16 @@ export default function EducationLevelClasses() {
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredClasses.length > 0 ? (
-                        filteredClasses.map((cls) => (
+                        filteredClasses.map((cls, index) => (
                           <tr
                             key={cls.id}
                             className="border-b border-gray-200 dark:border-gray-600"
                           >
+                            <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-gray-600">
+                              <div className="text-sm text-gray-900 dark:text-white">
+                                {index + 1}
+                              </div>
+                            </td>
                             <td className="px-4 py-4 text-center border-r border-gray-200 dark:border-gray-600">
                               <div className="font-medium text-gray-900 dark:text-white">
                                 {cls.className}
@@ -376,7 +384,7 @@ export default function EducationLevelClasses() {
                       ) : (
                         <tr>
                           <td
-                            colSpan="3"
+                            colSpan="4"
                             className="px-4 py-4 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600"
                           >
                             <div className="flex flex-col items-center">

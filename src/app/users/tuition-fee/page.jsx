@@ -112,7 +112,7 @@ const TuitionFee = () => {
       handleNotify(
         "warning",
         "Cảnh báo",
-        `Học phí cho ${semesterCode} - ${schoolYear} đã tồn tại. Vui lòng xóa học phí trùng trước khi cập nhật.`
+        `Học phí cho ${semesterCode} năm học ${schoolYear} đã tồn tại. Vui lòng xóa học phí trùng trước khi cập nhật.`
       );
       return;
     }
@@ -161,7 +161,7 @@ const TuitionFee = () => {
       handleNotify(
         "warning",
         "Cảnh báo",
-        `Học phí cho ${semesterCode} - ${schoolYear} đã tồn tại. Vui lòng xóa học phí cũ trước khi thêm mới.`
+        `Học phí cho ${semesterCode} năm học ${schoolYear} đã tồn tại. Vui lòng xóa học phí cũ trước khi thêm mới.`
       );
       return;
     }

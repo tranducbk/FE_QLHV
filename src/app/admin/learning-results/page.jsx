@@ -367,13 +367,25 @@ const LearningResults = () => {
   };
 
   // Tạo tree data cho TreeSelect với option "Tất cả học kỳ"
+  // Sắp xếp học kỳ từ mới nhất đến cũ nhất
+  const sortedSemesters = [...semesters].sort((a, b) => {
+    // So sánh năm học trước (giảm dần)
+    const yearA = a.schoolYear || "";
+    const yearB = b.schoolYear || "";
+    if (yearA !== yearB) return yearB.localeCompare(yearA);
+    // Trong cùng năm học, sắp xếp học kỳ giảm dần (HK2 trước HK1)
+    const codeA = a.code || "";
+    const codeB = b.code || "";
+    return codeB.localeCompare(codeA);
+  });
+
   const treeData = [
     {
       title: "Tất cả học kỳ",
       value: "all",
       key: "all",
     },
-    ...semesters.map((semester) => ({
+    ...sortedSemesters.map((semester) => ({
       title: getSemesterLabel(semester),
       value: semester.id,
       key: semester.id,
@@ -397,43 +409,9 @@ const LearningResults = () => {
       return matchesSearch && matchesUnit;
     });
 
-    // Sắp xếp theo thứ tự: đơn vị → tên → năm học → học kỳ
-    return filtered.sort((a, b) => {
-      // 1. Sắp xếp theo đơn vị từ L1-H5 đến L6-H5
-      const unitOrder = {
-        "L1 - H5": 1,
-        "L2 - H5": 2,
-        "L3 - H5": 3,
-        "L4 - H5": 4,
-        "L5 - H5": 5,
-        "L6 - H5": 6,
-      };
-      const unitA = unitOrder[a.unit] || 999;
-      const unitB = unitOrder[b.unit] || 999;
-      if (unitA !== unitB) return unitA - unitB;
-
-      // 2. Trong cùng đơn vị, sắp xếp theo tên học viên A-Z
-      if (a.fullName !== b.fullName) {
-        return a.fullName.localeCompare(b.fullName, "vi");
-      }
-
-      // 3. Trong cùng học viên, sắp xếp theo năm học (mới đến cũ)
-      const yearA = a.schoolYear || "";
-      const yearB = b.schoolYear || "";
-      if (yearA !== yearB) {
-        return yearB.localeCompare(yearA); // Năm mới trước
-      }
-
-      // 4. Trong cùng năm học, sắp xếp theo học kỳ (HK3, HK2, HK1)
-      const semesterOrder = {
-        HK3: 3,
-        HK2: 2,
-        HK1: 1,
-      };
-      const semesterA = semesterOrder[a.semester] || 0;
-      const semesterB = semesterOrder[b.semester] || 0;
-      return semesterB - semesterA; // Kỳ mới trước
-    });
+    // Sắp xếp theo điểm GPA từ cao xuống thấp (đã được sắp xếp từ backend)
+    // Giữ nguyên thứ tự từ API
+    return filtered;
   };
 
   // Tính toán dữ liệu phân trang
@@ -577,7 +555,11 @@ const LearningResults = () => {
                           placeholder="Chọn học kỳ"
                           allowClear
                           showSearch={false}
-                          style={{ width: 260, height: 36 }}
+                          maxTagCount={2}
+                          maxTagPlaceholder={(omittedValues) =>
+                            `+${omittedValues.length} học kỳ`
+                          }
+                          style={{ width: 280, minHeight: 36 }}
                           dropdownStyle={{
                             backgroundColor: isDark ? "#1f2937" : "#ffffff",
                             color: isDark ? "#e5e7eb" : "#111827",
@@ -591,7 +573,7 @@ const LearningResults = () => {
                             const { label, onClose } = props;
                             return (
                               <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 mr-1 mb-1"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 mr-1"
                                 onMouseDown={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
@@ -809,6 +791,9 @@ const LearningResults = () => {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                          STT
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           ĐƠN VỊ
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
@@ -842,7 +827,7 @@ const LearningResults = () => {
                       {loading ? (
                         <tr>
                           <td
-                            colSpan="11"
+                            colSpan="10"
                             className="text-center py-8 text-gray-500 dark:text-gray-400"
                           >
                             <div className="flex flex-col items-center">
@@ -878,6 +863,9 @@ const LearningResults = () => {
                             onClick={() => handleViewDetail(item)}
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                              {(currentPage - 1) * pageSize + index + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
                               {item.unit || "Chưa có đơn vị"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
@@ -894,7 +882,11 @@ const LearningResults = () => {
                               {item.className || "Chưa có lớp"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
-                              {item.semester} NH {item.schoolYear}
+                              {item.hasNoResults ? (
+                                <span className="text-gray-400 italic">Chưa có kết quả</span>
+                              ) : (
+                                `${item.semester} NH ${item.schoolYear}`
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
                               <div className="flex flex-col">

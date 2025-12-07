@@ -19,16 +19,20 @@ const Achievement = () => {
   const [filterStudentId, setFilterStudentId] = useState("");
   const [filterStudentKeyword, setFilterStudentKeyword] = useState("");
   const [filterClassId, setFilterClassId] = useState("");
+  const [filterTitle, setFilterTitle] = useState("");
   const [showFormAdd, setShowFormAdd] = useState(false);
   const [showFormEdit, setShowFormEdit] = useState(false);
   const [editFormData, setEditFormData] = useState({});
   const [addFormData, setAddFormData] = useState({});
   const [selectedStudentForForm, setSelectedStudentForForm] = useState(null);
   const [recommendations, setRecommendations] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const { loading, withLoading } = useLoading(true);
 
   // Disable scroll when modal is open
-  useModalScroll(showFormAdd || showFormEdit);
+  useModalScroll(showFormAdd || showFormEdit || showDeleteModal);
 
   const fetchStudents = async () => {
     try {
@@ -39,51 +43,76 @@ const Achievement = () => {
       const studentsData = Array.isArray(res.data) ? res.data : [];
       setStudents(studentsData);
 
-      // Fetch achievement cho TỪNG student
+      // Fetch achievement và recommendations cho tất cả students SONG SONG
       const achievementsData = {};
-      for (const student of studentsData) {
+      const recommendationsData = {};
+
+      // Tạo promises cho achievements
+      const achievementPromises = studentsData.map(async (student) => {
         try {
           const achievementRes = await axiosInstance.get(
             `/achievement/admin/${student.id}`
           );
-          achievementsData[student.id] = achievementRes.data;
+          return {
+            studentId: student.id,
+            data: achievementRes.data,
+            success: true,
+          };
         } catch (error) {
           // If no achievement exists, create default structure
-          achievementsData[student.id] = {
+          return {
             studentId: student.id,
-            yearlyAchievements: [],
-            totalYears: 0,
-            totalAdvancedSoldier: 0,
-            totalCompetitiveSoldier: 0,
-            totalScientificTopics: 0,
-            totalScientificInitiatives: 0,
-            eligibleForMinistryReward: false,
-            eligibleForNationalReward: false,
-            nextYearRecommendations: {},
+            data: {
+              studentId: student.id,
+              yearlyAchievements: [],
+              totalYears: 0,
+              totalAdvancedSoldier: 0,
+              totalCompetitiveSoldier: 0,
+              totalScientificTopics: 0,
+              totalScientificInitiatives: 0,
+              eligibleForMinistryReward: false,
+              eligibleForNationalReward: false,
+              nextYearRecommendations: {},
+            },
+            success: false,
           };
-        }
-      }
-      setAchievements(achievementsData);
-
-      // Fetch recommendations for each student in parallel
-      const recommendationsData = {};
-
-      const recommendationPromises = studentsData.map(async (student) => {
-        try {
-          const recRes = await axiosInstance.get(
-            `/achievement/admin/${student.id}/recommendations`
-          );
-          return { studentId: student.id, data: recRes.data };
-        } catch (error) {
-          return { studentId: student.id, data: { suggestions: [] } };
         }
       });
 
+      // Chạy promises achievements trước
+      const achievementResults = await Promise.all(achievementPromises);
+
+      // Xử lý kết quả achievements
+      achievementResults.forEach(({ studentId, data }) => {
+        achievementsData[studentId] = data;
+      });
+      setAchievements(achievementsData);
+
+      // Chỉ gọi API recommendations cho những student CÓ khen thưởng
+      const studentsWithAchievements = achievementResults.filter(
+        ({ data }) => data?.yearlyAchievements?.length > 0
+      );
+
+      const recommendationPromises = studentsWithAchievements.map(
+        async ({ studentId }) => {
+          try {
+            const recRes = await axiosInstance.get(
+              `/achievement/admin/${studentId}/recommendations`
+            );
+            return { studentId, data: recRes.data };
+          } catch (error) {
+            return { studentId, data: { suggestions: [] } };
+          }
+        }
+      );
+
+      // Chạy recommendations cho những student có khen thưởng
       const recommendationResults = await Promise.all(recommendationPromises);
+
+      // Xử lý kết quả recommendations
       recommendationResults.forEach(({ studentId, data }) => {
         recommendationsData[studentId] = data;
       });
-
       setRecommendations(recommendationsData);
 
       // Lấy danh sách các năm học có trong DB (không trùng)
@@ -136,21 +165,45 @@ const Achievement = () => {
       return;
     }
 
-    if (!addFormData.decisionNumber) {
-      handleNotify("danger", "Lỗi!", "Vui lòng nhập số quyết định");
+    // Chỉ yêu cầu số quyết định, ngày quyết định, danh hiệu nếu KHÔNG chọn bằng khen
+    const hasBangKhen = addFormData.hasMinistryReward || addFormData.hasNationalReward;
+    if (!hasBangKhen) {
+      if (!addFormData.decisionNumber) {
+        handleNotify("danger", "Lỗi!", "Vui lòng nhập số quyết định");
+        return;
+      }
+
+      if (!addFormData.decisionDate) {
+        handleNotify("danger", "Lỗi!", "Vui lòng nhập ngày quyết định");
+        return;
+      }
+
+      if (!addFormData.title) {
+        handleNotify("danger", "Lỗi!", "Vui lòng chọn danh hiệu");
+        return;
+      }
+    }
+
+    // Validate điều kiện bằng khen
+    if (addFormData.hasMinistryReward && !canSelectMinistryReward()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận BK BQP: ${getMinistryRewardReason()}`
+      );
       return;
     }
 
-    if (!addFormData.decisionDate) {
-      handleNotify("danger", "Lỗi!", "Vui lòng nhập ngày quyết định");
+    if (addFormData.hasNationalReward && !canSelectNationalReward()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận CSTĐ TQ: ${getNationalRewardReason()}`
+      );
       return;
     }
 
-    if (!addFormData.title) {
-      handleNotify("danger", "Lỗi!", "Vui lòng chọn danh hiệu");
-      return;
-    }
-
+    setSubmitting(true);
     try {
       const response = await axiosInstance.post(
         `/achievement/admin/${selectedStudentForForm.id}`,
@@ -163,7 +216,7 @@ const Achievement = () => {
       setSelectedStudentForForm(null);
 
       // Refresh toàn bộ danh sách students để lấy achievement mới
-      fetchStudents();
+      await fetchStudents();
     } catch (error) {
       console.error("Error adding achievement:", error);
       handleNotify(
@@ -171,11 +224,34 @@ const Achievement = () => {
         "Lỗi!",
         error.response?.data?.message || "Có lỗi xảy ra"
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleUpdateYearlyAchievement = async (e, achievementId) => {
     e.preventDefault();
+
+    // Validate điều kiện bằng khen cho form edit
+    if (editFormData.hasMinistryReward && !canSelectMinistryRewardForEdit()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận BK BQP: ${getMinistryRewardReasonForEdit()}`
+      );
+      return;
+    }
+
+    if (editFormData.hasNationalReward && !canSelectNationalRewardForEdit()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận CSTĐ TQ: ${getNationalRewardReasonForEdit()}`
+      );
+      return;
+    }
+
+    setSubmitting(true);
     try {
       await axiosInstance.put(
         `/achievement/admin/${achievementId}`,
@@ -184,27 +260,45 @@ const Achievement = () => {
       handleNotify("success", "Thành công!", "Cập nhật khen thưởng thành công");
       setShowFormEdit(false);
       setEditFormData({});
-      fetchStudents();
+      await fetchStudents();
     } catch (error) {
       handleNotify(
         "danger",
         "Lỗi!",
         error.response?.data?.message || "Có lỗi xảy ra"
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDeleteYearlyAchievement = async (achievementId) => {
+  const openDeleteModal = (achievement, student) => {
+    setDeleteTarget({ achievement, student });
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteYearlyAchievement = async () => {
+    if (!deleteTarget) return;
+
+    setSubmitting(true);
     try {
-      await axiosInstance.delete(`/achievement/admin/${achievementId}`);
+      await axiosInstance.delete(`/achievement/admin/${deleteTarget.achievement.id}`);
       handleNotify("success", "Thành công!", "Xóa khen thưởng thành công");
-      fetchStudents();
+      closeDeleteModal();
+      await fetchStudents();
     } catch (error) {
       handleNotify(
         "danger",
         "Lỗi!",
         error.response?.data?.message || "Có lỗi xảy ra"
       );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -273,55 +367,197 @@ const Achievement = () => {
   };
 
   // Kiểm tra điều kiện chọn bằng khen Bộ Quốc Phòng
-  const canSelectMinistryReward = () => {
-    if (!selectedStudentForForm) return false;
+  // Lấy lý do tại sao chưa đủ điều kiện BK BQP
+  const getMinistryRewardReason = () => {
+    if (!selectedStudentForForm) return "Chưa chọn học viên";
 
     const achievement = achievements[selectedStudentForForm.id];
-    if (!achievement) return false;
+    if (!achievement) return "Không có dữ liệu thành tích";
 
     // Kiểm tra đã nhận bằng khen Bộ Quốc Phòng chưa
     const hasMinistryReward = achievement.yearlyAchievements?.some(
       (ya) => ya.hasMinistryReward
     );
-    if (hasMinistryReward) return false; // Đã nhận rồi thì không cho chọn nữa
+    if (hasMinistryReward) return "Đã nhận BK BQP trước đó";
 
-    // Kiểm tra năm hiện tại có phải là năm thứ 2 liên tiếp không
-    const eligibleYear =
-      achievement.nextYearRecommendations?.eligibleYears?.ministryRewardYear;
-    const currentFormYear = addFormData.year || editFormData.year;
+    const recommendations = achievement.nextYearRecommendations || {};
+    const consecutiveYears = recommendations.consecutiveCompetitiveYears || 0;
+    const lastYearWasAdvanced = recommendations.lastYearWasAdvanced || false;
+    const eligibleMinistryRewardYear = recommendations.eligibleMinistryRewardYear || 0;
 
-    if (eligibleYear && currentFormYear && currentFormYear !== eligibleYear) {
-      return false; // Không phải năm thứ 2 liên tiếp
+    if (lastYearWasAdvanced) {
+      return "Chuỗi CSTĐ bị reset do năm gần nhất là CSTT";
     }
 
-    // Sử dụng kết quả từ backend thay vì tính toán lại
-    return achievement.eligibleForMinistryReward === true;
+    if (consecutiveYears < 2) {
+      return `Cần ${2 - consecutiveYears} năm CSTĐ liên tiếp nữa`;
+    }
+
+    // Kiểm tra NCKH ở 2 năm CSTĐ liên tiếp
+    if (!achievement.eligibleForMinistryReward) {
+      return "Cần có NCKH đã duyệt ở cả 2 năm CSTĐ liên tiếp";
+    }
+
+    // Kiểm tra năm nhập có đúng năm được phép không
+    // Năm nhận BK BQP không cần có CSTĐ hay NCKH, chỉ cần 2 năm trước đủ
+    const formYear = parseInt(addFormData.year) || 0;
+    if (eligibleMinistryRewardYear > 0 && formYear !== eligibleMinistryRewardYear) {
+      const details = recommendations.nationalRewardDetails || {};
+      const firstYear = details.firstYearOfStreak || (eligibleMinistryRewardYear - 2);
+      const secondYear = details.secondYearOfStreak || (eligibleMinistryRewardYear - 1);
+      return `BK BQP chỉ được nhận vào năm ${eligibleMinistryRewardYear} (sau 2 năm CSTĐ ${firstYear}-${secondYear})`;
+    }
+
+    return "";
   };
 
-  // Kiểm tra điều kiện chọn CSTĐ Toàn Quân
-  const canSelectNationalReward = () => {
-    if (!selectedStudentForForm) return false;
+  // Lấy lý do tại sao chưa đủ điều kiện CSTĐ TQ
+  const getNationalRewardReason = () => {
+    if (!selectedStudentForForm) return "Chưa chọn học viên";
 
     const achievement = achievements[selectedStudentForForm.id];
-    if (!achievement) return false;
+    if (!achievement) return "Không có dữ liệu thành tích";
 
     // Kiểm tra đã nhận CSTĐ Toàn Quân chưa
     const hasNationalReward = achievement.yearlyAchievements?.some(
       (ya) => ya.hasNationalReward
     );
-    if (hasNationalReward) return false; // Đã nhận rồi thì không cho chọn nữa
+    if (hasNationalReward) return "Đã nhận CSTĐ TQ trước đó";
 
-    // Kiểm tra năm hiện tại có phải là năm thứ 3 liên tiếp không
-    const eligibleYear =
-      achievement.nextYearRecommendations?.eligibleYears?.nationalRewardYear;
-    const currentFormYear = addFormData.year || editFormData.year;
+    // Kiểm tra đã có BK BQP chưa
+    const hasMinistryReward = achievement.yearlyAchievements?.some(
+      (ya) => ya.hasMinistryReward
+    );
+    if (!hasMinistryReward) return "Phải có BK của Bộ trưởng BQP trước";
 
-    if (eligibleYear && currentFormYear && currentFormYear !== eligibleYear) {
-      return false; // Không phải năm thứ 3 liên tiếp
+    // Kiểm tra năm nhập có đúng năm được phép không
+    const recommendations = achievement.nextYearRecommendations || {};
+    const eligibleNationalRewardYear = recommendations.eligibleNationalRewardYear || 0;
+    const ministryRewardYear = recommendations.ministryRewardYear || 0;
+    const formYear = parseInt(addFormData.year) || 0;
+
+    if (eligibleNationalRewardYear > 0 && formYear !== eligibleNationalRewardYear) {
+      return `CSTĐ TQ chỉ được nhận vào năm ${eligibleNationalRewardYear} (năm sau năm nhận BK BQP ${ministryRewardYear})`;
     }
 
-    // Sử dụng kết quả từ backend thay vì tính toán lại
-    return achievement.eligibleForNationalReward === true;
+    if (!achievement.eligibleForNationalReward) {
+      return "Năm nhận BK của Bộ trưởng BQP cần có CSTĐ và NCKH đã duyệt";
+    }
+
+    return "";
+  };
+
+  const canSelectMinistryReward = () => {
+    return getMinistryRewardReason() === "";
+  };
+
+  const canSelectNationalReward = () => {
+    return getNationalRewardReason() === "";
+  };
+
+  // Lấy lý do không đủ điều kiện CSTĐ TQ cho form Edit
+  const getNationalRewardReasonForEdit = () => {
+    if (!editFormData.studentId) return "Không có dữ liệu";
+
+    const achievement = achievements[editFormData.studentId];
+    if (!achievement) return "Không có dữ liệu thành tích";
+
+    // Kiểm tra bản ghi đang edit ĐÃ CÓ CSTĐ TQ từ trước chưa
+    // Nếu đã có thì cho phép edit mà không cần validate lại
+    const currentRecord = achievement.yearlyAchievements?.find(
+      (ya) => ya.id === editFormData.id
+    );
+    if (currentRecord?.hasNationalReward) {
+      return ""; // Bản ghi này đã có CSTĐ TQ, cho phép edit
+    }
+
+    // Kiểm tra các bản ghi KHÁC đã nhận CSTĐ TQ chưa
+    const hasNationalRewardInOthers = achievement.yearlyAchievements?.some(
+      (ya) => ya.id !== editFormData.id && ya.hasNationalReward
+    );
+    if (hasNationalRewardInOthers) return "Đã nhận CSTĐ TQ ở năm khác";
+
+    // Kiểm tra đã có BK BQP chưa
+    const hasMinistryReward = achievement.yearlyAchievements?.some(
+      (ya) => ya.hasMinistryReward
+    );
+    if (!hasMinistryReward) return "Phải có BK của Bộ trưởng BQP trước";
+
+    // Kiểm tra năm nhập có đúng năm được phép không
+    const recommendations = achievement.nextYearRecommendations || {};
+    const eligibleNationalRewardYear = recommendations.eligibleNationalRewardYear || 0;
+    const ministryRewardYear = recommendations.ministryRewardYear || 0;
+    const formYear = parseInt(editFormData.year) || 0;
+
+    if (eligibleNationalRewardYear > 0 && formYear !== eligibleNationalRewardYear) {
+      return `CSTĐ TQ chỉ được nhận vào năm ${eligibleNationalRewardYear} (năm sau năm nhận BK BQP ${ministryRewardYear})`;
+    }
+
+    if (!achievement.eligibleForNationalReward) {
+      return "Năm nhận BK của Bộ trưởng BQP cần có CSTĐ và NCKH đã duyệt";
+    }
+
+    return "";
+  };
+
+  const canSelectNationalRewardForEdit = () => {
+    return getNationalRewardReasonForEdit() === "";
+  };
+
+  // Lấy lý do không đủ điều kiện BK BQP cho form Edit
+  const getMinistryRewardReasonForEdit = () => {
+    if (!editFormData.studentId) return "Không có dữ liệu";
+
+    const achievement = achievements[editFormData.studentId];
+    if (!achievement) return "Không có dữ liệu thành tích";
+
+    // Kiểm tra bản ghi đang edit ĐÃ CÓ BK BQP từ trước chưa
+    // Nếu đã có thì cho phép edit mà không cần validate lại
+    const currentRecord = achievement.yearlyAchievements?.find(
+      (ya) => ya.id === editFormData.id
+    );
+    if (currentRecord?.hasMinistryReward) {
+      return ""; // Bản ghi này đã có BK BQP, cho phép edit
+    }
+
+    // Kiểm tra các bản ghi KHÁC đã nhận BK BQP chưa
+    const hasMinistryRewardInOthers = achievement.yearlyAchievements?.some(
+      (ya) => ya.id !== editFormData.id && ya.hasMinistryReward
+    );
+    if (hasMinistryRewardInOthers) return "Đã nhận BK BQP ở năm khác";
+
+    const recommendations = achievement.nextYearRecommendations || {};
+    const consecutiveYears = recommendations.consecutiveCompetitiveYears || 0;
+    const lastYearWasAdvanced = recommendations.lastYearWasAdvanced || false;
+    const eligibleMinistryRewardYear = recommendations.eligibleMinistryRewardYear || 0;
+
+    if (lastYearWasAdvanced) {
+      return "Chuỗi CSTĐ bị reset do năm gần nhất là CSTT";
+    }
+
+    if (consecutiveYears < 2) {
+      return `Cần ${2 - consecutiveYears} năm CSTĐ liên tiếp nữa`;
+    }
+
+    // Kiểm tra NCKH ở 2 năm CSTĐ liên tiếp
+    if (!achievement.eligibleForMinistryReward) {
+      return "Cần có NCKH đã duyệt ở cả 2 năm CSTĐ liên tiếp";
+    }
+
+    // Kiểm tra năm nhập có đúng năm được phép không
+    const formYear = parseInt(editFormData.year) || 0;
+    if (eligibleMinistryRewardYear > 0 && formYear !== eligibleMinistryRewardYear) {
+      const details = recommendations.nationalRewardDetails || {};
+      const firstYear = details.firstYearOfStreak || (eligibleMinistryRewardYear - 2);
+      const secondYear = details.secondYearOfStreak || (eligibleMinistryRewardYear - 1);
+      return `BK BQP chỉ được nhận vào năm ${eligibleMinistryRewardYear} (sau 2 năm CSTĐ ${firstYear}-${secondYear})`;
+    }
+
+    return "";
+  };
+
+  const canSelectMinistryRewardForEdit = () => {
+    return getMinistryRewardReasonForEdit() === "";
   };
 
   if (loading) {
@@ -491,7 +727,8 @@ const Achievement = () => {
                       setSelectedStudentForForm(null);
                       setShowFormAdd(true);
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                    disabled={submitting}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     + Thêm khen thưởng
                   </button>
@@ -584,6 +821,28 @@ const Achievement = () => {
                       />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                        Lọc theo danh hiệu
+                      </label>
+                      <Select
+                        value={filterTitle}
+                        onChange={setFilterTitle}
+                        placeholder="Chọn danh hiệu"
+                        style={{ width: 180, height: 36 }}
+                        options={[
+                          { value: "", label: "Tất cả" },
+                          {
+                            value: "Chiến sĩ tiên tiến",
+                            label: "Chiến sĩ tiên tiến",
+                          },
+                          {
+                            value: "Chiến sĩ thi đua",
+                            label: "Chiến sĩ thi đua",
+                          },
+                        ]}
+                      />
+                    </div>
+                    <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300 opacity-0">
                         &nbsp;
                       </label>
@@ -594,6 +853,7 @@ const Achievement = () => {
                           setFilterStudentId("");
                           setFilterStudentKeyword("");
                           setFilterClassId("");
+                          setFilterTitle("");
                         }}
                         className="h-9 px-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium"
                       >
@@ -650,6 +910,21 @@ const Achievement = () => {
                         );
                       }
 
+                      // Lọc theo danh hiệu nếu có
+                      if (filterTitle) {
+                        filteredStudents = filteredStudents.filter(
+                          (student) => {
+                            const achievement = achievements[student.id];
+                            return (
+                              achievement &&
+                              achievement.yearlyAchievements.some(
+                                (ya) => ya.title === filterTitle
+                              )
+                            );
+                          }
+                        );
+                      }
+
                       if (filteredStudents.length === 0) {
                         return (
                           <div className="text-center py-8">
@@ -699,6 +974,9 @@ const Achievement = () => {
                                 filterYear
                                   ? String(ya.year) === String(filterYear)
                                   : true
+                              )
+                              .filter((ya) =>
+                                filterTitle ? ya.title === filterTitle : true
                               )
                               .slice()
                               .sort((a, b) => (a.year || 0) - (b.year || 0))
@@ -750,7 +1028,8 @@ const Achievement = () => {
                                     setSelectedStudentForForm(student);
                                     setShowFormAdd(true);
                                   }}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                                  disabled={submitting}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   + Thêm khen thưởng
                                 </button>
@@ -847,13 +1126,18 @@ const Achievement = () => {
                                               </Link>
                                               <button
                                                 onClick={() => {
-                                                  setEditFormData(ya);
+                                                  setEditFormData({
+                                                    ...ya,
+                                                    studentId: student.id,
+                                                  });
                                                   setSelectedStudentForForm(
                                                     student
                                                   );
                                                   setShowFormEdit(true);
                                                 }}
-                                                className="text-blue-600 hover:text-blue-800 p-1"
+                                                disabled={submitting}
+                                                className="text-blue-600 hover:text-blue-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Chỉnh sửa khen thưởng"
                                               >
                                                 <svg
                                                   className="w-4 h-4"
@@ -871,11 +1155,11 @@ const Achievement = () => {
                                               </button>
                                               <button
                                                 onClick={() =>
-                                                  handleDeleteYearlyAchievement(
-                                                    ya.id
-                                                  )
+                                                  openDeleteModal(ya, student)
                                                 }
-                                                className="text-red-600 hover:text-red-800 p-1"
+                                                disabled={submitting}
+                                                className="text-red-600 hover:text-red-800 p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title="Xóa khen thưởng"
                                               >
                                                 <svg
                                                   className="w-4 h-4"
@@ -983,7 +1267,7 @@ const Achievement = () => {
           {showFormAdd && (
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pt-16">
               <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-              <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto">
+              <div id="add-achievement-modal" className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     {selectedStudentForForm
@@ -1001,10 +1285,11 @@ const Achievement = () => {
                   </button>
                 </div>
 
-                <form onSubmit={handleAddYearlyAchievement} className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <form onSubmit={handleAddYearlyAchievement} className="p-6" noValidate>
+                  {/* Layout 2 cột - tỷ lệ 2:1 */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Cột trái - Thông tin khen thưởng */}
-                    <div className="space-y-4">
+                    <div className="md:col-span-2 space-y-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b pb-2">
                         Thông tin khen thưởng
                       </h3>
@@ -1015,18 +1300,38 @@ const Achievement = () => {
                             Chọn học viên
                           </label>
                           <Select
-                            value={selectedStudentForForm?.id || ""}
+                            value={selectedStudentForForm?.id || undefined}
                             onChange={(value) => {
                               const student = students.find(
                                 (s) => s.id === value
                               );
                               setSelectedStudentForForm(student);
                             }}
-                            placeholder="Chọn học viên"
+                            placeholder="Nhập tên hoặc MSSV để tìm..."
                             style={{ width: "100%" }}
+                            showSearch
+                            getPopupContainer={() => document.getElementById("add-achievement-modal")}
+                            filterOption={(input, option) => {
+                              const searchText = input.toLowerCase();
+                              const student = students.find(
+                                (s) => s.id === option.value
+                              );
+                              if (!student) return false;
+                              return (
+                                student.fullName
+                                  ?.toLowerCase()
+                                  .includes(searchText) ||
+                                student.studentId
+                                  ?.toLowerCase()
+                                  .includes(searchText) ||
+                                student.unit?.toLowerCase().includes(searchText)
+                              );
+                            }}
                             options={students.map((student) => ({
                               value: student.id,
-                              label: `${student.fullName} - ${student.unit}`,
+                              label: `${student.fullName} - ${
+                                student.studentId || ""
+                              } - ${student.unit || ""}`,
                             }))}
                           />
                         </div>
@@ -1064,7 +1369,6 @@ const Achievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
                         />
                       </div>
 
@@ -1100,6 +1404,7 @@ const Achievement = () => {
                           }
                           placeholder="Chọn danh hiệu"
                           style={{ width: "100%" }}
+                          getPopupContainer={() => document.getElementById("add-achievement-modal")}
                           options={[
                             { value: "", label: "Chọn danh hiệu" },
                             {
@@ -1136,13 +1441,14 @@ const Achievement = () => {
                           }}
                           placeholder="Chọn bằng khen"
                           style={{ width: "100%" }}
+                          getPopupContainer={() => document.getElementById("add-achievement-modal")}
                           options={[
                             { value: "", label: "Không có bằng khen" },
                             {
                               value: "bằng khen bộ quốc phòng",
-                              label: `🏆 Bằng khen Bộ Quốc Phòng${
+                              label: `🏆 BK của Bộ trưởng BQP${
                                 !canSelectMinistryReward()
-                                  ? " (Chưa đủ điều kiện)"
+                                  ? ` ❌ ${getMinistryRewardReason()}`
                                   : ""
                               }`,
                               disabled: !canSelectMinistryReward(),
@@ -1151,7 +1457,7 @@ const Achievement = () => {
                               value: "CSTĐ Toàn Quân",
                               label: `🥇 CSTĐ Toàn Quân${
                                 !canSelectNationalReward()
-                                  ? " (Chưa đủ điều kiện)"
+                                  ? ` ❌ ${getNationalRewardReason()}`
                                   : ""
                               }`,
                               disabled: !canSelectNationalReward(),
@@ -1162,14 +1468,14 @@ const Achievement = () => {
                     </div>
 
                     {/* Cột phải - Nghiên cứu khoa học */}
-                    <div className="space-y-4">
+                    <div className="md:col-span-1 space-y-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b pb-2">
-                        Nghiên cứu khoa học
+                        Nghiên cứu khoa học (nếu có)
                       </h3>
 
                       <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                          Loại khoa học
+                          Loại nghiên cứu khoa học
                         </label>
                         <div className="space-y-2">
                           <label className="flex items-center">
@@ -1334,6 +1640,7 @@ const Achievement = () => {
                                 })
                               }
                               style={{ width: "100%" }}
+                              getPopupContainer={() => document.getElementById("add-achievement-modal")}
                               options={[
                                 { value: "pending", label: "Chờ duyệt" },
                                 { value: "approved", label: "Đã duyệt" },
@@ -1419,6 +1726,7 @@ const Achievement = () => {
                                 })
                               }
                               style={{ width: "100%" }}
+                              getPopupContainer={() => document.getElementById("add-achievement-modal")}
                               options={[
                                 { value: "pending", label: "Chờ duyệt" },
                                 { value: "approved", label: "Đã duyệt" },
@@ -1456,15 +1764,43 @@ const Achievement = () => {
                         setShowFormAdd(false);
                         setSelectedStudentForForm(null);
                       }}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
+                      disabled={submitting}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Hủy
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      disabled={submitting}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                     >
-                      Thêm
+                      {submitting ? (
+                        <>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Đang thêm khen thưởng...
+                        </>
+                      ) : (
+                        "Thêm khen thưởng"
+                      )}
                     </button>
                   </div>
                 </form>
@@ -1475,7 +1811,7 @@ const Achievement = () => {
           {showFormEdit && selectedStudentForForm && (
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pt-16 ">
               <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-              <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto">
+              <div id="edit-achievement-modal" className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-7xl max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Chỉnh sửa khen thưởng cho {selectedStudentForForm.fullName}
@@ -1495,11 +1831,12 @@ const Achievement = () => {
                     handleUpdateYearlyAchievement(e, editFormData.id)
                   }
                   className="p-4"
+                  noValidate
                 >
-                  {/* Layout 2 cột */}
-                  <div className="grid grid-cols-2 gap-6">
+                  {/* Layout 2 cột - tỷ lệ 2:1 */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Cột trái - Thông tin cơ bản */}
-                    <div className="space-y-4">
+                    <div className="md:col-span-2 space-y-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b pb-2">
                         Thông tin cơ bản
                       </h3>
@@ -1548,7 +1885,6 @@ const Achievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
                         />
                       </div>
 
@@ -1590,6 +1926,7 @@ const Achievement = () => {
                           }
                           placeholder="Chọn danh hiệu"
                           style={{ width: "100%" }}
+                          getPopupContainer={() => document.getElementById("edit-achievement-modal")}
                           options={[
                             { value: "", label: "Chọn danh hiệu" },
                             {
@@ -1626,40 +1963,46 @@ const Achievement = () => {
                           }}
                           placeholder="Chọn bằng khen"
                           style={{ width: "100%" }}
-                          options={[
-                            { value: "", label: "Không có bằng khen" },
-                            {
-                              value: "bằng khen bộ quốc phòng",
-                              label: `🥇 Bằng khen Bộ Quốc Phòng${
-                                !canSelectMinistryReward()
-                                  ? " (Chưa đủ điều kiện)"
-                                  : ""
-                              }`,
-                              disabled: !canSelectMinistryReward(),
-                            },
-                            {
-                              value: "CSTĐ Toàn Quân",
-                              label: `🎖️ CSTĐ Toàn Quân${
-                                !canSelectNationalReward()
-                                  ? " (Chưa đủ điều kiện)"
-                                  : ""
-                              }`,
-                              disabled: !canSelectNationalReward(),
-                            },
-                          ]}
+                          getPopupContainer={() => document.getElementById("edit-achievement-modal")}
+                          options={(() => {
+                            const canSelectBKBQP = canSelectMinistryRewardForEdit() || editFormData.hasMinistryReward;
+                            const canSelectCSTDTQ = canSelectNationalRewardForEdit() || editFormData.hasNationalReward;
+
+                            return [
+                              { value: "", label: "Không có bằng khen" },
+                              {
+                                value: "bằng khen bộ quốc phòng",
+                                label: `🏆 BK của Bộ trưởng BQP${
+                                  !canSelectBKBQP
+                                    ? ` ❌ ${getMinistryRewardReasonForEdit()}`
+                                    : ""
+                                }`,
+                                disabled: !canSelectBKBQP,
+                              },
+                              {
+                                value: "CSTĐ Toàn Quân",
+                                label: `🥇 CSTĐ Toàn Quân${
+                                  !canSelectCSTDTQ
+                                    ? ` ❌ ${getNationalRewardReasonForEdit()}`
+                                    : ""
+                                }`,
+                                disabled: !canSelectCSTDTQ,
+                              },
+                            ];
+                          })()}
                         />
                       </div>
                     </div>
 
                     {/* Cột phải - Nghiên cứu khoa học */}
-                    <div className="space-y-4">
+                    <div className="md:col-span-1 space-y-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b pb-2">
-                        Nghiên cứu khoa học
+                        Nghiên cứu khoa học (nếu có)
                       </h3>
 
                       <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
-                          Loại khoa học
+                          Loại nghiên cứu khoa học
                         </label>
                         <div className="space-y-2">
                           <label className="flex items-center">
@@ -1825,6 +2168,7 @@ const Achievement = () => {
                                 })
                               }
                               style={{ width: "100%" }}
+                              getPopupContainer={() => document.getElementById("edit-achievement-modal")}
                               options={[
                                 { value: "pending", label: "Chờ duyệt" },
                                 { value: "approved", label: "Đã duyệt" },
@@ -1910,6 +2254,7 @@ const Achievement = () => {
                                 })
                               }
                               style={{ width: "100%" }}
+                              getPopupContainer={() => document.getElementById("edit-achievement-modal")}
                               options={[
                                 { value: "pending", label: "Chờ duyệt" },
                                 { value: "approved", label: "Đã duyệt" },
@@ -1947,18 +2292,166 @@ const Achievement = () => {
                         setShowFormEdit(false);
                         setSelectedStudentForForm(null);
                       }}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
+                      disabled={submitting}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Hủy
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      disabled={submitting}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                     >
-                      Cập nhật
+                      {submitting ? (
+                        <>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Đang cập nhật...
+                        </>
+                      ) : (
+                        "Cập nhật"
+                      )}
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+          {/* Modal xác nhận xóa */}
+          {showDeleteModal && deleteTarget && (
+            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+              <div className="bg-black bg-opacity-50 inset-0 fixed" onClick={closeDeleteModal}></div>
+              <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+                <div className="p-6">
+                  <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30">
+                    <svg
+                      className="w-6 h-6 text-red-600 dark:text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-center text-gray-900 dark:text-white mb-2">
+                    Xác nhận xóa khen thưởng
+                  </h3>
+                  <p className="text-center text-gray-600 dark:text-gray-400 mb-2">
+                    Bạn có chắc chắn muốn xóa khen thưởng này?
+                  </p>
+                  <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Học viên:</span> {deleteTarget.student?.fullName}
+                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Năm:</span> {deleteTarget.achievement?.year}
+                    </p>
+                    {deleteTarget.achievement?.title && (
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Danh hiệu:</span> {deleteTarget.achievement?.title}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-center text-sm text-red-600 dark:text-red-400 mb-4">
+                    Hành động này không thể hoàn tác!
+                  </p>
+                  <div className="flex justify-center space-x-3">
+                    <button
+                      onClick={closeDeleteModal}
+                      disabled={submitting}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors disabled:opacity-50"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      onClick={handleDeleteYearlyAchievement}
+                      disabled={submitting}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center"
+                    >
+                      {submitting ? (
+                        <>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Đang xóa...
+                        </>
+                      ) : (
+                        "Xóa"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Loading overlay khi đang xử lý */}
+          {submitting && !showFormAdd && !showFormEdit && !showDeleteModal && (
+            <div className="fixed inset-0 flex items-center justify-center z-50">
+              <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
+              <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 flex flex-col items-center">
+                <svg
+                  className="animate-spin h-10 w-10 text-blue-600 mb-3"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span className="text-gray-700 dark:text-gray-300 font-medium">
+                  Đang xử lý...
+                </span>
               </div>
             </div>
           )}

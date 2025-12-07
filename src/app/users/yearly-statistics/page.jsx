@@ -993,6 +993,84 @@ const YearlyStatistics = () => {
         </div>
       </div>
 
+      {/* CSS cho Select dropdown đồng bộ với dark mode */}
+      <style jsx global>{`
+        .ant-select .ant-select-selector {
+          background-color: rgb(255 255 255) !important;
+          border-color: rgb(209 213 219) !important;
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select .ant-select-selection-placeholder {
+          color: rgb(107 114 128) !important;
+        }
+        .ant-select-single .ant-select-selector .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(17 24 39) !important;
+          font-weight: 600;
+        }
+        .ant-select-arrow,
+        .ant-select-clear {
+          color: rgb(107 114 128);
+        }
+        .ant-select-dropdown {
+          background-color: rgb(255 255 255) !important;
+          border: 1px solid rgb(229 231 235) !important;
+        }
+        .ant-select-item {
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.12) !important;
+          color: rgb(30 58 138) !important;
+        }
+        .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.18) !important;
+          color: rgb(30 58 138) !important;
+          font-weight: 600 !important;
+        }
+
+        .dark .ant-select .ant-select-selector {
+          background-color: rgb(55 65 81) !important;
+          border-color: rgb(75 85 99) !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select .ant-select-selection-placeholder {
+          color: rgb(156 163 175) !important;
+        }
+        .dark
+          .ant-select-single
+          .ant-select-selector
+          .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(255 255 255) !important;
+          font-weight: 600;
+        }
+        .dark .ant-select-arrow,
+        .dark .ant-select-clear {
+          color: rgb(209 213 219) !important;
+        }
+        .dark .ant-select-dropdown {
+          background-color: rgb(31 41 55) !important;
+          border-color: rgb(55 65 81) !important;
+        }
+        .dark .ant-select-item {
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.25) !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-selected:not(
+            .ant-select-item-option-disabled
+          ) {
+          background-color: rgba(59, 130, 246, 0.35) !important;
+          color: rgb(255 255 255) !important;
+          font-weight: 600 !important;
+        }
+      `}</style>
+
       {/* Modal chi tiết điểm */}
       {showDetailModal && selectedStudent && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">

@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { handleNotify } from "../../../../components/notify";
 import axiosInstance from "@/utils/axiosInstance";
 
 const StudentAchievement = () => {
-  const router = useRouter();
   const params = useParams();
   const { studentId } = params;
 
@@ -75,6 +74,26 @@ const StudentAchievement = () => {
 
   const handleAddYearlyAchievement = async (e) => {
     e.preventDefault();
+
+    // Validate điều kiện bằng khen
+    if (addFormData.hasMinistryReward && !canSelectMinistryReward()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận BK BQP: ${getMinistryRewardReason()}`
+      );
+      return;
+    }
+
+    if (addFormData.hasNationalReward && !canSelectNationalReward()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận CSTĐ TQ: ${getNationalRewardReason()}`
+      );
+      return;
+    }
+
     try {
       await axiosInstance.post(`/achievement/admin/${studentId}`, addFormData);
       handleNotify("success", "Thành công!", "Thêm khen thưởng thành công");
@@ -92,6 +111,26 @@ const StudentAchievement = () => {
 
   const handleUpdateYearlyAchievement = async (e, achievementId) => {
     e.preventDefault();
+
+    // Validate điều kiện bằng khen cho form edit
+    if (editFormData.hasMinistryReward && !canSelectMinistryRewardForEdit()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận BK BQP: ${getMinistryRewardReasonForEdit()}`
+      );
+      return;
+    }
+
+    if (editFormData.hasNationalReward && !canSelectNationalRewardForEdit()) {
+      handleNotify(
+        "danger",
+        "Lỗi!",
+        `Không đủ điều kiện nhận CSTĐ TQ: ${getNationalRewardReasonForEdit()}`
+      );
+      return;
+    }
+
     try {
       await axiosInstance.put(
         `/achievement/admin/${achievementId}`,
@@ -128,30 +167,73 @@ const StudentAchievement = () => {
     return title || "-";
   };
 
-  const getScientificResearchDisplay = (ya) => {
-    if (!ya || !ya.scientific) return "Chưa có";
+  const renderScientificResearch = (ya) => {
+    if (!ya || !ya.scientific) return "Chưa có NCKH";
     const { topics, initiatives } = ya.scientific;
+
     if (topics && topics.length > 0) {
       const topic = topics[0];
-      const statusText =
-        topic.status === "approved"
-          ? "Đã duyệt"
-          : topic.status === "rejected"
-          ? "Từ chối"
-          : "Chờ duyệt";
-      return `Đề tài: ${topic.title || "N/A"} (${statusText})`;
+      return (
+        <div className="text-left">
+          <div className="font-medium">
+            Đề tài: {topic.title || "N/A"}
+            <span
+              className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                topic.status === "approved"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                  : topic.status === "rejected"
+                  ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+              }`}
+            >
+              {topic.status === "approved"
+                ? "Đã duyệt"
+                : topic.status === "rejected"
+                ? "Từ chối"
+                : "Chờ duyệt"}
+            </span>
+          </div>
+          {topic.description && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-normal">
+              {topic.description}
+            </div>
+          )}
+        </div>
+      );
     }
+
     if (initiatives && initiatives.length > 0) {
       const initiative = initiatives[0];
-      const statusText =
-        initiative.status === "approved"
-          ? "Đã duyệt"
-          : initiative.status === "rejected"
-          ? "Từ chối"
-          : "Chờ duyệt";
-      return `Sáng kiến: ${initiative.title || "N/A"} (${statusText})`;
+      return (
+        <div className="text-left">
+          <div className="font-medium">
+            Sáng kiến: {initiative.title || "N/A"}
+            <span
+              className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                initiative.status === "approved"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                  : initiative.status === "rejected"
+                  ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+              }`}
+            >
+              {initiative.status === "approved"
+                ? "Đã duyệt"
+                : initiative.status === "rejected"
+                ? "Từ chối"
+                : "Chờ duyệt"}
+            </span>
+          </div>
+          {initiative.description && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-normal">
+              {initiative.description}
+            </div>
+          )}
+        </div>
+      );
     }
-    return "Chưa có";
+
+    return "Chưa có NCKH";
   };
 
   const getRewardsDisplay = (ya) => {
@@ -162,292 +244,216 @@ const StudentAchievement = () => {
     return rewards.length > 0 ? rewards.join(", ") : "Chưa có";
   };
 
-  // Điều kiện chọn bằng khen Bộ Quốc Phòng
-  const canSelectMinistryReward = () => {
-    if (!achievement) return false;
+  // Lấy lý do tại sao chưa đủ điều kiện BK BQP (cho form Add)
+  const getMinistryRewardReason = () => {
+    if (!achievement) return "Không có dữ liệu thành tích";
 
-    // Đã nhận rồi thì không cho chọn nữa
+    // Kiểm tra đã nhận bằng khen Bộ Quốc Phòng chưa
     const hasMinistryReward = achievement.yearlyAchievements?.some(
       (ya) => ya.hasMinistryReward
     );
-    if (hasMinistryReward) return false;
+    if (hasMinistryReward) return "Đã nhận BK BQP trước đó";
 
-    // Cần ít nhất 2 năm chiến sĩ thi đua liên tiếp
-    const competitiveYears =
-      achievement.yearlyAchievements
-        ?.filter((ya) => ya.title === "Chiến sĩ thi đua")
-        ?.map((ya) => ya.year)
-        ?.sort((a, b) => a - b) || [];
-    if (competitiveYears.length < 2) return false;
+    // Lấy recommendations từ nextYearRecommendations trong achievement object
+    const nextYearRec = achievement.nextYearRecommendations || {};
+    const eligibleMinistryRewardYear =
+      nextYearRec.eligibleMinistryRewardYear || 0;
 
-    // Tìm chuỗi liên tiếp có ít nhất 2 năm
-    let maxConsecutive = 0;
-    let currentConsecutive = 0;
-    let consecutiveStartYear = 0;
-    let validTwoYearStreak = null;
-
-    for (let i = 0; i < competitiveYears.length; i++) {
-      if (i === 0 || competitiveYears[i] === competitiveYears[i - 1] + 1) {
-        if (currentConsecutive === 0)
-          consecutiveStartYear = competitiveYears[i];
-        currentConsecutive++;
-
-        // Lưu chuỗi 2 năm liên tiếp gần nhất
-        if (currentConsecutive >= 2) {
-          validTwoYearStreak = {
-            startYear: consecutiveStartYear,
-            endYear: competitiveYears[i],
-          };
-        }
-      } else {
-        currentConsecutive = 1;
-        consecutiveStartYear = competitiveYears[i];
+    // Ưu tiên kiểm tra eligibleForMinistryReward trước - đây là kết quả cuối cùng từ backend
+    // Nếu đủ điều kiện, chỉ cần kiểm tra năm
+    if (achievement.eligibleForMinistryReward) {
+      // Kiểm tra năm nhập có đúng năm được phép không
+      const formYear = parseInt(addFormData.year) || 0;
+      if (
+        eligibleMinistryRewardYear > 0 &&
+        formYear !== eligibleMinistryRewardYear
+      ) {
+        const details = nextYearRec.nationalRewardDetails || {};
+        const firstYear =
+          details.firstYearOfStreak || eligibleMinistryRewardYear - 2;
+        const secondYear =
+          details.secondYearOfStreak || eligibleMinistryRewardYear - 1;
+        return `BK BQP chỉ được nhận vào năm ${eligibleMinistryRewardYear} (sau 2 năm CSTĐ ${firstYear}-${secondYear})`;
       }
-      if (currentConsecutive > maxConsecutive)
-        maxConsecutive = currentConsecutive;
+      return ""; // Đủ điều kiện
     }
 
-    if (maxConsecutive < 2 || !validTwoYearStreak) return false;
+    // Nếu chưa đủ điều kiện, giải thích lý do
+    const consecutiveYears = nextYearRec.consecutiveCompetitiveYears || 0;
+    const lastYearWasAdvanced = nextYearRec.lastYearWasAdvanced || false;
 
-    // Kiểm tra đã qua năm thứ 2 chưa
-    const maxYear = Math.max(...competitiveYears);
-    const secondYearOfStreak = validTwoYearStreak.startYear + 1;
-    if (maxYear < secondYearOfStreak) return false;
+    if (lastYearWasAdvanced) {
+      return "Chuỗi CSTĐ bị reset do năm gần nhất là CSTT";
+    }
 
-    // Cần có đề tài hoặc sáng kiến đã duyệt ở bất kỳ năm nào
-    let hasApprovedScientific = false;
-    achievement.yearlyAchievements?.forEach((ya) => {
-      if (ya.scientific) {
-        if (ya.scientific.topics?.some((t) => t.status === "approved")) {
-          hasApprovedScientific = true;
-        }
-        if (ya.scientific.initiatives?.some((i) => i.status === "approved")) {
-          hasApprovedScientific = true;
-        }
+    if (consecutiveYears < 2) {
+      return `Cần ${2 - consecutiveYears} năm CSTĐ liên tiếp nữa`;
+    }
+
+    // Có đủ 2 năm CSTĐ nhưng thiếu NCKH
+    return "Cần có NCKH đã duyệt ở cả 2 năm CSTĐ liên tiếp";
+  };
+
+  // Lấy lý do không đủ điều kiện BK BQP cho form Edit
+  const getMinistryRewardReasonForEdit = () => {
+    if (!achievement) return "Không có dữ liệu thành tích";
+
+    // Kiểm tra bản ghi đang edit ĐÃ CÓ BK BQP từ trước chưa
+    // Nếu đã có thì cho phép edit mà không cần validate lại
+    const currentRecord = achievement.yearlyAchievements?.find(
+      (ya) => ya.id === editFormData.id
+    );
+    if (currentRecord?.hasMinistryReward) {
+      return ""; // Bản ghi này đã có BK BQP, cho phép edit
+    }
+
+    // Kiểm tra các bản ghi KHÁC đã nhận BK BQP chưa
+    const hasMinistryRewardInOthers = achievement.yearlyAchievements?.some(
+      (ya) => ya.id !== editFormData.id && ya.hasMinistryReward
+    );
+    if (hasMinistryRewardInOthers) return "Đã nhận BK BQP ở bản ghi khác";
+
+    // Lấy recommendations từ nextYearRecommendations trong achievement object
+    const nextYearRec = achievement.nextYearRecommendations || {};
+    const eligibleMinistryRewardYear =
+      nextYearRec.eligibleMinistryRewardYear || 0;
+
+    // Ưu tiên kiểm tra eligibleForMinistryReward trước - đây là kết quả cuối cùng từ backend
+    // Nếu đủ điều kiện, chỉ cần kiểm tra năm
+    if (achievement.eligibleForMinistryReward) {
+      // Kiểm tra năm nhập có đúng năm được phép không
+      const formYear = parseInt(editFormData.year) || 0;
+      if (
+        eligibleMinistryRewardYear > 0 &&
+        formYear !== eligibleMinistryRewardYear
+      ) {
+        const details = nextYearRec.nationalRewardDetails || {};
+        const firstYear =
+          details.firstYearOfStreak || eligibleMinistryRewardYear - 2;
+        const secondYear =
+          details.secondYearOfStreak || eligibleMinistryRewardYear - 1;
+        return `BK BQP chỉ được nhận vào năm ${eligibleMinistryRewardYear} (sau 2 năm CSTĐ ${firstYear}-${secondYear})`;
       }
-    });
-    return hasApprovedScientific;
+      return ""; // Đủ điều kiện
+    }
+
+    // Nếu chưa đủ điều kiện, giải thích lý do
+    const consecutiveYears = nextYearRec.consecutiveCompetitiveYears || 0;
+    const lastYearWasAdvanced = nextYearRec.lastYearWasAdvanced || false;
+
+    if (lastYearWasAdvanced) {
+      return "Chuỗi CSTĐ bị reset do năm gần nhất là CSTT";
+    }
+
+    if (consecutiveYears < 2) {
+      return `Cần ${2 - consecutiveYears} năm CSTĐ liên tiếp nữa`;
+    }
+
+    // Có đủ 2 năm CSTĐ nhưng thiếu NCKH
+    return "Cần có NCKH đã duyệt ở cả 2 năm CSTĐ liên tiếp";
+  };
+
+  // Lấy lý do tại sao chưa đủ điều kiện CSTĐ TQ (cho form Add)
+  const getNationalRewardReason = () => {
+    if (!achievement) return "Không có dữ liệu thành tích";
+
+    // Kiểm tra đã nhận CSTĐ Toàn Quân chưa
+    const hasNationalReward = achievement.yearlyAchievements?.some(
+      (ya) => ya.hasNationalReward
+    );
+    if (hasNationalReward) return "Đã nhận CSTĐ TQ trước đó";
+
+    // Kiểm tra đã có BK BQP chưa
+    const hasMinistryReward = achievement.yearlyAchievements?.some(
+      (ya) => ya.hasMinistryReward
+    );
+    if (!hasMinistryReward) return "Phải có BK BQP trước";
+
+    // Lấy recommendations từ nextYearRecommendations trong achievement object
+    const nextYearRec = achievement.nextYearRecommendations || {};
+    const eligibleNationalRewardYear =
+      nextYearRec.eligibleNationalRewardYear || 0;
+    const ministryRewardYear = nextYearRec.ministryRewardYear || 0;
+    const formYear = parseInt(addFormData.year) || 0;
+
+    if (
+      eligibleNationalRewardYear > 0 &&
+      formYear !== eligibleNationalRewardYear
+    ) {
+      return `CSTĐ TQ chỉ được nhận vào năm ${eligibleNationalRewardYear} (năm sau năm nhận BK BQP ${ministryRewardYear})`;
+    }
+
+    if (!achievement.eligibleForNationalReward) {
+      return "Năm nhận BK BQP cần có CSTĐ và NCKH đã duyệt";
+    }
+
+    return "";
+  };
+
+  // Lấy lý do không đủ điều kiện CSTĐ TQ cho form Edit
+  const getNationalRewardReasonForEdit = () => {
+    if (!achievement) return "Không có dữ liệu thành tích";
+
+    // Kiểm tra bản ghi đang edit ĐÃ CÓ CSTĐ TQ từ trước chưa
+    // Nếu đã có thì cho phép edit mà không cần validate lại
+    const currentRecord = achievement.yearlyAchievements?.find(
+      (ya) => ya.id === editFormData.id
+    );
+    if (currentRecord?.hasNationalReward) {
+      return ""; // Bản ghi này đã có CSTĐ TQ, cho phép edit
+    }
+
+    // Kiểm tra các bản ghi KHÁC đã nhận CSTĐ TQ chưa
+    const hasNationalRewardInOthers = achievement.yearlyAchievements?.some(
+      (ya) => ya.id !== editFormData.id && ya.hasNationalReward
+    );
+    if (hasNationalRewardInOthers) return "Đã nhận CSTĐ TQ ở năm khác";
+
+    // Kiểm tra đã có BK BQP chưa
+    const hasMinistryReward = achievement.yearlyAchievements?.some(
+      (ya) => ya.hasMinistryReward
+    );
+    if (!hasMinistryReward) return "Phải có BK BQP trước";
+
+    // Lấy recommendations từ nextYearRecommendations trong achievement object
+    const nextYearRec = achievement.nextYearRecommendations || {};
+    const eligibleNationalRewardYear =
+      nextYearRec.eligibleNationalRewardYear || 0;
+    const ministryRewardYear = nextYearRec.ministryRewardYear || 0;
+    const formYear = parseInt(editFormData.year) || 0;
+
+    if (
+      eligibleNationalRewardYear > 0 &&
+      formYear !== eligibleNationalRewardYear
+    ) {
+      return `CSTĐ TQ chỉ được nhận vào năm ${eligibleNationalRewardYear} (năm sau năm nhận BK BQP ${ministryRewardYear})`;
+    }
+
+    if (!achievement.eligibleForNationalReward) {
+      return "Năm nhận BK BQP cần có CSTĐ và NCKH đã duyệt";
+    }
+
+    return "";
+  };
+
+  // Điều kiện chọn bằng khen Bộ Quốc Phòng
+  const canSelectMinistryReward = () => {
+    return getMinistryRewardReason() === "";
   };
 
   // Điều kiện chọn CSTĐ Toàn Quân
   const canSelectNationalReward = () => {
-    if (!achievement) return false;
-
-    // Đã nhận rồi thì không cho chọn nữa
-    const hasNationalReward = achievement.yearlyAchievements?.some(
-      (ya) => ya.hasNationalReward
-    );
-    if (hasNationalReward) return false;
-
-    // Cần ít nhất 3 năm chiến sĩ thi đua liên tiếp
-    const competitiveYears =
-      achievement.yearlyAchievements
-        ?.filter((ya) => ya.title === "Chiến sĩ thi đua")
-        ?.map((ya) => ya.year)
-        ?.sort((a, b) => a - b) || [];
-    if (competitiveYears.length < 3) return false;
-
-    // Tìm chuỗi ĐÚNG 3 năm liên tiếp (không quá 3)
-    let currentConsecutive = 0;
-    let consecutiveStartYear = 0;
-    let validThreeYearStreak = null;
-
-    for (let i = 0; i < competitiveYears.length; i++) {
-      if (i === 0 || competitiveYears[i] === competitiveYears[i - 1] + 1) {
-        if (currentConsecutive === 0)
-          consecutiveStartYear = competitiveYears[i];
-        currentConsecutive++;
-
-        // Khi đạt 3 năm liên tiếp, lưu lại
-        if (currentConsecutive === 3) {
-          validThreeYearStreak = {
-            startYear: consecutiveStartYear,
-            endYear: competitiveYears[i],
-          };
-        }
-        // Nếu quá 3 năm, reset để tìm chuỗi mới
-        if (currentConsecutive > 3) {
-          currentConsecutive = 1;
-          consecutiveStartYear = competitiveYears[i];
-          validThreeYearStreak = null; // Hủy chuỗi cũ vì đã quá 3 năm
-        }
-      } else {
-        currentConsecutive = 1;
-        consecutiveStartYear = competitiveYears[i];
-      }
-    }
-
-    if (!validThreeYearStreak) return false;
-
-    // Kiểm tra đã qua năm thứ 3 chưa
-    const maxYear = Math.max(...competitiveYears);
-    const thirdYearOfStreak = validThreeYearStreak.startYear + 2;
-    if (maxYear < thirdYearOfStreak) return false;
-
-    // CSTĐ TQ cần: NCKH ở năm thứ 3 + NCKH ở 1 trong 2 năm trước
-    const firstYear = validThreeYearStreak.startYear;
-    const secondYear = firstYear + 1;
-    const thirdYear = firstYear + 2;
-
-    let hasTopicInFirstYear = false;
-    let hasTopicInSecondYear = false;
-    let hasTopicInThirdYear = false;
-
-    achievement.yearlyAchievements?.forEach((ya) => {
-      if (ya.scientific) {
-        const hasApproved =
-          ya.scientific.topics?.some((t) => t.status === "approved") ||
-          ya.scientific.initiatives?.some((i) => i.status === "approved");
-
-        if (hasApproved) {
-          if (ya.year === firstYear) hasTopicInFirstYear = true;
-          if (ya.year === secondYear) hasTopicInSecondYear = true;
-          if (ya.year === thirdYear) hasTopicInThirdYear = true;
-        }
-      }
-    });
-
-    // Phải có NCKH ở năm thứ 3 VÀ có NCKH ở 1 trong 2 năm trước
-    return hasTopicInThirdYear && (hasTopicInFirstYear || hasTopicInSecondYear);
+    return getNationalRewardReason() === "";
   };
 
-  // Điều kiện chọn bằng khen BQP cho chế độ EDIT (loại trừ bản ghi đang sửa)
+  // Điều kiện chọn bằng khen BQP cho chế độ EDIT
   const canSelectMinistryRewardForEdit = () => {
-    if (!achievement || !editFormData.id) return false;
-
-    // Kiểm tra các bản ghi KHÁC có bằng khen BQP không
-    const hasMinistryRewardInOthers = achievement.yearlyAchievements?.some(
-      (ya) => ya.id !== editFormData.id && ya.hasMinistryReward
-    );
-    if (hasMinistryRewardInOthers) return false;
-
-    // Kiểm tra điều kiện tương tự canSelectMinistryReward
-    const competitiveYears =
-      achievement.yearlyAchievements
-        ?.filter((ya) => ya.title === "Chiến sĩ thi đua")
-        ?.map((ya) => ya.year)
-        ?.sort((a, b) => a - b) || [];
-    if (competitiveYears.length < 2) return false;
-
-    let maxConsecutive = 0;
-    let currentConsecutive = 0;
-    let consecutiveStartYear = 0;
-    let validTwoYearStreak = null;
-
-    for (let i = 0; i < competitiveYears.length; i++) {
-      if (i === 0 || competitiveYears[i] === competitiveYears[i - 1] + 1) {
-        if (currentConsecutive === 0)
-          consecutiveStartYear = competitiveYears[i];
-        currentConsecutive++;
-
-        if (currentConsecutive >= 2) {
-          validTwoYearStreak = {
-            startYear: consecutiveStartYear,
-            endYear: competitiveYears[i],
-          };
-        }
-      } else {
-        currentConsecutive = 1;
-        consecutiveStartYear = competitiveYears[i];
-      }
-      if (currentConsecutive > maxConsecutive)
-        maxConsecutive = currentConsecutive;
-    }
-
-    if (maxConsecutive < 2 || !validTwoYearStreak) return false;
-
-    const maxYear = Math.max(...competitiveYears);
-    const secondYearOfStreak = validTwoYearStreak.startYear + 1;
-    if (maxYear < secondYearOfStreak) return false;
-
-    let hasApprovedScientific = false;
-    achievement.yearlyAchievements?.forEach((ya) => {
-      if (ya.scientific) {
-        if (ya.scientific.topics?.some((t) => t.status === "approved")) {
-          hasApprovedScientific = true;
-        }
-        if (ya.scientific.initiatives?.some((i) => i.status === "approved")) {
-          hasApprovedScientific = true;
-        }
-      }
-    });
-    return hasApprovedScientific;
+    return getMinistryRewardReasonForEdit() === "";
   };
 
-  // Điều kiện chọn CSTĐ Toàn Quân cho chế độ EDIT (loại trừ bản ghi đang sửa)
+  // Điều kiện chọn CSTĐ Toàn Quân cho chế độ EDIT
   const canSelectNationalRewardForEdit = () => {
-    if (!achievement || !editFormData.id) return false;
-
-    // Kiểm tra các bản ghi KHÁC có CSTĐ TQ không
-    const hasNationalRewardInOthers = achievement.yearlyAchievements?.some(
-      (ya) => ya.id !== editFormData.id && ya.hasNationalReward
-    );
-    if (hasNationalRewardInOthers) return false;
-
-    // Kiểm tra điều kiện tương tự canSelectNationalReward
-    const competitiveYears =
-      achievement.yearlyAchievements
-        ?.filter((ya) => ya.title === "Chiến sĩ thi đua")
-        ?.map((ya) => ya.year)
-        ?.sort((a, b) => a - b) || [];
-    if (competitiveYears.length < 3) return false;
-
-    let currentConsecutive = 0;
-    let consecutiveStartYear = 0;
-    let validThreeYearStreak = null;
-
-    for (let i = 0; i < competitiveYears.length; i++) {
-      if (i === 0 || competitiveYears[i] === competitiveYears[i - 1] + 1) {
-        if (currentConsecutive === 0)
-          consecutiveStartYear = competitiveYears[i];
-        currentConsecutive++;
-
-        if (currentConsecutive === 3) {
-          validThreeYearStreak = {
-            startYear: consecutiveStartYear,
-            endYear: competitiveYears[i],
-          };
-        }
-        if (currentConsecutive > 3) {
-          currentConsecutive = 1;
-          consecutiveStartYear = competitiveYears[i];
-          validThreeYearStreak = null;
-        }
-      } else {
-        currentConsecutive = 1;
-        consecutiveStartYear = competitiveYears[i];
-      }
-    }
-
-    if (!validThreeYearStreak) return false;
-
-    const maxYear = Math.max(...competitiveYears);
-    const thirdYearOfStreak = validThreeYearStreak.startYear + 2;
-    if (maxYear < thirdYearOfStreak) return false;
-
-    const firstYear = validThreeYearStreak.startYear;
-    const secondYear = firstYear + 1;
-    const thirdYear = firstYear + 2;
-
-    let hasTopicInFirstYear = false;
-    let hasTopicInSecondYear = false;
-    let hasTopicInThirdYear = false;
-
-    achievement.yearlyAchievements?.forEach((ya) => {
-      if (ya.scientific) {
-        const hasApproved =
-          ya.scientific.topics?.some((t) => t.status === "approved") ||
-          ya.scientific.initiatives?.some((i) => i.status === "approved");
-
-        if (hasApproved) {
-          if (ya.year === firstYear) hasTopicInFirstYear = true;
-          if (ya.year === secondYear) hasTopicInSecondYear = true;
-          if (ya.year === thirdYear) hasTopicInThirdYear = true;
-        }
-      }
-    });
-
-    return hasTopicInThirdYear && (hasTopicInFirstYear || hasTopicInSecondYear);
+    return getNationalRewardReasonForEdit() === "";
   };
 
   const formatDate = (dateString) => {
@@ -749,8 +755,8 @@ const StudentAchievement = () => {
                               <td className="border px-3 py-2">
                                 {ya.title ? getTitleDisplay(ya.title) : "-"}
                               </td>
-                              <td className="border px-3 py-2">
-                                {getScientificResearchDisplay(ya)}
+                              <td className="border px-3 py-2 max-w-xs">
+                                {renderScientificResearch(ya)}
                               </td>
                               <td className="border px-3 py-2">
                                 {getRewardsDisplay(ya)}
@@ -845,7 +851,7 @@ const StudentAchievement = () => {
           {showFormAdd && (
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-              <div className="relative mt-20 bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto">
+              <div className="relative mt-20 bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Thêm khen thưởng
@@ -857,9 +863,13 @@ const StudentAchievement = () => {
                     ✕
                   </button>
                 </div>
-                <form onSubmit={handleAddYearlyAchievement} className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
+                <form
+                  onSubmit={handleAddYearlyAchievement}
+                  className="p-4"
+                  noValidate
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-3 space-y-4">
                       <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                           Năm
@@ -891,7 +901,7 @@ const StudentAchievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
+                          placeholder="Không bắt buộc"
                         />
                       </div>
                       <div>
@@ -908,7 +918,7 @@ const StudentAchievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
+                          placeholder="Không bắt buộc"
                         />
                       </div>
                       <div>
@@ -924,7 +934,6 @@ const StudentAchievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
                         >
                           <option value="">Chọn danh hiệu</option>
                           <option value="Chiến sĩ tiên tiến">
@@ -963,24 +972,26 @@ const StudentAchievement = () => {
                             value="bằng khen bộ quốc phòng"
                             disabled={!canSelectMinistryReward()}
                           >
-                            {canSelectMinistryReward() ||
-                            addFormData.hasMinistryReward
-                              ? "🥇 Bằng khen Bộ Quốc Phòng"
-                              : "🥇 Bằng khen Bộ Quốc Phòng (Chưa đủ điều kiện)"}
+                            {`🏆 BK của Bộ trưởng BQP${
+                              !canSelectMinistryReward()
+                                ? ` ❌ ${getMinistryRewardReason()}`
+                                : ""
+                            }`}
                           </option>
                           <option
                             value="CSTĐ Toàn Quân"
                             disabled={!canSelectNationalReward()}
                           >
-                            {canSelectNationalReward() ||
-                            addFormData.hasNationalReward
-                              ? "🎖️ CSTĐ Toàn Quân"
-                              : "🎖️ CSTĐ Toàn Quân (Chưa đủ điều kiện)"}
+                            {`🎖️ CSTĐ Toàn Quân${
+                              !canSelectNationalReward()
+                                ? ` ❌ ${getNationalRewardReason()}`
+                                : ""
+                            }`}
                           </option>
                         </select>
                       </div>
                     </div>
-                    <div className="space-y-4">
+                    <div className="md:col-span-1 space-y-4">
                       <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                           Nghiên cứu khoa học
@@ -1277,7 +1288,7 @@ const StudentAchievement = () => {
           {showFormEdit && (
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-              <div className="relative mt-14 bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto">
+              <div className="relative mt-14 bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Chỉnh sửa khen thưởng
@@ -1294,9 +1305,10 @@ const StudentAchievement = () => {
                     handleUpdateYearlyAchievement(e, editFormData.id)
                   }
                   className="p-4"
+                  noValidate
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="md:col-span-3 space-y-4">
                       <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                           Năm
@@ -1328,7 +1340,7 @@ const StudentAchievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
+                          placeholder="Không bắt buộc"
                         />
                       </div>
                       <div>
@@ -1351,7 +1363,6 @@ const StudentAchievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
                         />
                       </div>
                       <div>
@@ -1367,7 +1378,6 @@ const StudentAchievement = () => {
                             })
                           }
                           className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
                         >
                           <option value="">Chọn danh hiệu</option>
                           <option value="Chiến sĩ tiên tiến">
@@ -1404,26 +1414,36 @@ const StudentAchievement = () => {
                           <option value="">Không có bằng khen</option>
                           <option
                             value="bằng khen bộ quốc phòng"
-                            disabled={!canSelectMinistryRewardForEdit()}
+                            disabled={
+                              !canSelectMinistryRewardForEdit() &&
+                              !editFormData.hasMinistryReward
+                            }
                           >
-                            {canSelectMinistryRewardForEdit() ||
-                            editFormData.hasMinistryReward
-                              ? "🥇 Bằng khen Bộ Quốc Phòng"
-                              : "🥇 Bằng khen Bộ Quốc Phòng (Chưa đủ điều kiện)"}
+                            {`🏆 BK của Bộ trưởng BQP${
+                              !canSelectMinistryRewardForEdit() &&
+                              !editFormData.hasMinistryReward
+                                ? ` ❌ ${getMinistryRewardReasonForEdit()}`
+                                : ""
+                            }`}
                           </option>
                           <option
                             value="CSTĐ Toàn Quân"
-                            disabled={!canSelectNationalRewardForEdit()}
+                            disabled={
+                              !canSelectNationalRewardForEdit() &&
+                              !editFormData.hasNationalReward
+                            }
                           >
-                            {canSelectNationalRewardForEdit() ||
-                            editFormData.hasNationalReward
-                              ? "🎖️ CSTĐ Toàn Quân"
-                              : "🎖️ CSTĐ Toàn Quân (Chưa đủ điều kiện)"}
+                            {`🎖️ CSTĐ Toàn Quân${
+                              !canSelectNationalRewardForEdit() &&
+                              !editFormData.hasNationalReward
+                                ? ` ❌ ${getNationalRewardReasonForEdit()}`
+                                : ""
+                            }`}
                           </option>
                         </select>
                       </div>
                     </div>
-                    <div className="space-y-4">
+                    <div className="md:col-span-1 space-y-4">
                       <div>
                         <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
                           Nghiên cứu khoa học

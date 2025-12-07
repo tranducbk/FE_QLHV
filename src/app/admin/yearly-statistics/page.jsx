@@ -425,29 +425,9 @@ const YearlyStatistics = () => {
       return matchesSearch && matchesUnit;
     });
 
-    // Sắp xếp theo thứ tự: năm học → đơn vị → tên
-    return filtered.sort((a, b) => {
-      // 1. Sắp xếp theo năm học (mới nhất trước)
-      if (a.schoolYear !== b.schoolYear) {
-        return b.schoolYear.localeCompare(a.schoolYear);
-      }
-
-      // 2. Trong cùng năm học, sắp xếp theo đơn vị từ L1-H5 đến L6-H5
-      const unitOrder = {
-        "L1 - H5": 1,
-        "L2 - H5": 2,
-        "L3 - H5": 3,
-        "L4 - H5": 4,
-        "L5 - H5": 5,
-        "L6 - H5": 6,
-      };
-      const unitA = unitOrder[a.unit] || 999;
-      const unitB = unitOrder[b.unit] || 999;
-      if (unitA !== unitB) return unitA - unitB;
-
-      // 3. Trong cùng đơn vị, sắp xếp theo tên học viên A-Z
-      return a.fullName.localeCompare(b.fullName, "vi");
-    });
+    // Sắp xếp theo điểm GPA từ cao xuống thấp (đã được sắp xếp từ backend)
+    // Giữ nguyên thứ tự từ API
+    return filtered;
   };
 
   // Tính toán dữ liệu phân trang
@@ -1216,6 +1196,9 @@ const YearlyStatistics = () => {
                         <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                           <tr>
                             <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
+                              STT
+                            </th>
+                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                               ĐƠN VỊ
                             </th>
                             <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
@@ -1243,12 +1226,15 @@ const YearlyStatistics = () => {
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                           {getPaginatedResults().data.length > 0 ? (
-                            getPaginatedResults().data.map((item) => (
+                            getPaginatedResults().data.map((item, index) => (
                               <tr
                                 key={`${item.id}-${item.schoolYear}`}
                                 className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                                 onClick={() => handleViewDetail(item)}
                               >
+                                <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
+                                  {(currentPage - 1) * pageSize + index + 1}
+                                </td>
                                 <td className="px-3 md:px-6 py-3 md:py-4 whitespace-nowrap text-xs md:text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 text-center">
                                   {item.unit || "Chưa có đơn vị"}
                                 </td>
@@ -1396,7 +1382,7 @@ const YearlyStatistics = () => {
                           ) : (
                             <tr>
                               <td
-                                colSpan="8"
+                                colSpan="9"
                                 className="text-center py-6 md:py-8 text-gray-500 dark:text-gray-400"
                               >
                                 <div className="flex flex-col items-center">
@@ -1655,105 +1641,111 @@ const YearlyStatistics = () => {
               {studentDetail ? (
                 <>
                   {/* Thông tin tổng quan */}
-                  <div className="grid grid-cols-1 md:grid-cols-7 gap-4 mb-6">
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {studentDetail.totalCredits || 0}
+                  <div className="space-y-4 mb-6">
+                    {/* Hàng 1: GPA (Hệ 4), GPA (Hệ 10), CPA (Hệ 4), CPA (Hệ 10) */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {studentDetail.yearlyGPA?.toFixed(2) || "0.00"}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          GPA (Hệ 4)
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Tổng tín chỉ
+                      <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                          {studentDetail.yearlyGrade10?.toFixed(2) || "0.00"}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          GPA (Hệ 10)
+                        </div>
                       </div>
-                    </div>
-                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {studentDetail.yearlyGPA?.toFixed(2) || "0.00"}
+                      <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                          {studentDetail.cumulativeGPA?.toFixed(2) ||
+                            studentDetail.cumulativeGrade4?.toFixed(2) ||
+                            "Chưa có điểm"}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          CPA (Hệ 4)
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        GPA (Hệ 4)
-                      </div>
-                    </div>
-                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                        {studentDetail.yearlyGrade10?.toFixed(2) || "0.00"}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        GPA (Hệ 10)
-                      </div>
-                    </div>
-                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                        {studentDetail.cumulativeGPA?.toFixed(2) ||
-                          studentDetail.cumulativeGrade4?.toFixed(2) ||
-                          "Chưa có điểm"}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        CPA (Hệ 4)
-                      </div>
-                    </div>
-                    <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                        {studentDetail.cumulativeGrade10?.toFixed(2) || "0.00"}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        CPA (Hệ 10)
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                          {studentDetail.cumulativeGrade10?.toFixed(2) || "0.00"}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          CPA (Hệ 10)
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                        {studentDetail.subjects?.length || 0}
+                    {/* Hàng 2: Tổng tín chỉ, Số môn học, Xếp loại Đảng viên, Xếp loại Rèn luyện */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {studentDetail.totalCredits || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Tổng tín chỉ
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Số môn học
+                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                          {studentDetail.subjects?.length || 0}
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Số môn học
+                        </div>
                       </div>
-                    </div>
-                    <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-                      {(() => {
-                        const positionParty = studentDetail.positionParty;
-                        const partyRating = studentDetail.partyRating;
-                        const displayText =
-                          positionParty === "Không"
-                            ? "Chưa là Đảng viên"
-                            : partyRating?.rating || "Chưa cập nhật";
-                        const isSmallText =
-                          displayText === "Chưa cập nhật" ||
-                          displayText === "Chưa là Đảng viên";
+                      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
+                        {(() => {
+                          const positionParty = studentDetail.positionParty;
+                          const partyRating = studentDetail.partyRating;
+                          const displayText =
+                            positionParty === "Không"
+                              ? "Chưa là Đảng viên"
+                              : partyRating?.rating || "Chưa cập nhật";
+                          const isSmallText =
+                            displayText === "Chưa cập nhật" ||
+                            displayText === "Chưa là Đảng viên";
 
-                        return (
-                          <div
-                            className={`${
-                              isSmallText
-                                ? "text-sm font-bold"
-                                : "text-2xl font-bold"
-                            } text-red-600  mb-1 dark:text-red-400 flex items-center justify-center h-8`}
-                          >
-                            {displayText}
-                          </div>
-                        );
-                      })()}
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Xếp loại Đảng viên
+                          return (
+                            <div
+                              className={`${
+                                isSmallText
+                                  ? "text-sm font-bold"
+                                  : "text-2xl font-bold"
+                              } text-red-600  mb-1 dark:text-red-400 flex items-center justify-center h-8`}
+                            >
+                              {displayText}
+                            </div>
+                          );
+                        })()}
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Xếp loại Đảng viên
+                        </div>
                       </div>
-                    </div>
-                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
-                      {(() => {
-                        const trainingRating = studentDetail.trainingRating;
-                        const displayText = trainingRating || "Chưa cập nhật";
-                        const isSmallText = displayText === "Chưa cập nhật";
+                      <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
+                        {(() => {
+                          const trainingRating = studentDetail.trainingRating;
+                          const displayText = trainingRating || "Chưa cập nhật";
+                          const isSmallText = displayText === "Chưa cập nhật";
 
-                        return (
-                          <div
-                            className={`${
-                              isSmallText
-                                ? "text-sm font-bold"
-                                : "text-2xl font-bold"
-                            } text-indigo-600  mb-1 dark:text-indigo-400 flex items-center justify-center h-8`}
-                          >
-                            {displayText}
-                          </div>
-                        );
-                      })()}
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Xếp loại Rèn luyện
+                          return (
+                            <div
+                              className={`${
+                                isSmallText
+                                  ? "text-sm font-bold"
+                                  : "text-2xl font-bold"
+                              } text-indigo-600  mb-1 dark:text-indigo-400 flex items-center justify-center h-8`}
+                            >
+                              {displayText}
+                            </div>
+                          );
+                        })()}
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          Xếp loại Rèn luyện
+                        </div>
                       </div>
                     </div>
                   </div>

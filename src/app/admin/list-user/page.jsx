@@ -1325,7 +1325,7 @@ const ListUser = () => {
                           </div>
                           <div className="mb-2 text-gray-900 dark:text-white">
                             <span className="font-bold">
-                              Khoa/Viện quản lý:
+                              Trường/Khoa/Viện:
                             </span>{" "}
                             {profileOrganization?.organizationName ||
                               profileDetail?.organization?.organizationName ||
@@ -2101,7 +2101,7 @@ const ListUser = () => {
                                 htmlFor="organization"
                                 className="block mb-2 text-sm font-medium dark:text-white"
                               >
-                                Khoa/Viện quản lý
+                                Trường/Khoa/Viện
                               </label>
                               <select
                                 id="organization"
@@ -3889,7 +3889,7 @@ const ListUser = () => {
                               htmlFor="organization"
                               className="block mb-2 text-sm font-medium dark:text-white"
                             >
-                              Khoa/Viện quản lý
+                              Trường/Khoa/Viện
                             </label>
                             <select
                               id="organization"

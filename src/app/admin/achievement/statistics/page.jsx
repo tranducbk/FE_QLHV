@@ -1154,7 +1154,7 @@ const AchievementStatistics = () => {
           {showFormAdd && (
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-              <div className="relative mt-16 bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto">
+              <div className="relative mt-16 bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                     {selectedStudentForForm
@@ -1639,7 +1639,7 @@ const AchievementStatistics = () => {
           {showFormEdit && selectedStudentForForm && (
             <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
               <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-              <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+              <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-7xl max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between p-4 border-b">
                   <h2 className="text-xl font-semibold">
                     Chỉnh sửa khen thưởng cho {selectedStudentForForm.fullName}

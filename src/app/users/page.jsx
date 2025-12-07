@@ -417,20 +417,20 @@ export default function Home() {
   }
 
   return (
-    <div className="flex">
-      <div>
+    <div className="flex min-h-screen overflow-x-hidden">
+      <div className="flex-shrink-0">
         <SideBar />
       </div>
-      <div className="flex-1 min-h-screen bg-gray-50 dark:bg-gray-900 ml-64">
-        <div className="w-full pt-20 pl-5 pr-6 mb-5">
+      <div className="flex-1 min-h-screen bg-gray-50 dark:bg-gray-900 ml-64 overflow-x-hidden">
+        <div className="w-full pt-20 px-4 sm:px-5 lg:px-6 mb-5">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex justify-between items-start">
+          <div className="mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Tổng quan học tập và rèn luyện
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                   Chào mừng bạn trở lại! Đây là tổng quan về tình hình học tập
                   và rèn luyện của bạn.
                 </p>
@@ -438,7 +438,7 @@ export default function Home() {
               <button
                 onClick={refreshAllData}
                 disabled={isRefreshing}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+                className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors text-sm sm:text-base"
                 title="Làm mới dữ liệu"
               >
                 <svg
@@ -460,7 +460,7 @@ export default function Home() {
           </div>
 
           {/* Thống kê nhanh */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
@@ -575,10 +575,10 @@ export default function Home() {
           </div>
 
           {/* Các module chính */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {/* Học tập */}
             <Link href="/users/semester-results" className="group">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 shadow-lg border border-blue-200 dark:border-blue-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 sm:p-6 shadow-lg border border-blue-200 dark:border-blue-700 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] min-h-[14rem] sm:min-h-[16rem]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
                     <svg
@@ -676,7 +676,7 @@ export default function Home() {
 
             {/* Cắt cơm hôm nay */}
             <Link href="/users/cut-rice" className="group">
-              <div className="bg-gradient-to-br from-rose-50 to-pink-100 dark:from-rose-900/20 dark:to-pink-900/20 rounded-2xl p-6 shadow-lg border border-rose-200 dark:border-rose-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
+              <div className="bg-gradient-to-br from-rose-50 to-pink-100 dark:from-rose-900/20 dark:to-pink-900/20 rounded-2xl p-4 sm:p-6 shadow-lg border border-rose-200 dark:border-rose-700 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] min-h-[14rem] sm:min-h-[16rem]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-rose-100 dark:bg-rose-900/30 rounded-xl">
                     <svg
@@ -748,7 +748,7 @@ export default function Home() {
 
             {/* Thời khóa biểu hôm nay */}
             <Link href="/users/time-table" className="group">
-              <div className="bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl p-6 shadow-lg border border-emerald-200 dark:border-emerald-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
+              <div className="bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl p-4 sm:p-6 shadow-lg border border-emerald-200 dark:border-emerald-700 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] min-h-[14rem] sm:min-h-[16rem]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
                     <svg
@@ -821,7 +821,7 @@ export default function Home() {
 
             {/* Lịch trực chỉ huy */}
             <Link href="/users/commander-duty-schedule" className="group">
-              <div className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20 rounded-2xl p-6 shadow-lg border border-orange-200 dark:border-orange-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
+              <div className="bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-900/20 dark:to-amber-900/20 rounded-2xl p-4 sm:p-6 shadow-lg border border-orange-200 dark:border-orange-700 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] min-h-[14rem] sm:min-h-[16rem]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
                     <svg
@@ -895,7 +895,7 @@ export default function Home() {
 
             {/* Học phí */}
             <Link href="/users/tuition-fee" className="group">
-              <div className="bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-900/20 dark:to-purple-900/20 rounded-2xl p-6 shadow-lg border border-violet-200 dark:border-violet-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
+              <div className="bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-900/20 dark:to-purple-900/20 rounded-2xl p-4 sm:p-6 shadow-lg border border-violet-200 dark:border-violet-700 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] min-h-[14rem] sm:min-h-[16rem]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-violet-100 dark:bg-violet-900/30 rounded-xl">
                     <svg
@@ -956,7 +956,7 @@ export default function Home() {
 
             {/* Thông tin giấy tờ */}
             <div className="group">
-              <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/20 dark:to-gray-900/20 rounded-2xl p-6 shadow-lg border border-slate-200 dark:border-slate-700 transition-all duration-300 hover:shadow-xl hover:scale-105 h-64">
+              <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/20 dark:to-gray-900/20 rounded-2xl p-4 sm:p-6 shadow-lg border border-slate-200 dark:border-slate-700 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] min-h-[14rem] sm:min-h-[16rem]">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-slate-100 dark:bg-slate-900/30 rounded-xl">
                     <svg

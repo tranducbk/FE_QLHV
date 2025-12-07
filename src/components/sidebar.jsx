@@ -35,6 +35,8 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   BankOutlined,
+  SolutionOutlined,
+  FileDoneOutlined,
   TrophyFilled,
   BookFilled,
   CalendarFilled,
@@ -129,6 +131,12 @@ const SideBarContent = () => {
       return;
     }
 
+    // User: open proposals submenu
+    if (currentPath.startsWith("/users/proposals")) {
+      setOpenKeys(["proposals-user"]);
+      return;
+    }
+
     // Admin: Auto open submenu if current path is in submenu
     // Chỉ mở submenu "learning" cho các path thực sự nằm trong submenu đó
     if (
@@ -149,6 +157,8 @@ const SideBarContent = () => {
       currentPath.startsWith("/admin/universities")
     ) {
       setOpenKeys(["student-management"]);
+    } else if (currentPath.startsWith("/admin/proposals")) {
+      setOpenKeys(["proposals"]);
     } else if (currentPath.startsWith("/supper_admin")) {
       setOpenKeys([]);
     } else {
@@ -399,6 +409,19 @@ const SideBarContent = () => {
             <Menu.Item key="/admin/statistical" icon={<BarChartOutlined />}>
               Thống kê
             </Menu.Item>
+
+            <SubMenu
+              key="proposals"
+              icon={<SolutionOutlined />}
+              title="Duyệt đề xuất"
+            >
+              <Menu.Item
+                key="/admin/proposals/grade-results"
+                icon={<FileDoneOutlined />}
+              >
+                Kết quả học tập
+              </Menu.Item>
+            </SubMenu>
           </Menu>
         </ConfigProvider>
       </Sider>
@@ -535,6 +558,19 @@ const SideBarContent = () => {
             <Menu.Item key="/users/achievement" icon={<CrownOutlined />}>
               Khen thưởng
             </Menu.Item>
+
+            <SubMenu
+              key="proposals-user"
+              icon={<SolutionOutlined />}
+              title="Quản lý đề xuất"
+            >
+              <Menu.Item
+                key="/users/proposals/grade-results"
+                icon={<FileDoneOutlined />}
+              >
+                Kết quả học tập
+              </Menu.Item>
+            </SubMenu>
           </Menu>
         </ConfigProvider>
       </Sider>

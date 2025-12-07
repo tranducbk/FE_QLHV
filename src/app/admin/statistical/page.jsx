@@ -557,6 +557,9 @@ const Statictical = () => {
                         STT
                       </th>
                       <th className="border-r border-gray-200 dark:border-gray-600 py-3 px-4 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                        MSSV
+                      </th>
+                      <th className="border-r border-gray-200 dark:border-gray-600 py-3 px-4 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                         Họ và tên
                       </th>
                       <th className="border-r border-gray-200 dark:border-gray-600 py-3 px-4 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
@@ -596,6 +599,9 @@ const Statictical = () => {
                             {index + 1}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                            {item.studentCode || "-"}
+                          </td>
+                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
                             {item.fullName}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
@@ -613,14 +619,34 @@ const Statictical = () => {
                               item.averageGrade10}
                           </td>
                           <td className="whitespace-nowrap font-medium py-4 px-4">
-                            {item.trainingRating || "Chưa có dữ liệu"}
+                            {item.trainingRating ? (
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  item.trainingRating === "Tốt"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                    : item.trainingRating === "Khá"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                    : item.trainingRating === "Trung bình"
+                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                    : item.trainingRating === "Yếu"
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                                    : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                {item.trainingRating}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500 italic">
+                                Chưa có dữ liệu
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))}
                     {(!topStudentsLatestYear?.topStudents ||
                       topStudentsLatestYear.topStudents.length === 0) && (
                       <tr>
-                        <td colSpan={7} className="py-4 px-4 text-gray-400">
+                        <td colSpan={8} className="py-4 px-4 text-gray-400">
                           Không có dữ liệu
                         </td>
                       </tr>

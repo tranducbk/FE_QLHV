@@ -213,30 +213,58 @@ const AchievementContent = () => {
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
                             {item.title || "Không có dữ liệu"}
                           </td>
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.scientific?.topics?.length > 0
-                              ? `Đề tài: ${item.scientific.topics[0].title} (${
-                                  item.scientific.topics[0].status ===
-                                  "approved"
-                                    ? "Đã duyệt"
-                                    : item.scientific.topics[0].status ===
-                                      "rejected"
-                                    ? "Từ chối"
-                                    : "Chờ duyệt"
-                                })`
-                              : item.scientific?.initiatives?.length > 0
-                              ? `Sáng kiến: ${
-                                  item.scientific.initiatives[0].title
-                                } (${
-                                  item.scientific.initiatives[0].status ===
-                                  "approved"
-                                    ? "Đã duyệt"
-                                    : item.scientific.initiatives[0].status ===
-                                      "rejected"
-                                    ? "Từ chối"
-                                    : "Chờ duyệt"
-                                })`
-                              : "Chưa có NCKH"}
+                          <td className="font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4 max-w-xs">
+                            {item.scientific?.topics?.length > 0 ? (
+                              <div className="text-left">
+                                <div className="font-medium">
+                                  Đề tài: {item.scientific.topics[0].title}
+                                  <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                                    item.scientific.topics[0].status === "approved"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                      : item.scientific.topics[0].status === "rejected"
+                                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                  }`}>
+                                    {item.scientific.topics[0].status === "approved"
+                                      ? "Đã duyệt"
+                                      : item.scientific.topics[0].status === "rejected"
+                                      ? "Từ chối"
+                                      : "Chờ duyệt"}
+                                  </span>
+                                </div>
+                                {item.scientific.topics[0].description && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-normal">
+                                    {item.scientific.topics[0].description}
+                                  </div>
+                                )}
+                              </div>
+                            ) : item.scientific?.initiatives?.length > 0 ? (
+                              <div className="text-left">
+                                <div className="font-medium">
+                                  Sáng kiến: {item.scientific.initiatives[0].title}
+                                  <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                                    item.scientific.initiatives[0].status === "approved"
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                      : item.scientific.initiatives[0].status === "rejected"
+                                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                  }`}>
+                                    {item.scientific.initiatives[0].status === "approved"
+                                      ? "Đã duyệt"
+                                      : item.scientific.initiatives[0].status === "rejected"
+                                      ? "Từ chối"
+                                      : "Chờ duyệt"}
+                                  </span>
+                                </div>
+                                {item.scientific.initiatives[0].description && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 whitespace-normal">
+                                    {item.scientific.initiatives[0].description}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              "Chưa có NCKH"
+                            )}
                           </td>
                           <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
                             {item.hasMinistryReward ? "✓" : ""}

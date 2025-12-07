@@ -588,20 +588,29 @@ const CutRice = () => {
                       >
                         Chọn đơn vị
                       </label>
-                      <select
-                        id="unit"
-                        value={unit}
-                        onChange={(e) => handleUnitChange(e.target.value)}
-                        className="bg-gray-50 border w-56 border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pb-1 pt-1.5 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                      <ConfigProvider
+                        theme={{
+                          algorithm: isDark
+                            ? theme.darkAlgorithm
+                            : theme.defaultAlgorithm,
+                        }}
                       >
-                        <option value="">Tất cả đơn vị</option>
-                        <option value="L1 - H5">L1 - H5</option>
-                        <option value="L2 - H5">L2 - H5</option>
-                        <option value="L3 - H5">L3 - H5</option>
-                        <option value="L4 - H5">L4 - H5</option>
-                        <option value="L5 - H5">L5 - H5</option>
-                        <option value="L6 - H5">L6 - H5</option>
-                      </select>
+                        <Select
+                          id="unit"
+                          value={unit}
+                          onChange={(value) => handleUnitChange(value)}
+                          style={{ width: 224 }}
+                          options={[
+                            { value: "", label: "Tất cả đơn vị" },
+                            { value: "L1 - H5", label: "L1 - H5" },
+                            { value: "L2 - H5", label: "L2 - H5" },
+                            { value: "L3 - H5", label: "L3 - H5" },
+                            { value: "L4 - H5", label: "L4 - H5" },
+                            { value: "L5 - H5", label: "L5 - H5" },
+                            { value: "L6 - H5", label: "L6 - H5" },
+                          ]}
+                        />
+                      </ConfigProvider>
                     </div>
                   </div>
                 </div>
@@ -712,7 +721,7 @@ const CutRice = () => {
                           scope="col"
                           className="border-r border-gray-200 dark:border-gray-600 py-4 px-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                         >
-                          LỚP
+                          ĐƠN VỊ
                         </th>
                         <th
                           scope="col"
@@ -885,7 +894,7 @@ const CutRice = () => {
                             className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                           >
                             <td className="whitespace-nowrap font-medium border-r py-4 px-2 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                              {unitMapping[item.unit] || ""}
+                              {item.unit || ""}
                             </td>
                             <td className="whitespace-nowrap font-medium border-r py-4 px-2 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
                               {item.fullName}
@@ -1317,6 +1326,82 @@ const CutRice = () => {
           </div>
         </div>
       )}
+
+      {/* CSS cho Select dropdown đồng bộ với dark mode */}
+      <style jsx global>{`
+        .ant-select .ant-select-selector {
+          background-color: rgb(255 255 255) !important;
+          border-color: rgb(209 213 219) !important;
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select .ant-select-selection-placeholder {
+          color: rgb(107 114 128) !important;
+        }
+        .ant-select-single .ant-select-selector .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-arrow,
+        .ant-select-clear {
+          color: rgb(107 114 128);
+        }
+        .ant-select-dropdown {
+          background-color: rgb(255 255 255) !important;
+          border: 1px solid rgb(229 231 235) !important;
+        }
+        .ant-select-item {
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.12) !important;
+          color: rgb(30 58 138) !important;
+        }
+        .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.18) !important;
+          color: rgb(30 58 138) !important;
+          font-weight: 600 !important;
+        }
+
+        .dark .ant-select .ant-select-selector {
+          background-color: rgb(55 65 81) !important;
+          border-color: rgb(75 85 99) !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select .ant-select-selection-placeholder {
+          color: rgb(156 163 175) !important;
+        }
+        .dark
+          .ant-select-single
+          .ant-select-selector
+          .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select-arrow,
+        .dark .ant-select-clear {
+          color: rgb(209 213 219) !important;
+        }
+        .dark .ant-select-dropdown {
+          background-color: rgb(31 41 55) !important;
+          border-color: rgb(55 65 81) !important;
+        }
+        .dark .ant-select-item {
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.25) !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-selected:not(
+            .ant-select-item-option-disabled
+          ) {
+          background-color: rgba(59, 130, 246, 0.35) !important;
+          color: rgb(255 255 255) !important;
+          font-weight: 600 !important;
+        }
+      `}</style>
     </>
   );
 };

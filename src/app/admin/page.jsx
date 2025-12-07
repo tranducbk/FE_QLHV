@@ -438,8 +438,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="pt-20 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
+      <div className="pt-20 p-4 w-full max-w-full box-border">
         {/* Header bên trái */}
         <div className="mb-6">
           <div className="text-left">
@@ -453,17 +453,17 @@ export default function Home() {
         </div>
 
         {/* Grid Layout - 2x2 Cards */}
-        <div className="max-w-6xl mx-auto">
+        <div className="w-full max-w-6xl mx-auto overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
             {/* Card 1: Tổng quan quân số */}
-            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <SafetyOutlined className="text-white text-lg" />
+            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] overflow-hidden">
+              <div className="flex items-center justify-between mb-4 gap-2">
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <SafetyOutlined className="text-white text-base sm:text-lg" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200 truncate">
                       Tổng quan quân số
                     </h3>
                     <p className="text-slate-600 dark:text-slate-400 text-xs">
@@ -471,8 +471,8 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                <div className="text-right flex-shrink-0">
+                  <div className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400">
                     {totalPersonnel}
                   </div>
                   <p className="text-slate-500 dark:text-slate-400 text-xs">
@@ -510,7 +510,7 @@ export default function Home() {
 
             {/* Card 2: Kết quả học tập */}
             <Link href="/admin/learning-results" className="block">
-              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -538,12 +538,12 @@ export default function Home() {
                 </div>
 
                 {/* 4 Progress Rings */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
                   {/* Xuất sắc + Giỏi */}
                   <div className="flex flex-col items-center">
-                    <div className="relative w-16 h-16">
+                    <div className="relative w-12 h-12 sm:w-16 sm:h-16">
                       <svg
-                        className="w-16 h-16 transform -rotate-90"
+                        className="w-12 h-12 sm:w-16 sm:h-16 transform -rotate-90"
                         viewBox="0 0 100 100"
                       >
                         <circle
@@ -599,9 +599,9 @@ export default function Home() {
 
                   {/* Khá */}
                   <div className="flex flex-col items-center">
-                    <div className="relative w-16 h-16">
+                    <div className="relative w-12 h-12 sm:w-16 sm:h-16">
                       <svg
-                        className="w-16 h-16 transform -rotate-90"
+                        className="w-12 h-12 sm:w-16 sm:h-16 transform -rotate-90"
                         viewBox="0 0 100 100"
                       >
                         <circle
@@ -653,9 +653,9 @@ export default function Home() {
 
                   {/* TB/Yếu */}
                   <div className="flex flex-col items-center">
-                    <div className="relative w-16 h-16">
+                    <div className="relative w-12 h-12 sm:w-16 sm:h-16">
                       <svg
-                        className="w-16 h-16 transform -rotate-90"
+                        className="w-12 h-12 sm:w-16 sm:h-16 transform -rotate-90"
                         viewBox="0 0 100 100"
                       >
                         <circle
@@ -710,9 +710,9 @@ export default function Home() {
 
                   {/* Nợ môn */}
                   <div className="flex flex-col items-center">
-                    <div className="relative w-16 h-16">
+                    <div className="relative w-12 h-12 sm:w-16 sm:h-16">
                       <svg
-                        className="w-16 h-16 transform -rotate-90"
+                        className="w-12 h-12 sm:w-16 sm:h-16 transform -rotate-90"
                         viewBox="0 0 100 100"
                       >
                         <circle
@@ -763,7 +763,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-1 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 text-center">
                   <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-2">
                     <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
                       {learningStats.excellent + learningStats.good}
@@ -804,7 +804,7 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Card 3: Lịch cắt cơm */}
             <Link href="/admin/cut-rice" className="block">
-              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -865,7 +865,7 @@ export default function Home() {
 
             {/* Card 4: Xếp loại rèn luyện */}
             <Link href="/admin/training-rating" className="block">
-              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -894,7 +894,7 @@ export default function Home() {
 
                 {/* Training Rating Types */}
                 <div className="space-y-2">
-                  <div className="grid grid-cols-4 gap-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                     <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-2 text-center">
                       <div className="text-sm font-bold text-slate-800 dark:text-slate-200">
                         {trainingStats.good}
@@ -936,7 +936,7 @@ export default function Home() {
           {/* Row 2: Additional Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
             {/* Card 5: Top học viên */}
-            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl">
+            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -1017,7 +1017,7 @@ export default function Home() {
 
             {/* Card 6: Thống kê trường và khoa/viện */}
             <Link href="/admin/universities" className="block">
-              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer">
+              <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -1049,7 +1049,7 @@ export default function Home() {
                       {universityStats.totalOrganizations}
                     </div>
                     <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Khoa/Viện
+                      Trường/Khoa/Viện
                     </p>
                   </div>
                   <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg p-3 text-center border border-indigo-200 dark:border-indigo-800">
@@ -1125,7 +1125,7 @@ export default function Home() {
           {/* Row 3: Wide Cards */}
           <div className="grid grid-cols-1 gap-4 mt-4">
             {/* Card 7: Xu hướng học tập */}
-            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl">
+            <div className="bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-4 border border-white/20 dark:border-slate-700/20 shadow-xl overflow-hidden">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -1142,7 +1142,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Hiệu suất học tập */}
                 <div className="bg-white/50 dark:bg-slate-700/50 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">

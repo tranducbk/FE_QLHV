@@ -367,13 +367,13 @@ export default function Universities() {
                           scope="col"
                           className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
                         >
-                          TÊN TRƯỜNG
+                          TÊN CƠ SỞ ĐÀO TẠO
                         </th>
                         <th
                           scope="col"
                           className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
                         >
-                          KHOA/VIỆN
+                          TRƯỜNG/KHOA/VIỆN
                         </th>
                         <th
                           scope="col"
@@ -641,7 +641,7 @@ export default function Universities() {
                                     <Link
                                       href={`/admin/universities/${row.university.id}/organizations`}
                                       className="text-green-600 hover:text-green-900 p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                                      title="Quản lý Khoa/Viện"
+                                      title="Quản lý Trường/Khoa/Viện"
                                     >
                                       <BookOutlined className="text-lg" />
                                     </Link>
@@ -734,7 +734,7 @@ export default function Universities() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tên trường *
+                  Tên cơ sở đào tạo *
                 </label>
                 <input
                   type="text"
@@ -743,7 +743,7 @@ export default function Universities() {
                     handleAddInputChange("universityName", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Nhập tên trường"
+                  placeholder="Nhập tên cơ sở đào tạo"
                   required
                 />
               </div>
@@ -801,7 +801,7 @@ export default function Universities() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tên trường *
+                  Tên cơ sở đào tạo *
                 </label>
                 <input
                   type="text"
@@ -810,7 +810,7 @@ export default function Universities() {
                     handleEditInputChange("universityName", e.target.value)
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Nhập tên trường"
+                  placeholder="Nhập tên cơ sở đào tạo"
                   required
                 />
               </div>
@@ -856,7 +856,7 @@ export default function Universities() {
 
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
               <div className="text-sm text-gray-600 dark:text-gray-300">
-                <strong>Tên trường:</strong>{" "}
+                <strong>Tên cơ sở đào tạo:</strong>{" "}
                 {universityToDelete?.universityName}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-300">

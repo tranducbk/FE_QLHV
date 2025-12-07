@@ -315,7 +315,7 @@ export default function UniversityOrganizations() {
                       />
                     </svg>
                     <div className="ms-1 text-sm font-medium text-gray-500 md:ms-2 dark:text-gray-400">
-                      Quản lý Khoa/Viện
+                      Quản lý Trường/Khoa/Viện
                     </div>
                   </div>
                 </li>
@@ -335,7 +335,7 @@ export default function UniversityOrganizations() {
                     <ArrowLeftOutlined className="text-xl" />
                   </Link>
                   <div className="text-gray-900 dark:text-white text-lg">
-                    QUẢN LÝ KHOA/VIỆN
+                    QUẢN LÝ TRƯỜNG/KHOA/VIỆN
                   </div>
                 </div>
                 <button
@@ -343,7 +343,7 @@ export default function UniversityOrganizations() {
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
                 >
                   <PlusOutlined />
-                  Thêm Khoa/Viện
+                  Thêm Trường/Khoa/Viện
                 </button>
               </div>
 
@@ -354,7 +354,7 @@ export default function UniversityOrganizations() {
                     <SearchOutlined className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Tìm kiếm khoa/viện..."
+                      placeholder="Tìm kiếm trường/khoa/viện..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -368,7 +368,7 @@ export default function UniversityOrganizations() {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          Tên khoa/viện
+                          Tên trường/khoa/viện
                         </th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           Thời gian di chuyển
@@ -569,7 +569,7 @@ export default function UniversityOrganizations() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Thêm Khoa/Viện
+                Thêm Trường/Khoa/Viện
               </h2>
               <button
                 onClick={resetAddForm}
@@ -582,7 +582,7 @@ export default function UniversityOrganizations() {
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tên khoa/viện *
+                  Tên trường/khoa/viện *
                 </label>
                 <input
                   type="text"
@@ -594,7 +594,7 @@ export default function UniversityOrganizations() {
                     }))
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Nhập tên khoa/viện"
+                  placeholder="Nhập tên trường/khoa/viện"
                   required
                 />
               </div>
@@ -642,7 +642,7 @@ export default function UniversityOrganizations() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Chỉnh sửa Khoa/Viện
+                Chỉnh sửa Trường/Khoa/Viện
               </h2>
               <button
                 onClick={resetEditForm}
@@ -655,7 +655,7 @@ export default function UniversityOrganizations() {
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tên khoa/viện *
+                  Tên trường/khoa/viện *
                 </label>
                 <input
                   type="text"
@@ -667,7 +667,7 @@ export default function UniversityOrganizations() {
                     }))
                   }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Nhập tên khoa/viện"
+                  placeholder="Nhập tên trường/khoa/viện"
                   required
                 />
               </div>

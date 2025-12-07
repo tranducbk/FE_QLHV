@@ -226,7 +226,7 @@ export default function EducationLevelClasses() {
                       href={`/admin/universities/${universityId}/organizations`}
                       className="ms-1 text-sm font-medium text-gray-500 hover:text-blue-600 md:ms-2 dark:text-gray-400 dark:hover:text-white"
                     >
-                      Quản lý Khoa/Viện
+                      Quản lý Trường/Khoa/Viện
                     </Link>
                   </div>
                 </li>

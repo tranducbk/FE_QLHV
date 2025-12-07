@@ -34,7 +34,7 @@ import TabNotification from "./tabNotification";
 import { ThemeToggle } from "./ThemeToggle";
 import { useThemeContext } from "./ThemeProvider";
 import axiosInstance, { clearAuthData } from "@/utils/axiosInstance";
-import { isAdmin } from "@/utils/roleUtils";
+import { isAdmin, isSuperAdmin } from "@/utils/roleUtils";
 
 const { Header: AntHeader } = Layout;
 const { Text, Title } = Typography;
@@ -49,12 +49,18 @@ const Header = () => {
   const [isDesktop, setIsDesktop] = useState(false);
   const router = useRouter();
   const frameRef = useRef(null);
+  const notificationRef = useRef(null);
   const { token: themeToken } = theme.useToken();
   const { theme: currentTheme } = useThemeContext();
 
   // Helper function để check admin (sử dụng utility function)
   const checkIsAdmin = () => {
     return isAdmin(userDetail) || isAdmin(user);
+  };
+
+  // Helper function để check super admin
+  const checkIsSuperAdmin = () => {
+    return isSuperAdmin(userDetail) || isSuperAdmin(user);
   };
 
   useEffect(() => {
@@ -79,21 +85,11 @@ const Header = () => {
     try {
       if (!user?.id) return;
 
-      // CHỈ fetch notifications cho student
-      // Admin sẽ nhận thông báo từ hệ thống khác (khi student cập nhật data)
-      if (!checkIsAdmin()) {
-        const res = await axiosInstance.get(
-          `/commander/studentNotifications/${user.id}`
-        );
-        setDocuments(res.data || []);
-      } else {
-        // TODO: Implement admin notifications
-        // Admin sẽ nhận thông báo khi:
-        // - Student cập nhật học phí
-        // - Student cập nhật kết quả học tập
-        // - Student cập nhật thông tin cá nhân
-        setDocuments([]);
-      }
+      // Fetch notifications cho cả user và admin
+      const res = await axiosInstance.get(
+        `/commander/studentNotifications/${user.id}`
+      );
+      setDocuments(res.data || []);
     } catch (error) {
       // Handle error silently
       setDocuments([]);
@@ -104,6 +100,13 @@ const Header = () => {
     const handleClickOutside = (event) => {
       if (frameRef.current && !frameRef.current.contains(event.target)) {
         setIsOpen(false);
+      }
+      // Đóng notification dropdown khi click ra ngoài
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setDropdownOpen(false);
       }
     };
 
@@ -176,6 +179,20 @@ const Header = () => {
 
   const handleOutsideClick = () => {
     setDropdownOpen(false);
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      if (!user?.id) return;
+
+      await axiosInstance.put(`/commander/notifications/${user.id}/mark-all-read`);
+
+      setDocuments((prevDocs) =>
+        prevDocs.map((doc) => ({ ...doc, isRead: true }))
+      );
+    } catch (error) {
+      // Handle error silently
+    }
   };
 
   const handleUpdateIsRead = async (e, notificationId, notification) => {
@@ -318,19 +335,8 @@ const Header = () => {
             break;
           case "achievement":
           case "award":
-            // Khen thưởng - nếu có studentId trong data thì đi đến trang chi tiết
-            try {
-              const notifData = notification?.data
-                ? JSON.parse(notification.data)
-                : null;
-              if (isAdmin && notifData?.studentId) {
-                targetUrl = `/admin/achievement/${notifData.studentId}`;
-              } else {
-                targetUrl = `${baseRoute}/achievement`;
-              }
-            } catch {
-              targetUrl = `${baseRoute}/achievement`;
-            }
+            // Khen thưởng - user đến /users/achievement
+            targetUrl = "/users/achievement";
             break;
           case "regulation":
           case "regulatory_regime":
@@ -349,6 +355,15 @@ const Header = () => {
           case "statistical":
             // Thống kê (chỉ admin có)
             targetUrl = isAdmin ? "/admin/statistical" : baseRoute;
+            break;
+          case "grade_proposal":
+            // Đề xuất kết quả học tập (admin nhận)
+            targetUrl = "/admin/proposals/grade-results";
+            break;
+          case "grade_approved":
+          case "grade_rejected":
+            // Kết quả duyệt đề xuất (user nhận)
+            targetUrl = "/users/proposals/grade-results";
             break;
           default:
             // Mặc định về trang tổng quan
@@ -466,56 +481,92 @@ const Header = () => {
     },
   ];
 
+  const notificationHeader = {
+    key: "header",
+    label: (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "4px 0",
+          borderBottom: `1px solid ${themeToken.colorBorder}`,
+          marginBottom: "4px",
+        }}
+      >
+        <Text strong style={{ fontSize: "14px" }} className="dark:text-white">
+          Thông báo
+        </Text>
+        {unreadCount > 0 && (
+          <Button
+            type="link"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMarkAllAsRead();
+            }}
+            style={{ padding: 0, fontSize: "12px" }}
+          >
+            Đọc tất cả
+          </Button>
+        )}
+      </div>
+    ),
+  };
+
   const notificationItems =
     Array.isArray(documents) && documents.length > 0
-      ? documents.map((doc) => ({
-          key: doc.id,
-          label: (
-            <Card
-              size="small"
-              style={{
-                margin: "4px 0",
-                backgroundColor: doc.isRead
-                  ? themeToken.colorBgContainer
-                  : themeToken.colorPrimaryBg,
-                border: `1px solid ${themeToken.colorBorder}`,
-                opacity: doc.isRead ? 0.7 : 1,
-                cursor: "pointer",
-              }}
-              onClick={(e) => handleUpdateIsRead(e, doc.id, doc)}
-            >
-              <Space direction="vertical" size={4} style={{ width: "100%" }}>
-                <Space>
-                  <Text strong>{doc.title || "Thông báo"}</Text>
-                  {!doc.isRead && (
-                    <Tag color="blue" size="small">
-                      Mới
-                    </Tag>
+      ? [
+          notificationHeader,
+          ...documents.map((doc) => ({
+            key: doc.id,
+            onClick: ({ domEvent }) => handleUpdateIsRead(domEvent, doc.id, doc),
+            label: (
+              <Card
+                size="small"
+                style={{
+                  margin: "4px 0",
+                  backgroundColor: doc.isRead
+                    ? themeToken.colorBgContainer
+                    : themeToken.colorPrimaryBg,
+                  border: `1px solid ${themeToken.colorBorder}`,
+                  opacity: doc.isRead ? 0.7 : 1,
+                  cursor: "pointer",
+                }}
+              >
+                <Space direction="vertical" size={4} style={{ width: "100%" }}>
+                  <Space>
+                    <Text strong>{doc.title || "Thông báo"}</Text>
+                    {!doc.isRead && (
+                      <Tag color="blue" size="small">
+                        Mới
+                      </Tag>
+                    )}
+                  </Space>
+                  {doc?.content && (
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: "12px",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        wordBreak: "break-word",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {doc.content}
+                    </Text>
                   )}
-                </Space>
-                {doc?.content && (
-                  <Text
-                    type="secondary"
-                    style={{
-                      fontSize: "12px",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                      wordBreak: "break-word",
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {doc.content}
+                  <Text type="secondary" style={{ fontSize: "11px" }}>
+                    {dayjs(doc.createdAt).format("DD/MM/YYYY HH:mm")}
                   </Text>
-                )}
-                <Text type="secondary" style={{ fontSize: "11px" }}>
-                  {dayjs(doc.createdAt).format("DD/MM/YYYY HH:mm")}
-                </Text>
-              </Space>
-            </Card>
-          ),
-        }))
+                </Space>
+              </Card>
+            ),
+          })),
+        ]
       : [
           {
             key: "empty",
@@ -701,30 +752,33 @@ const Header = () => {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center space-x-4">
-          {/* Notifications - Only for USER role */}
-          {isDesktop && user?.role === "USER" && (
-            <Dropdown
-              menu={{
-                items: notificationItems,
-                className:
-                  "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 notification-dropdown-menu",
-                style: {
-                  maxHeight: "500px",
-                  overflowY: "auto",
-                  width: "360px",
-                  padding: "8px",
-                },
-              }}
-              open={dropdownOpen}
-              onOpenChange={setDropdownOpen}
-              placement="bottomRight"
-              trigger={[]}
-              overlayClassName="notification-dropdown"
-            >
-              <Badge count={unreadCount} size="small">
-                <NotificationButton />
-              </Badge>
-            </Dropdown>
+          {/* Notifications - For USER and ADMIN (not SUPER_ADMIN) */}
+          {isDesktop && !checkIsSuperAdmin() && (
+            <div ref={notificationRef}>
+              <Dropdown
+                menu={{
+                  items: notificationItems,
+                  className:
+                    "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 notification-dropdown-menu",
+                  style: {
+                    maxHeight: "500px",
+                    overflowY: "auto",
+                    width: "360px",
+                    padding: "8px",
+                  },
+                }}
+                open={dropdownOpen}
+                onOpenChange={setDropdownOpen}
+                placement="bottomRight"
+                trigger={[]}
+                overlayClassName="notification-dropdown"
+                getPopupContainer={() => notificationRef.current}
+              >
+                <Badge count={unreadCount} size="small">
+                  <NotificationButton />
+                </Badge>
+              </Dropdown>
+            </div>
           )}
 
           {/* User Menu */}
@@ -745,30 +799,33 @@ const Header = () => {
 
         {/* Mobile Actions */}
         <div className="flex md:hidden items-center space-x-2">
-          {/* Notifications - Only for USER role */}
-          {!isDesktop && user?.role === "USER" && (
-            <Dropdown
-              menu={{
-                items: notificationItems,
-                className:
-                  "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 notification-dropdown-menu",
-                style: {
-                  maxHeight: "400px",
-                  overflowY: "auto",
-                  width: "300px",
-                  padding: "8px",
-                },
-              }}
-              open={dropdownOpen}
-              onOpenChange={setDropdownOpen}
-              placement="bottomRight"
-              trigger={[]}
-              overlayClassName="notification-dropdown"
-            >
-              <Badge count={unreadCount} size="small">
-                <NotificationButton />
-              </Badge>
-            </Dropdown>
+          {/* Notifications - For USER and ADMIN (not SUPER_ADMIN) */}
+          {!isDesktop && !checkIsSuperAdmin() && (
+            <div ref={notificationRef}>
+              <Dropdown
+                menu={{
+                  items: notificationItems,
+                  className:
+                    "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 notification-dropdown-menu",
+                  style: {
+                    maxHeight: "400px",
+                    overflowY: "auto",
+                    width: "300px",
+                    padding: "8px",
+                  },
+                }}
+                open={dropdownOpen}
+                onOpenChange={setDropdownOpen}
+                placement="bottomRight"
+                trigger={[]}
+                overlayClassName="notification-dropdown"
+                getPopupContainer={() => notificationRef.current}
+              >
+                <Badge count={unreadCount} size="small">
+                  <NotificationButton />
+                </Badge>
+              </Dropdown>
+            </div>
           )}
 
           {/* Mobile Menu Button */}

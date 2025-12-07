@@ -12,6 +12,7 @@ import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { useModalScroll } from "@/hooks/useModalScroll";
 import axiosInstance from "@/utils/axiosInstance";
+import { Select, ConfigProvider, theme } from "antd";
 const CommanderDutySchedule = () => {
   const router = useRouter();
   const [commanderDutySchedule, setCommanderDutySchedule] = useState([]);
@@ -29,6 +30,22 @@ const CommanderDutySchedule = () => {
   });
   const [commanders, setCommanders] = useState([]);
   const { loading, withLoading } = useLoading(true);
+  const [isDark, setIsDark] = useState(false);
+
+  // Phát hiện theme hiện tại
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDarkMode = document.documentElement.classList.contains("dark");
+      setIsDark(isDarkMode);
+    };
+    checkTheme();
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useModalScroll(showFormAdd || showFormEdit || showConfirm);
 
@@ -38,6 +55,7 @@ const CommanderDutySchedule = () => {
       const res = await axiosInstance.get(`/user/commanderDutySchedule/${id}`);
 
       setEditFormData({
+        commanderId: res.data.commanderId || "",
         fullName: res.data.fullName || "",
         phoneNumber: res.data.phoneNumber || "",
         rank: res.data.rank || "",
@@ -171,7 +189,8 @@ const CommanderDutySchedule = () => {
   const fetchCommanders = async () => {
     try {
       const res = await axiosInstance.get(`/commander`);
-      setCommanders(res.data);
+      // Backend đã lọc bỏ SUPER_ADMIN
+      setCommanders(res.data || []);
     } catch (error) {
       console.log(error);
     }
@@ -205,6 +224,7 @@ const CommanderDutySchedule = () => {
       if (formType === "add") {
         setAddFormData({
           ...addFormData,
+          commanderId: commander.id,
           fullName: commander.fullName,
           phoneNumber: commander.phoneNumber || "",
           rank: commander.rank || "",
@@ -213,6 +233,7 @@ const CommanderDutySchedule = () => {
       } else {
         setEditFormData({
           ...editFormData,
+          commanderId: commander.id,
           fullName: commander.fullName,
           phoneNumber: commander.phoneNumber || "",
           rank: commander.rank || "",
@@ -713,37 +734,47 @@ const CommanderDutySchedule = () => {
                         Chỉnh sửa lịch trực
                       </h2>
 
-                      <div className="mb-4">
+                      <div className="mb-4" id="edit-modal-container">
                         <label
                           htmlFor="commanderSelect1"
                           className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                         >
                           Chọn chỉ huy
                         </label>
-                        <select
-                          id="commanderSelect1"
-                          name="commanderSelect1"
-                          value={
-                            commanders.find(
-                              (cmd) => cmd.fullName === editFormData.fullName
-                            )?.id || ""
-                          }
-                          onChange={(e) =>
-                            handleCommanderSelect(e.target.value, "edit")
-                          }
-                          className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mt-1"
+                        <ConfigProvider
+                          theme={{
+                            algorithm: isDark
+                              ? theme.darkAlgorithm
+                              : theme.defaultAlgorithm,
+                          }}
                         >
-                          <option value="">Chọn chỉ huy</option>
-                          {commanders.map((commander) => (
-                            <option
-                              key={commander.id}
-                              value={commander.id}
-                              className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                            >
-                              {commander.fullName}
-                            </option>
-                          ))}
-                        </select>
+                          <Select
+                            id="commanderSelect1"
+                            showSearch
+                            placeholder="Chọn chỉ huy"
+                            value={editFormData.commanderId || undefined}
+                            onChange={(value) =>
+                              handleCommanderSelect(value, "edit")
+                            }
+                            optionFilterProp="label"
+                            filterOption={(input, option) =>
+                              (option?.label ?? "")
+                                .toLowerCase()
+                                .includes(input.toLowerCase())
+                            }
+                            options={commanders.map((commander) => ({
+                              value: commander.id,
+                              label: `${commander.fullName}${
+                                commander.rank ? ` - ${commander.rank}` : ""
+                              }`,
+                            }))}
+                            className="w-full mt-1"
+                            size="large"
+                            getPopupContainer={() =>
+                              document.getElementById("edit-modal-container")
+                            }
+                          />
+                        </ConfigProvider>
                       </div>
 
                       <div className="mb-4">
@@ -917,38 +948,47 @@ const CommanderDutySchedule = () => {
                     Nhập lịch trực
                   </h2>
 
-                  <div className="mb-4">
+                  <div className="mb-4" id="add-modal-container">
                     <label
                       htmlFor="commanderSelect"
                       className="block text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
                       Chọn chỉ huy
                     </label>
-                    <select
-                      id="commanderSelect"
-                      name="commanderSelect"
-                      value={
-                        commanders.find(
-                          (cmd) => cmd.fullName === addFormData.fullName
-                        )?.id || ""
-                      }
-                      onChange={(e) =>
-                        handleCommanderSelect(e.target.value, "add")
-                      }
-                      required
-                      className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 mt-1"
+                    <ConfigProvider
+                      theme={{
+                        algorithm: isDark
+                          ? theme.darkAlgorithm
+                          : theme.defaultAlgorithm,
+                      }}
                     >
-                      <option value="">Chọn chỉ huy</option>
-                      {commanders.map((commander) => (
-                        <option
-                          key={commander.id}
-                          value={commander.id}
-                          className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          {commander.fullName}
-                        </option>
-                      ))}
-                    </select>
+                      <Select
+                        id="commanderSelect"
+                        showSearch
+                        placeholder="Chọn chỉ huy"
+                        value={addFormData.commanderId || undefined}
+                        onChange={(value) =>
+                          handleCommanderSelect(value, "add")
+                        }
+                        optionFilterProp="label"
+                        filterOption={(input, option) =>
+                          (option?.label ?? "")
+                            .toLowerCase()
+                            .includes(input.toLowerCase())
+                        }
+                        options={commanders.map((commander) => ({
+                          value: commander.id,
+                          label: `${commander.fullName}${
+                            commander.rank ? ` - ${commander.rank}` : ""
+                          }`,
+                        }))}
+                        className="w-full mt-1"
+                        size="large"
+                        getPopupContainer={() =>
+                          document.getElementById("add-modal-container")
+                        }
+                      />
+                    </ConfigProvider>
                   </div>
 
                   <div className="mb-4">
@@ -1095,6 +1135,82 @@ const CommanderDutySchedule = () => {
           )}
         </div>
       </div>
+
+      {/* CSS cho Select dropdown đồng bộ với dark mode */}
+      <style jsx global>{`
+        .ant-select .ant-select-selector {
+          background-color: rgb(255 255 255) !important;
+          border-color: rgb(209 213 219) !important;
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select .ant-select-selection-placeholder {
+          color: rgb(107 114 128) !important;
+        }
+        .ant-select-single .ant-select-selector .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-arrow,
+        .ant-select-clear {
+          color: rgb(107 114 128);
+        }
+        .ant-select-dropdown {
+          background-color: rgb(255 255 255) !important;
+          border: 1px solid rgb(229 231 235) !important;
+        }
+        .ant-select-item {
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.12) !important;
+          color: rgb(30 58 138) !important;
+        }
+        .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.18) !important;
+          color: rgb(30 58 138) !important;
+          font-weight: 600 !important;
+        }
+
+        .dark .ant-select .ant-select-selector {
+          background-color: rgb(55 65 81) !important;
+          border-color: rgb(75 85 99) !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select .ant-select-selection-placeholder {
+          color: rgb(156 163 175) !important;
+        }
+        .dark
+          .ant-select-single
+          .ant-select-selector
+          .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select-arrow,
+        .dark .ant-select-clear {
+          color: rgb(209 213 219) !important;
+        }
+        .dark .ant-select-dropdown {
+          background-color: rgb(31 41 55) !important;
+          border-color: rgb(55 65 81) !important;
+        }
+        .dark .ant-select-item {
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(59, 130, 246, 0.25) !important;
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-selected:not(
+            .ant-select-item-option-disabled
+          ) {
+          background-color: rgba(59, 130, 246, 0.35) !important;
+          color: rgb(255 255 255) !important;
+          font-weight: 600 !important;
+        }
+      `}</style>
     </>
   );
 };

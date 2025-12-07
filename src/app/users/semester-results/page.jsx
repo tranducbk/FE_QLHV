@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import SideBar from "@/components/sidebar";
 import Loader from "@/components/loader";
@@ -14,12 +14,12 @@ const SemesterResults = () => {
   const [semesters, setSemesters] = useState([]);
   const [learningResult, setLearningResult] = useState([]);
   const [semesterResults, setSemesterResults] = useState([]);
-  const [showConfirmLearn, setShowConfirmLearn] = useState(false);
-  const [learnId, setLearnId] = useState(null);
-  const [editingSemester, setEditingSemester] = useState(null);
   const [viewingSemester, setViewingSemester] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showGradeModal, setShowGradeModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
   const [gradeSubjects, setGradeSubjects] = useState([
     {
       subjectCode: "",
@@ -28,9 +28,11 @@ const SemesterResults = () => {
       grade10: "",
     },
   ]);
+  const [updateSubjects, setUpdateSubjects] = useState([]);
   const { loading, withLoading } = useLoading(true);
   const [gradeSemesterCode, setGradeSemesterCode] = useState("");
   const [studentId, setStudentId] = useState(null);
+  const router = useRouter();
 
   // Helpers cho nhập KQHT
   const parseTermFromId = (id) => {
@@ -170,7 +172,6 @@ const SemesterResults = () => {
   };
   const openGradeModal = () => {
     // Reset state khi thêm mới
-    setEditingSemester(null);
     setGradeSemesterCode("");
     setGradeSubjects([
       {
@@ -252,78 +253,27 @@ const SemesterResults = () => {
         })),
       };
 
-      // Kiểm tra xem có đang chỉnh sửa hay thêm mới
-      if (editingSemester) {
-        // Cập nhật học kỳ hiện có - sử dụng API grade với studentId
-        const response = await axiosInstance.put(
-          `/student/${studentId}/grades/${term}/${schoolYear}`,
-          payload
-        );
-        handleNotify(
-          "success",
-          "Thành công",
-          `Đã cập nhật KQ học tập ${term} - ${schoolYear}`
-        );
+      // Thêm mới đề xuất kết quả học tập
+      await axiosInstance.post(`/student/${studentId}/grades`, payload);
+      handleNotify(
+        "success",
+        "Thành công",
+        `Đã gửi đề xuất KQ học tập ${term} năm học ${schoolYear}. Vui lòng chờ Chỉ huy phê duyệt.`
+      );
 
-        // Cập nhật semester trong state thay vì refresh
-        if (response.data.semesterResult) {
-          setLearningResult((prev) =>
-            prev.map((item) =>
-              item.id === editingSemester.id
-                ? response.data.semesterResult
-                : item
-            )
-          );
-          setSemesterResults((prev) =>
-            prev.map((item) =>
-              item.id === editingSemester.id
-                ? response.data.semesterResult
-                : item
-            )
-          );
-        }
+      // Đóng modal và reset state
+      setShowGradeModal(false);
+      setGradeSubjects([
+        {
+          subjectCode: "",
+          subjectName: "",
+          credits: "",
+          grade10: "",
+        },
+      ]);
 
-        // Đóng modal và reset state
-        setShowGradeModal(false);
-        setEditingSemester(null);
-        setGradeSubjects([
-          {
-            subjectCode: "",
-            subjectName: "",
-            credits: "",
-            grade10: "",
-          },
-        ]);
-      } else {
-        // Thêm mới học kỳ - sử dụng API grade với studentId
-        const response = await axiosInstance.post(
-          `/student/${studentId}/grades`,
-          payload
-        );
-        handleNotify(
-          "success",
-          "Thành công",
-          `Đã nhập KQ học tập ${term} - ${schoolYear}`
-        );
-
-        // Thêm semester mới vào state thay vì refresh
-        if (response.data.semesterResult) {
-          setLearningResult((prev) => [...prev, response.data.semesterResult]);
-          setSemesterResults((prev) => [...prev, response.data.semesterResult]);
-        }
-
-        // Đóng modal và reset state
-        setShowGradeModal(false);
-        setEditingSemester(null);
-        setGradeSubjects([
-          {
-            subjectCode: "",
-            subjectName: "",
-            credits: "",
-            grade10: "",
-          },
-        ]);
-      }
+      // Chuyển hướng đến trang quản lý đề xuất
+      router.push("/users/proposals/grade-results");
     } catch (err) {
       handleNotify(
         "danger",
@@ -338,91 +288,201 @@ const SemesterResults = () => {
     setShowDetailModal(true);
   };
 
-  const handleEditLearningResult = (id) => {
-    console.log("handleEditLearningResult called with id:", id);
-    console.log("learningResult:", learningResult);
-    setLearnId(id);
+  // Mở modal yêu cầu cập nhật
+  const openUpdateModal = () => {
+    if (!viewingSemester) return;
+    // Copy subjects từ kết quả hiện tại để chỉnh sửa
+    const subjects = viewingSemester.subjects?.map((s) => ({
+      subjectCode: s.subjectCode || "",
+      subjectName: s.subjectName || "",
+      credits: s.credits?.toString() || "",
+      grade10: s.gradePoint10?.toString() || "",
+    })) || [];
+    setUpdateSubjects(subjects.length > 0 ? subjects : [
+      { subjectCode: "", subjectName: "", credits: "", grade10: "" }
+    ]);
+    setShowDetailModal(false);
+    setShowUpdateModal(true);
+  };
 
-    const semester = learningResult.find((item) => item.id === id);
-    console.log("Found semester:", semester);
-    if (semester) {
-      // Set editing semester để form biết đang chỉnh sửa
-      setEditingSemester(semester);
+  // Mở modal yêu cầu xóa
+  const openDeleteModal = () => {
+    setDeleteReason("");
+    setShowDetailModal(false);
+    setShowDeleteModal(true);
+  };
 
-      // Tìm semester ID từ semester code và schoolYear
-      const semesterData = semesters.find(
-        (s) =>
-          s.code === semester.semester && s.schoolYear === semester.schoolYear
+  // Thêm dòng môn học trong update modal
+  const addUpdateSubjectRow = () => {
+    setUpdateSubjects((prev) => [
+      ...prev,
+      { subjectCode: "", subjectName: "", credits: "", grade10: "" },
+    ]);
+  };
+
+  // Xóa dòng môn học trong update modal
+  const removeUpdateSubjectRow = (idx) => {
+    setUpdateSubjects((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (next.length === 0) {
+        return [{ subjectCode: "", subjectName: "", credits: "", grade10: "" }];
+      }
+      return next;
+    });
+  };
+
+  // Cập nhật field trong update modal
+  const updateUpdateSubjectField = (idx, field, value) => {
+    setUpdateSubjects((prev) => {
+      const next = prev.slice();
+      next[idx] = { ...next[idx], [field]: value };
+      return next;
+    });
+  };
+
+  // Tính toán GPA cho update modal
+  const calculateUpdateSummary = () => {
+    if (!updateSubjects || updateSubjects.length === 0) {
+      return { totalCredits: 0, gpa4: 0, gpa10: 0 };
+    }
+
+    let totalGradePoints4 = 0;
+    let totalGradePoints10 = 0;
+    let totalCredits = 0;
+
+    updateSubjects.forEach((subject) => {
+      const credits = parseFloat(subject.credits) || 0;
+      const grade10 = parseFloat(subject.grade10) || 0;
+
+      if (credits > 0 && !isNaN(grade10)) {
+        let letterGrade = "F";
+        if (grade10 >= 9.5) letterGrade = "A+";
+        else if (grade10 >= 8.5) letterGrade = "A";
+        else if (grade10 >= 8.0) letterGrade = "B+";
+        else if (grade10 >= 7.0) letterGrade = "B";
+        else if (grade10 >= 6.5) letterGrade = "C+";
+        else if (grade10 >= 5.5) letterGrade = "C";
+        else if (grade10 >= 5.0) letterGrade = "D+";
+        else if (grade10 >= 4.0) letterGrade = "D";
+
+        let grade4 = 0.0;
+        switch (letterGrade) {
+          case "A+": case "A": grade4 = 4.0; break;
+          case "B+": grade4 = 3.5; break;
+          case "B": grade4 = 3.0; break;
+          case "C+": grade4 = 2.5; break;
+          case "C": grade4 = 2.0; break;
+          case "D+": grade4 = 1.5; break;
+          case "D": grade4 = 1.0; break;
+          case "F": grade4 = 0.0; break;
+        }
+
+        totalGradePoints4 += grade4 * credits;
+        totalGradePoints10 += grade10 * credits;
+        totalCredits += credits;
+      }
+    });
+
+    const gpa4 = totalCredits > 0 ? totalGradePoints4 / totalCredits : 0;
+    const gpa10 = totalCredits > 0 ? totalGradePoints10 / totalCredits : 0;
+
+    return {
+      totalCredits,
+      gpa4: gpa4.toFixed(2),
+      gpa10: gpa10.toFixed(2),
+    };
+  };
+
+  // Gửi yêu cầu cập nhật
+  const submitUpdateRequest = async (e) => {
+    e.preventDefault();
+    if (!viewingSemester || !studentId) return;
+
+    // Validate dữ liệu
+    const validSubjects = updateSubjects.filter(
+      (subject) =>
+        subject.subjectCode.trim() &&
+        subject.subjectName.trim() &&
+        subject.credits &&
+        subject.grade10 &&
+        parseFloat(subject.grade10) >= 0 &&
+        parseFloat(subject.grade10) <= 10
+    );
+
+    if (validSubjects.length === 0) {
+      handleNotify("warning", "Thiếu dữ liệu", GRADE_MESSAGES.MISSING_DATA);
+      return;
+    }
+
+    if (validSubjects.length !== updateSubjects.length) {
+      handleNotify("warning", "Dữ liệu không hợp lệ", GRADE_MESSAGES.INVALID_SUBJECT_DATA);
+      return;
+    }
+
+    try {
+      const payload = {
+        subjects: updateSubjects.map((s) => ({
+          subjectCode: s.subjectCode.trim(),
+          subjectName: s.subjectName.trim(),
+          credits: Number(s.credits || 0),
+          gradePoint10: Number(s.grade10 || 0),
+        })),
+      };
+
+      await axiosInstance.post(
+        `/student/${studentId}/grades/${viewingSemester.semester}/${viewingSemester.schoolYear}/request-update`,
+        payload
       );
 
-      if (semesterData) {
-        setGradeSemesterCode(semesterData.id);
-      }
+      handleNotify(
+        "success",
+        "Thành công",
+        `Đã gửi yêu cầu cập nhật kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}. Vui lòng chờ Chỉ huy phê duyệt.`
+      );
 
-      // Populate subjects data
-      if (semester.subjects && semester.subjects.length > 0) {
-        setGradeSubjects(
-          semester.subjects.map((subject) => ({
-            subjectCode: subject.subjectCode || "",
-            subjectName: subject.subjectName || "",
-            credits: subject.credits?.toString() || "",
-            grade10: subject.gradePoint10?.toString() || "",
-          }))
-        );
-      } else {
-        // Nếu không có subjects, tạo một dòng trống
-        setGradeSubjects([
-          {
-            subjectCode: "",
-            subjectName: "",
-            credits: "",
-            grade10: "",
-          },
-        ]);
-      }
-
-      setShowGradeModal(true);
-    } else {
-      console.log("Semester not found for id:", id);
+      setShowUpdateModal(false);
+      setViewingSemester(null);
+      router.push("/users/proposals/grade-results");
+    } catch (err) {
+      handleNotify(
+        "danger",
+        "Lỗi",
+        err?.response?.data?.message || "Không thể gửi yêu cầu cập nhật"
+      );
     }
   };
 
-  const handleDeleteLearn = (id) => {
-    setLearnId(id);
-    setShowConfirmLearn(true);
-  };
+  // Gửi yêu cầu xóa
+  const submitDeleteRequest = async () => {
+    if (!viewingSemester || !studentId) return;
 
-  const handleConfirmDeleteLearn = (learnId) => {
-    if (studentId) {
-      // Tìm semester data từ learnId
-      const semester = learningResult.find((item) => item.id === learnId);
-      if (!semester) {
-        handleNotify("error", "Lỗi", "Không tìm thấy thông tin học kỳ");
-        return;
-      }
-
-      axiosInstance
-        .delete(
-          `/student/${studentId}/grades/${semester.semester}/${semester.schoolYear}`
-        )
-        .then(() => {
-          handleNotify(
-            "success",
-            "Thành công!",
-            "Xóa kết quả học tập thành công"
-          );
-          fetchLearningResult();
-        })
-        .catch((error) => {
-          const errorMessage =
-            error.response?.data?.message ||
-            error.response?.data ||
-            "Có lỗi xảy ra khi xóa kết quả học tập";
-          handleNotify("danger", "Lỗi!", errorMessage);
-        });
+    if (!deleteReason.trim()) {
+      handleNotify("warning", "Thiếu thông tin", "Vui lòng nhập lý do xóa");
+      return;
     }
 
-    setShowConfirmLearn(false);
+    try {
+      await axiosInstance.post(
+        `/student/${studentId}/grades/${viewingSemester.semester}/${viewingSemester.schoolYear}/request-delete`,
+        { reason: deleteReason.trim() }
+      );
+
+      handleNotify(
+        "success",
+        "Thành công",
+        `Đã gửi yêu cầu xóa kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}. Vui lòng chờ Chỉ huy phê duyệt.`
+      );
+
+      setShowDeleteModal(false);
+      setViewingSemester(null);
+      router.push("/users/proposals/grade-results");
+    } catch (err) {
+      handleNotify(
+        "danger",
+        "Lỗi",
+        err?.response?.data?.message || "Không thể gửi yêu cầu xóa"
+      );
+    }
   };
 
   const fetchLearningResult = async () => {
@@ -441,9 +501,11 @@ const SemesterResults = () => {
           }))
         );
 
-        setLearningResult(res.data.semesterResults || []);
-        // Cũng set vào semesterResults để hiển thị
-        setSemesterResults(res.data.semesterResults || []);
+        // semesterResults từ API giờ chỉ chứa kết quả đã duyệt
+        const approvedResults = res.data.semesterResults || [];
+
+        setLearningResult(approvedResults);
+        setSemesterResults(approvedResults);
       } catch (error) {
         console.log(error);
       }
@@ -661,7 +723,7 @@ const SemesterResults = () => {
                           scope="col"
                           className="border-r border-gray-200 dark:border-gray-600 py-3 px-4 text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                         >
-                          Ngày cập nhật
+                          Thời gian cập nhật
                         </th>
                         <th
                           scope="col"
@@ -692,134 +754,94 @@ const SemesterResults = () => {
                           );
                         })
                         .map((item, index) => (
-                        <tr
-                          key={index}
-                          className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer"
-                          onClick={() => handleViewSemesterDetail(item)}
-                        >
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.semester}
-                          </td>
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.schoolYear}
-                          </td>
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            <div className="flex flex-col">
-                              <div className="font-medium text-blue-600 dark:text-blue-400">
-                                {item.averageGrade4 || "0.00"}
+                          <tr
+                            key={index}
+                            className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer"
+                            onClick={() => handleViewSemesterDetail(item)}
+                          >
+                            <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                              {item.semester}
+                            </td>
+                            <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                              {item.schoolYear}
+                            </td>
+                            <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                              <div className="flex flex-col">
+                                <div className="font-medium text-blue-600 dark:text-blue-400">
+                                  {item.averageGrade4 || "0.00"}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {item.averageGrade10 || "0.00"}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {item.averageGrade10 || "0.00"}
+                            </td>
+                            <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                              <div className="flex flex-col">
+                                <div className="font-medium text-green-600 dark:text-green-400">
+                                  {item.semesterCPA ||
+                                    item.cumulativeGrade4?.toFixed(2) ||
+                                    "0.00"}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {item.semesterCPA10 ||
+                                    item.cumulativeGrade10?.toFixed(2) ||
+                                    "0.00"}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            <div className="flex flex-col">
-                              <div className="font-medium text-green-600 dark:text-green-400">
-                                {item.semesterCPA ||
-                                  item.cumulativeGrade4?.toFixed(2) ||
-                                  "0.00"}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {item.semesterCPA10 ||
-                                  item.cumulativeGrade10?.toFixed(2) ||
-                                  "0.00"}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.totalCredits || 0} tín chỉ
-                          </td>
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.subjects?.length || 0} môn
-                          </td>
-                          <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
-                            {item.updatedAt
-                              ? new Date(item.updatedAt).toLocaleDateString(
-                                  "vi-VN"
-                                )
-                              : "-"}
-                          </td>
-                          <td className="flex justify-center items-center space-x-2 py-4 px-4">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewSemesterDetail(item);
-                              }}
-                              className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-200"
-                              title="Xem chi tiết"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth="1.5"
-                                stroke="currentColor"
-                                className="w-5 h-5"
+                            </td>
+                            <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                              {item.totalCredits || 0} tín chỉ
+                            </td>
+                            <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                              {item.subjects?.length || 0} môn
+                            </td>
+                            <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600 py-4 px-4">
+                              {item.updatedAt
+                                ? new Date(item.updatedAt).toLocaleString(
+                                    "vi-VN",
+                                    {
+                                      day: "2-digit",
+                                      month: "2-digit",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )
+                                : "-"}
+                            </td>
+                            <td className="flex justify-center items-center space-x-2 py-4 px-4">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewSemesterDetail(item);
+                                }}
+                                className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors duration-200"
+                                title="Xem chi tiết"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.639 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.639 0-8.573-3.007-9.963-7.178z"
-                                />
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditLearningResult(item.id);
-                              }}
-                              className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200"
-                              title="Chỉnh sửa"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth="1.5"
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-                                />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteLearn(item.id);
-                              }}
-                              className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200"
-                              title="Xóa học kỳ"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth="1.5"
-                                stroke="currentColor"
-                                className="w-5 h-5"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                                />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth="1.5"
+                                  stroke="currentColor"
+                                  className="w-5 h-5"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.639 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.639 0-8.573-3.007-9.963-7.178z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -829,88 +851,17 @@ const SemesterResults = () => {
         </div>
       </div>
 
-      {/* Modal Xác nhận xóa kết quả học tập */}
-      {showConfirmLearn && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-          <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Xác nhận xóa
-              </h2>
-              <button
-                onClick={() => setShowConfirmLearn(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  ></path>
-                </svg>
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="flex items-center justify-center mb-4">
-                <svg
-                  className="w-12 h-12 text-red-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  ></path>
-                </svg>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 text-center mb-6">
-                Bạn có chắc chắn muốn xóa kết quả học tập này?
-              </p>
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowConfirmLearn(false)}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors duration-200"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={() => handleConfirmDeleteLearn(learnId)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200"
-                >
-                  Xóa
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal nhập/sửa KQ học tập theo môn */}
+      {/* Modal nhập KQ học tập theo môn */}
       {showGradeModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pt-10 p-4">
           <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
           <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {editingSemester
-                  ? "Chỉnh sửa kết quả học tập"
-                  : "Nhập kết quả học tập theo môn"}
+                Nhập kết quả học tập theo môn
               </h2>
               <button
-                onClick={() => {
-                  setShowGradeModal(false);
-                  setEditingSemester(null);
-                }}
+                onClick={() => setShowGradeModal(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <svg
@@ -938,12 +889,7 @@ const SemesterResults = () => {
                     <select
                       value={gradeSemesterCode}
                       onChange={(e) => setGradeSemesterCode(e.target.value)}
-                      disabled={editingSemester}
-                      className={`bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 ${
-                        editingSemester
-                          ? "opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-600"
-                          : ""
-                      }`}
+                      className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                     >
                       <option value="" disabled>
                         Chọn học kỳ
@@ -975,11 +921,6 @@ const SemesterResults = () => {
                           </option>
                         ))}
                     </select>
-                    {editingSemester && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Không thể thay đổi học kỳ khi đang chỉnh sửa
-                      </p>
-                    )}
                   </div>
                   <button
                     type="button"
@@ -1150,10 +1091,7 @@ const SemesterResults = () => {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        setShowGradeModal(false);
-                        setEditingSemester(null);
-                      }}
+                      onClick={() => setShowGradeModal(false)}
                       className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md"
                     >
                       Hủy
@@ -1162,7 +1100,7 @@ const SemesterResults = () => {
                       type="submit"
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
                     >
-                      {editingSemester ? "Cập nhật" : "Lưu kết quả"}
+                      Gửi đề xuất
                     </button>
                   </div>
                 </div>
@@ -1179,7 +1117,7 @@ const SemesterResults = () => {
           <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Chi tiết kết quả học tập - {viewingSemester.semester} - Năm học{" "}
+                Chi tiết kết quả học tập - {viewingSemester.semester} năm học{" "}
                 {viewingSemester.schoolYear}
               </h2>
               <button
@@ -1344,7 +1282,13 @@ const SemesterResults = () => {
                         {viewingSemester.updatedAt
                           ? new Date(
                               viewingSemester.updatedAt
-                            ).toLocaleDateString("vi-VN")
+                            ).toLocaleString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
                           : "-"}
                       </div>
                     </div>
@@ -1377,6 +1321,251 @@ const SemesterResults = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Nút yêu cầu cập nhật / xóa */}
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={openUpdateModal}
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors duration-200"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                  Yêu cầu cập nhật
+                </button>
+                <button
+                  onClick={openDeleteModal}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors duration-200"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  Yêu cầu xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal yêu cầu cập nhật */}
+      {showUpdateModal && viewingSemester && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pt-10 p-4">
+          <div className="bg-black bg-opacity-50 inset-0 fixed" onClick={() => setShowUpdateModal(false)}></div>
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Yêu cầu cập nhật kết quả - {viewingSemester.semester} - {viewingSemester.schoolYear}
+              </h2>
+              <button
+                onClick={() => setShowUpdateModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
+              <form onSubmit={submitUpdateRequest} className="p-4">
+                <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                    Bạn đang yêu cầu cập nhật kết quả học tập đã được duyệt. Vui lòng chỉnh sửa thông tin bên dưới và gửi đề xuất.
+                    Chỉ huy sẽ xem xét và phê duyệt yêu cầu của bạn.
+                  </p>
+                </div>
+
+                <div className="flex justify-end mb-4">
+                  <button
+                    type="button"
+                    onClick={addUpdateSubjectRow}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md flex items-center gap-2 transition-colors duration-200"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Thêm môn học
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-200 dark:border-gray-700 text-sm rounded-lg">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-3 py-2 border-r w-1/5">Mã môn</th>
+                        <th className="px-3 py-2 border-r w-2/5">Tên môn</th>
+                        <th className="px-3 py-2 border-r w-1/5">Tín chỉ</th>
+                        <th className="px-3 py-2 border-r w-1/5">Điểm hệ 10</th>
+                        <th className="px-3 py-2 w-16">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {updateSubjects.map((row, idx) => (
+                        <tr key={idx} className="border-t">
+                          <td className="px-2 py-2 border-r w-1/5">
+                            <input
+                              type="text"
+                              value={row.subjectCode}
+                              onChange={(e) => updateUpdateSubjectField(idx, "subjectCode", e.target.value)}
+                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
+                              placeholder="Mã môn"
+                            />
+                          </td>
+                          <td className="px-2 py-2 border-r w-2/5">
+                            <input
+                              type="text"
+                              value={row.subjectName}
+                              onChange={(e) => updateUpdateSubjectField(idx, "subjectName", e.target.value)}
+                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
+                              placeholder="Tên môn học"
+                            />
+                          </td>
+                          <td className="px-2 py-2 border-r w-1/5">
+                            <input
+                              type="number"
+                              min="0"
+                              value={row.credits}
+                              onChange={(e) => updateUpdateSubjectField(idx, "credits", e.target.value)}
+                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
+                              placeholder="Tín chỉ"
+                            />
+                          </td>
+                          <td className="px-2 py-2 border-r w-1/5">
+                            <input
+                              type="number"
+                              min="0"
+                              max="10"
+                              step="0.01"
+                              value={row.grade10 || ""}
+                              onChange={(e) => updateUpdateSubjectField(idx, "grade10", e.target.value)}
+                              className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
+                              placeholder="0.0"
+                            />
+                          </td>
+                          <td className="px-2 py-2 text-center w-16">
+                            <button
+                              type="button"
+                              onClick={() => removeUpdateSubjectRow(idx)}
+                              className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                              title="Xóa môn học"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Tổng kết */}
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Tổng kết (sau cập nhật)</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{calculateUpdateSummary().totalCredits}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Tổng tín chỉ</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{calculateUpdateSummary().gpa4}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">GPA (Hệ 4)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{calculateUpdateSummary().gpa10}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">GPA (Hệ 10)</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowUpdateModal(false)}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md"
+                  >
+                    Gửi yêu cầu cập nhật
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal yêu cầu xóa */}
+      {showDeleteModal && viewingSemester && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="bg-black bg-opacity-50 inset-0 fixed" onClick={() => setShowDeleteModal(false)}></div>
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Yêu cầu xóa kết quả học tập
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  Bạn đang yêu cầu xóa kết quả học tập <strong>{viewingSemester.semester} - {viewingSemester.schoolYear}</strong>.
+                  Hành động này cần được Chỉ huy phê duyệt.
+                </p>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Lý do xóa <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                  rows="3"
+                  placeholder="Nhập lý do xóa kết quả học tập..."
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={submitDeleteRequest}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                >
+                  Gửi yêu cầu xóa
+                </button>
               </div>
             </div>
           </div>

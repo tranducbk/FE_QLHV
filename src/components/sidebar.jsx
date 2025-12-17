@@ -312,7 +312,7 @@ const SideBarContent = () => {
                 Danh sách học viên
               </Menu.Item>
               <Menu.Item key="/admin/universities" icon={<BankOutlined />}>
-                Quản lý trường
+                Quản lý cơ sở đào tạo
               </Menu.Item>
             </SubMenu>
 

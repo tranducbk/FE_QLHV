@@ -32,6 +32,8 @@ const AdminProposalGradeResults = () => {
   const [filterSchoolYear, setFilterSchoolYear] = useState(null);
   const [searchText, setSearchText] = useState("");
   const [isDark, setIsDark] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const { loading, withLoading } = useLoading(true);
 
   // Phát hiện theme hiện tại
@@ -77,6 +79,37 @@ const AdminProposalGradeResults = () => {
     loadData();
   }, [withLoading]);
 
+  // Khóa scroll nền khi bất kỳ modal nào mở
+  useEffect(() => {
+    const hasOpenModal =
+      showDetailModal ||
+      showApproveModal ||
+      showRejectModal ||
+      showBulkApproveModal ||
+      showBulkRejectModal;
+
+    if (hasOpenModal) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [
+    showDetailModal,
+    showApproveModal,
+    showRejectModal,
+    showBulkApproveModal,
+    showBulkRejectModal,
+  ]);
+
+  // Reset phân trang & lựa chọn khi thay đổi bộ lọc / tìm kiếm
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedIds([]);
+  }, [filterStatus, filterSemester, filterSchoolYear, searchText]);
+
   // Get unique values for filters
   const uniqueSemesters = [
     ...new Set(allResults.map((r) => r.semester)),
@@ -116,6 +149,24 @@ const AdminProposalGradeResults = () => {
 
   // Get pending results for bulk actions
   const pendingResults = filteredResults.filter((r) => r.status === "PENDING");
+
+  // Phân trang trên client
+  const totalItems = filteredResults.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedResults = filteredResults.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Pending trên trang hiện tại (dùng cho chọn tất cả)
+  const pendingCurrentPageResults = paginatedResults.filter(
+    (r) => r.status === "PENDING"
+  );
+
+  const handlePageSizeChange = (value) => {
+    setPageSize(value);
+    setCurrentPage(1);
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -238,7 +289,7 @@ const AdminProposalGradeResults = () => {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(pendingResults.map((r) => r.id));
+      setSelectedIds(pendingCurrentPageResults.map((r) => r.id));
     } else {
       setSelectedIds([]);
     }
@@ -330,7 +381,7 @@ const AdminProposalGradeResults = () => {
 
   return (
     <>
-      {/* CSS cho Input đồng bộ với dark mode */}
+      {/* CSS cho Ant Design (Input, Select) đồng bộ với dark mode, giống admin/list-user */}
       <style jsx global>{`
         /* Input styles - Light mode */
         .ant-input {
@@ -362,6 +413,116 @@ const AdminProposalGradeResults = () => {
         .dark .ant-input-focused {
           border-color: rgb(37 99 235) !important; /* blue-600 */
           box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+        }
+
+        /* Select styles - giống admin/list-user */
+        .ant-select .ant-select-selector {
+          background-color: rgb(255 255 255) !important;
+          border-color: rgb(209 213 219) !important; /* gray-300 */
+          color: rgb(17 24 39) !important; /* gray-900 */
+        }
+        .ant-select .ant-select-selection-placeholder {
+          color: rgb(107 114 128) !important; /* gray-500 */
+        }
+        /* Tokens chỉ áp dụng cho chế độ multiple */
+        .ant-select-multiple .ant-select-selection-item {
+          background-color: rgb(239 246 255) !important; /* blue-50 */
+          border-color: rgb(191 219 254) !important; /* blue-200 */
+          color: rgb(30 58 138) !important; /* blue-900 */
+        }
+        /* Single select: chữ rõ, không nền */
+        .ant-select-single .ant-select-selector .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(17 24 39) !important; /* gray-900 */
+          font-weight: 600;
+        }
+        .ant-select-arrow,
+        .ant-select-clear {
+          color: rgb(107 114 128);
+        }
+        .ant-select-dropdown {
+          background-color: rgb(255 255 255) !important;
+          border: 1px solid rgb(229 231 235) !important; /* gray-200 */
+        }
+        .ant-select-item {
+          color: rgb(17 24 39) !important;
+        }
+        .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(
+            59,
+            130,
+            246,
+            0.12
+          ) !important; /* blue-500/12 */
+          color: rgb(30 58 138) !important;
+        }
+        .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+          background-color: rgba(
+            59,
+            130,
+            246,
+            0.18
+          ) !important; /* blue-500/18 */
+          color: rgb(30 58 138) !important;
+          font-weight: 600 !important;
+        }
+
+        .dark .ant-select .ant-select-selector {
+          background-color: rgb(55 65 81) !important; /* gray-700 */
+          border-color: rgb(75 85 99) !important; /* gray-600 */
+          color: rgb(255 255 255) !important;
+        }
+        .dark .ant-select .ant-select-selection-placeholder {
+          color: rgb(156 163 175) !important; /* gray-400 */
+        }
+        /* Tokens ở chế độ multiple trong dark */
+        .dark .ant-select-multiple .ant-select-selection-item {
+          background-color: rgb(75 85 99) !important; /* gray-600 */
+          border-color: rgb(75 85 99) !important;
+          color: rgb(255 255 255) !important;
+        }
+        /* Single select dark: chữ rõ, không nền */
+        .dark
+          .ant-select-single
+          .ant-select-selector
+          .ant-select-selection-item {
+          background-color: transparent !important;
+          color: rgb(255 255 255) !important;
+          font-weight: 600;
+        }
+        .dark .ant-select-arrow,
+        .dark .ant-select-clear {
+          color: rgb(209 213 219) !important; /* gray-300 */
+        }
+        .dark .ant-select-dropdown {
+          background-color: rgb(31 41 55) !important; /* gray-800 */
+          border-color: rgb(55 65 81) !important; /* gray-700 */
+        }
+        .dark .ant-select-item {
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+          background-color: rgba(
+            59,
+            130,
+            246,
+            0.25
+          ) !important; /* blue-500/25 */
+          color: rgb(255 255 255) !important;
+        }
+        .dark
+          .ant-select-item-option-selected:not(
+            .ant-select-item-option-disabled
+          ) {
+          background-color: rgba(
+            59,
+            130,
+            246,
+            0.35
+          ) !important; /* blue-500/35 */
+          color: rgb(255 255 255) !important;
+          font-weight: 600 !important;
         }
       `}</style>
       <div className="flex">
@@ -700,8 +861,9 @@ const AdminProposalGradeResults = () => {
                             type="checkbox"
                             onChange={handleSelectAll}
                             checked={
-                              selectedIds.length === pendingResults.length &&
-                              pendingResults.length > 0
+                              selectedIds.length ===
+                                pendingCurrentPageResults.length &&
+                              pendingCurrentPageResults.length > 0
                             }
                             className="w-4 h-4 text-blue-600 rounded"
                           />
@@ -746,7 +908,7 @@ const AdminProposalGradeResults = () => {
                           </td>
                         </tr>
                       ) : (
-                        filteredResults.map((item, index) => (
+                        paginatedResults.map((item, index) => (
                           <tr
                             key={index}
                             className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
@@ -889,6 +1051,115 @@ const AdminProposalGradeResults = () => {
                     </tbody>
                   </table>
                 </div>
+                {totalItems > 0 && (
+                  <div className="flex justify-between items-center mr-5 pb-5 mt-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm ml-1 text-gray-700 dark:text-gray-300">
+                        Hiển thị:
+                      </span>
+                      <Select
+                        value={pageSize}
+                        onChange={handlePageSizeChange}
+                        style={{ width: 80 }}
+                        options={[
+                          { value: 5, label: "5" },
+                          { value: 10, label: "10" },
+                          { value: 20, label: "20" },
+                          { value: 50, label: "50" },
+                          { value: 100, label: "100" },
+                        ]}
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        kết quả/trang
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Trang {currentPage} / {totalPages} ({totalItems} kết
+                        quả)
+                      </span>
+                      <nav aria-label="Page navigation">
+                        <ul className="list-style-none flex">
+                          <li>
+                            <button
+                              className={`relative mr-1 block rounded bg-transparent px-3 py-1.5 font-bold text-sm transition-all duration-300 ${
+                                currentPage <= 1
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:bg-blue-200 dark:hover:bg-blue-900/40"
+                              }`}
+                              onClick={() => {
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth="1.5"
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M15.75 19.5 8.25 12l7.5-7.5"
+                                />
+                              </svg>
+                            </button>
+                          </li>
+                          {Array.from(
+                            { length: totalPages },
+                            (_, index) => index + 1
+                          ).map((pageNumber) => (
+                            <li key={pageNumber}>
+                              <button
+                                className={`relative mr-1 block rounded bg-transparent px-3 py-1.5 font-bold text-sm transition-all duration-300 ${
+                                  currentPage === pageNumber
+                                    ? "bg-blue-200 dark:bg-blue-900/60"
+                                    : "hover:bg-blue-200 dark:hover:bg-blue-900/40"
+                                }`}
+                                onClick={() => setCurrentPage(pageNumber)}
+                              >
+                                {pageNumber}
+                              </button>
+                            </li>
+                          ))}
+                          <li>
+                            <button
+                              className={`relative block rounded bg-transparent px-3 py-1.5 font-bold text-sm transition-all duration-300 ${
+                                currentPage >= totalPages
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:bg-blue-200 dark:hover:bg-blue-900/40"
+                              }`}
+                              onClick={() => {
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth="1.5"
+                                stroke="currentColor"
+                                className="w-5 h-5"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                                />
+                              </svg>
+                            </button>
+                          </li>
+                        </ul>
+                      </nav>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

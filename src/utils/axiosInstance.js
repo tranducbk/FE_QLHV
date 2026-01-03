@@ -15,9 +15,24 @@ import { BASE_URL } from "@/configs";
 // ==================== CONSTANTS ====================
 const REFRESH_TOKEN_ENDPOINT = "/user/refresh-token";
 const MAX_RETRY_ATTEMPTS = 1;
-const REFRESH_TOKEN_TIMEOUT = 10000; // 10 seconds
-const REQUEST_TIMEOUT = 30000; // 30 seconds
-const LOGOUT_TIMEOUT = 3000; // 3 seconds
+const REFRESH_TOKEN_TIMEOUT = 10000;
+const REQUEST_TIMEOUT = 30000;
+const LOGOUT_TIMEOUT = 3000;
+const REDIRECT_DELAY = 100;
+
+const PUBLIC_ROUTES = ["/", "/login", "/forgot-password"];
+const RESET_PASSWORD_PREFIX = "/reset-password/";
+
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: "accessToken",
+  USER_ROLE: "userRole",
+  SESSION_EXPIRED: "showSessionExpiredNotification",
+};
+
+const HTTP_STATUS = {
+  UNAUTHORIZED: 401,
+  TOO_MANY_REQUESTS: 429,
+};
 
 // ==================== STATE MANAGEMENT ====================
 let isRefreshing = false;
@@ -43,43 +58,49 @@ const processQueue = (error, success = false) => {
 };
 
 /**
+ * Xóa cookie với options chuẩn
+ */
+const clearCookie = (name, domain = "") => {
+  const options = [
+    "path=/",
+    "expires=Thu, 01 Jan 1970 00:00:00 UTC",
+    "SameSite=None",
+    "Secure",
+    domain && `domain=${domain}`,
+  ]
+    .filter(Boolean)
+    .join("; ");
+
+  document.cookie = `${name}=; ${options}`;
+};
+
+/**
  * Xóa tất cả authentication data từ localStorage và cookies
  * Export để có thể sử dụng ở các component khác
  */
 export const clearAuthData = () => {
+  if (typeof window === "undefined") return;
+
   try {
-    // Clear accessToken và userRole từ localStorage
-    // refreshToken chỉ có trong httpOnly cookie, sẽ được clear bởi backend
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("userRole");
+    // Clear localStorage
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER_ROLE);
 
-    // Clear cookies với đầy đủ options
-    const cookieOptions = [
-      "path=/",
-      "expires=Thu, 01 Jan 1970 00:00:00 UTC",
-      "SameSite=None",
-      "Secure",
-    ].join("; ");
+    // Clear cookies với domain hiện tại và parent domain
+    const hostname = window.location.hostname;
+    const domains = [hostname, `.${hostname}`];
 
-    // Xóa cookies với các path và domain khác nhau để đảm bảo
-    document.cookie = `accessToken=; ${cookieOptions}`;
-    document.cookie = `refreshToken=; ${cookieOptions}`;
-
-    // Xóa với domain hiện tại và parent domain
-    if (typeof window !== "undefined") {
-      const hostname = window.location.hostname;
-      const domains = [hostname, `.${hostname}`];
-
+    ["accessToken", "refreshToken"].forEach((tokenName) => {
+      clearCookie(tokenName);
       domains.forEach((domain) => {
         try {
-          document.cookie = `accessToken=; ${cookieOptions}; domain=${domain}`;
-          document.cookie = `refreshToken=; ${cookieOptions}; domain=${domain}`;
-        } catch (e) {
+          clearCookie(tokenName, domain);
+        } catch {
           // Ignore domain errors
         }
       });
-    }
-  } catch (error) {
+    });
+  } catch {
     // Ignore errors
   }
 };
@@ -95,7 +116,7 @@ const showSessionExpiredNotification = async () => {
       "Phiên đăng nhập đã hết hạn",
       "Vui lòng đăng nhập lại để tiếp tục sử dụng"
     );
-  } catch (error) {
+  } catch {
     // Ignore nếu không import được (tránh circular dependency)
   }
 };
@@ -113,9 +134,19 @@ const callLogoutAPI = async () => {
         timeout: LOGOUT_TIMEOUT,
       }
     );
-  } catch (error) {
+  } catch {
     // Expected: token có thể đã hết hạn
   }
+};
+
+/**
+ * Kiểm tra xem route có phải là public route không
+ */
+const isPublicRoute = (pathname) => {
+  return (
+    PUBLIC_ROUTES.includes(pathname) ||
+    pathname.startsWith(RESET_PASSWORD_PREFIX)
+  );
 };
 
 /**
@@ -123,46 +154,40 @@ const callLogoutAPI = async () => {
  * - Clear auth data
  * - Gọi logout API
  * - Hiển thị notification
- * - Redirect về trang chủ
+ * - Redirect về login (nếu đang ở protected route)
  *
  * @param {string} reason - Lý do session expired (for logging)
  */
-const handleSessionExpired = async (reason = "Session expired") => {
+const handleSessionExpired = async () => {
   if (isRedirecting || typeof window === "undefined") {
     return;
   }
 
-  // Không redirect nếu đang ở trang chủ (tránh loop)
   const currentPath = window.location.pathname;
-  if (currentPath === "/") {
-    // Chỉ clear data, không redirect
-    clearAuthData();
-    callLogoutAPI();
+
+  // Clear auth data và logout
+  clearAuthData();
+  callLogoutAPI();
+
+  // Nếu đang ở public route, chỉ clear data và show notification
+  if (isPublicRoute(currentPath)) {
     showSessionExpiredNotification();
     return;
   }
 
+  // Protected routes: redirect về login
   isRedirecting = true;
+  sessionStorage.setItem(STORAGE_KEYS.SESSION_EXPIRED, "true");
 
-  // Clear auth data
-  clearAuthData();
-
-  // Call logout API (non-blocking)
-  callLogoutAPI();
-
-  // Lưu flag để hiện thông báo ở page home (không hiện ở page hiện tại)
-  sessionStorage.setItem("showSessionExpiredNotification", "true");
-
-  // Redirect to home page
   setTimeout(() => {
-    window.location.href = "/";
-  }, 100);
+    window.location.href = "/login";
+  }, REDIRECT_DELAY);
 };
 
 // ==================== AXIOS INSTANCE ====================
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, // Quan trọng: gửi cookies tự động
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -181,14 +206,13 @@ axiosInstance.interceptors.request.use(
     }
 
     // Gửi accessToken từ localStorage trong Authorization header
-    // (accessToken không lưu trong cookie, chỉ refreshToken lưu trong httpOnly cookie)
     if (typeof window !== "undefined") {
       try {
-        const accessToken = localStorage.getItem("accessToken");
+        const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
         if (accessToken) {
           config.headers.Authorization = `Bearer ${accessToken}`;
         }
-      } catch (error) {
+      } catch {
         // Ignore localStorage errors (privacy mode, etc.)
       }
     }
@@ -204,20 +228,21 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Skip nếu request đã bị cancel hoặc không có config
     if (!originalRequest) {
       return Promise.reject(error);
     }
 
+    const status = error.response?.status;
+
     // Handle 429 Rate Limited - Retry với delay
-    if (error.response?.status === 429) {
+    if (status === HTTP_STATUS.TOO_MANY_REQUESTS) {
       const retryAfter = error.response.headers["retry-after"] || 1;
       await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
       return axiosInstance(originalRequest);
     }
 
     // Handle 401 Unauthorized - Refresh token
-    if (error.response?.status === 401) {
+    if (status === HTTP_STATUS.UNAUTHORIZED) {
       return handleUnauthorizedError(originalRequest, error);
     }
 
@@ -239,20 +264,20 @@ const handleUnauthorizedError = async (originalRequest, error) => {
 
   // Skip refresh token endpoint để tránh infinite loop
   if (requestUrl.includes(REFRESH_TOKEN_ENDPOINT)) {
-    handleSessionExpired("Refresh token failed");
+    handleSessionExpired();
     return Promise.reject(error);
   }
 
   // Nếu là lỗi "Bạn chưa đăng nhập" - không có token, đăng xuất ngay
   if (errorMessage.includes("Bạn chưa đăng nhập")) {
-    handleSessionExpired("Not logged in");
+    handleSessionExpired();
     return Promise.reject(error);
   }
 
   // Kiểm tra retry count
   const retryCount = originalRequest._retryCount || 0;
   if (retryCount >= MAX_RETRY_ATTEMPTS) {
-    handleSessionExpired("Max retry attempts reached");
+    handleSessionExpired();
     return Promise.reject(error);
   }
 
@@ -290,37 +315,32 @@ const refreshAccessToken = async (originalRequest, retryCount) => {
   isRefreshing = true;
 
   try {
-    // Gọi refresh token endpoint
-    // refreshToken sẽ tự động được gửi từ httpOnly cookie với withCredentials: true
-    // Không cần gửi refreshToken trong body
     const refreshResponse = await axiosInstance.post(
       REFRESH_TOKEN_ENDPOINT,
-      {}, // Không cần gửi refreshToken trong body, đã có trong cookie
+      {},
       {
-        withCredentials: true, // Quan trọng: gửi httpOnly cookies
+        withCredentials: true,
         timeout: REFRESH_TOKEN_TIMEOUT,
-        skipAuthRefresh: true, // Tránh loop
+        skipAuthRefresh: true,
       }
     );
 
-    // Lưu accessToken mới vào localStorage (fallback)
+    // Lưu accessToken mới vào localStorage
     if (refreshResponse.data?.accessToken) {
-      localStorage.setItem("accessToken", refreshResponse.data.accessToken);
+      localStorage.setItem(
+        STORAGE_KEYS.ACCESS_TOKEN,
+        refreshResponse.data.accessToken
+      );
     }
 
-    // Process queue và retry requests
     processQueue(null, true);
     isRefreshing = false;
 
-    // Retry original request với token mới
     return axiosInstance(originalRequest);
   } catch (refreshError) {
-    // Refresh token thất bại - refreshToken đã hết hạn hoặc không hợp lệ
     processQueue(refreshError, false);
     isRefreshing = false;
-
-    // Khi refreshToken hết hạn, chỉ cần clear token và logout
-    handleSessionExpired("Refresh token expired");
+    handleSessionExpired();
     return Promise.reject(refreshError);
   }
 };

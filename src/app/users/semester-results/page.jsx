@@ -8,7 +8,9 @@ import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import { handleNotify } from "../../../components/notify";
 import { GRADE_MESSAGES } from "@/constants/validationMessages";
+import { FILE_UPLOAD_CONFIG } from "@/constants/fileUpload";
 import axiosInstance from "@/utils/axiosInstance";
+import { UploadButton, getAuthToken } from "@/utils/uploadthing";
 
 const SemesterResults = () => {
   const [semesters, setSemesters] = useState([]);
@@ -33,30 +35,75 @@ const SemesterResults = () => {
   const [gradeSemesterCode, setGradeSemesterCode] = useState("");
   const [studentId, setStudentId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState(null);
+  const [uploadedFileName, setUploadedFileName] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [updateSelectedFile, setUpdateSelectedFile] = useState(null);
+  const [updateUploadedFileUrl, setUpdateUploadedFileUrl] = useState(null);
+  const [updateUploadedFileName, setUpdateUploadedFileName] = useState(null);
   const [updateUploadingFile, setUpdateUploadingFile] = useState(false);
   const [deleteSelectedFile, setDeleteSelectedFile] = useState(null);
+  const [deleteUploadedFileUrl, setDeleteUploadedFileUrl] = useState(null);
+  const [deleteUploadedFileName, setDeleteUploadedFileName] = useState(null);
   const [deleteUploadingFile, setDeleteUploadingFile] = useState(false);
   const router = useRouter();
 
-  // Helpers cho nhập KQHT
+  // ==================== UPLOAD HANDLERS ====================
+  /**
+   * Tạo upload handlers để tái sử dụng
+   */
+  const createUploadHandlers = ({
+    onSuccess,
+    onError,
+    setUploading,
+    setFileUrl,
+    setFileName,
+    setSelectedFile,
+  }) => ({
+    onClientUploadComplete: (res) => {
+      if (res?.[0]) {
+        const file = res[0];
+        setFileUrl(file.url || file.fileUrl);
+        setFileName(file.name || file.fileName);
+        setUploading(false);
+        handleNotify(
+          "success",
+          "Upload thành công",
+          `File ${file.name || file.fileName} đã được upload thành công`
+        );
+        onSuccess?.(file);
+      }
+    },
+    onUploadError: (error) => {
+      setUploading(false);
+      handleNotify(
+        "danger",
+        "Lỗi upload file",
+        error.message || "Không thể upload file"
+      );
+      onError?.(error);
+    },
+    onUploadBegin: (name) => {
+      setUploading(true);
+      setSelectedFile({ name });
+    },
+  });
+
+  // ==================== HELPERS ====================
+  /**
+   * Parse semester code từ ID
+   */
   const parseTermFromId = (id) => {
-    console.log("parseTermFromId input:", id);
     if (!id) return null;
     const semester = semesters.find((s) => s.id === id);
     if (!semester) return null;
 
     if (semester.code.startsWith("HK")) {
-      console.log("parseTermFromId return original:", semester.code);
-      return semester.code; // Trả về nguyên string "HK1", "HK2", "HK3"
+      return semester.code;
     }
     if (semester.code.includes(".")) {
-      const result = "HK" + semester.code.split(".")[1]; // Chuyển đổi thành "HK1", "HK2", "HK3"
-      console.log("parseTermFromId return converted:", result);
-      return result;
+      return "HK" + semester.code.split(".")[1];
     }
-    console.log("parseTermFromId return null");
     return null;
   };
   const findSchoolYearById = (id) => {
@@ -259,39 +306,14 @@ const SemesterResults = () => {
     }
 
     try {
-      let uploadedFileName = null;
-
-      setUploadingFile(true);
-      try {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-        formData.append("studentId", studentId);
-        formData.append("semester", term);
-        formData.append("schoolYear", schoolYear);
-
-        const uploadResponse = await axiosInstance.post(
-          "/grade/upload-file",
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        uploadedFileName = uploadResponse.data.fileName;
-      } catch (uploadError) {
+      // Kiểm tra file đã được upload chưa
+      if (selectedFile && !uploadedFileUrl) {
         handleNotify(
-          "danger",
-          "Lỗi upload file",
-          uploadError?.response?.data?.error ||
-            uploadError.message ||
-            "Không thể upload file"
+          "warning",
+          "Chưa upload file",
+          "Vui lòng upload file trước khi gửi đề xuất"
         );
-        setUploadingFile(false);
         return;
-      } finally {
-        setUploadingFile(false);
       }
 
       const payload = {
@@ -303,7 +325,12 @@ const SemesterResults = () => {
           credits: Number(s.credits || 0),
           gradePoint10: Number(s.grade10 || 0),
         })),
-        ...(uploadedFileName && { attachmentFile: uploadedFileName }),
+        ...(uploadedFileUrl && {
+          attachmentFile: JSON.stringify({
+            url: uploadedFileUrl,
+            name: uploadedFileName || "File đính kèm",
+          }),
+        }),
       };
 
       // Thêm mới đề xuất kết quả học tập
@@ -312,13 +339,15 @@ const SemesterResults = () => {
         "success",
         "Thành công",
         `Đã gửi đề xuất KQ học tập ${term} năm học ${schoolYear}${
-          uploadedFileName ? " kèm file đính kèm" : ""
+          uploadedFileUrl ? " kèm file đính kèm" : ""
         }. Vui lòng chờ Chỉ huy phê duyệt.`
       );
 
       // Đóng modal và reset state
       setShowGradeModal(false);
       setSelectedFile(null);
+      setUploadedFileUrl(null);
+      setUploadedFileName(null);
       setGradeSubjects([
         {
           subjectCode: "",
@@ -500,42 +529,16 @@ const SemesterResults = () => {
     }
 
     try {
-      let uploadedFileName = null;
+      let uploadedFileUrl = null;
 
-      // Upload file nếu có
-      if (updateSelectedFile) {
-        setUpdateUploadingFile(true);
-        try {
-          const formData = new FormData();
-          formData.append("file", updateSelectedFile);
-          formData.append("studentId", studentId);
-          formData.append("semester", viewingSemester.semester);
-          formData.append("schoolYear", viewingSemester.schoolYear);
-
-          const uploadResponse = await axiosInstance.post(
-            "/grade/upload-file",
-            formData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          );
-
-          uploadedFileName = uploadResponse.data.fileName;
-        } catch (uploadError) {
-          handleNotify(
-            "danger",
-            "Lỗi upload file",
-            uploadError?.response?.data?.error ||
-              uploadError.message ||
-              "Không thể upload file"
-          );
-          setUpdateUploadingFile(false);
-          return;
-        } finally {
-          setUpdateUploadingFile(false);
-        }
+      // Kiểm tra file đã được upload chưa (nếu có file mới)
+      if (updateSelectedFile && !updateUploadedFileUrl) {
+        handleNotify(
+          "warning",
+          "Chưa upload file",
+          "Vui lòng upload file trước khi gửi yêu cầu cập nhật"
+        );
+        return;
       }
 
       const payload = {
@@ -545,7 +548,7 @@ const SemesterResults = () => {
           credits: Number(s.credits || 0),
           gradePoint10: Number(s.grade10 || 0),
         })),
-        ...(uploadedFileName && { attachmentFile: uploadedFileName }),
+        ...(updateUploadedFileUrl && { attachmentFile: updateUploadedFileUrl }),
       };
 
       await axiosInstance.post(
@@ -556,11 +559,14 @@ const SemesterResults = () => {
       handleNotify(
         "success",
         "Thành công",
-        `Đã gửi yêu cầu cập nhật kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}${uploadedFileName ? " kèm file đính kèm" : ""}. Vui lòng chờ Chỉ huy phê duyệt.`
+        `Đã gửi yêu cầu cập nhật kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}${updateUploadedFileUrl ? " kèm file đính kèm" : ""}. Vui lòng chờ Chỉ huy phê duyệt.`
       );
 
       setShowUpdateModal(false);
       setViewingSemester(null);
+      setUpdateSelectedFile(null);
+      setUpdateUploadedFileUrl(null);
+      setUpdateUploadedFileName(null);
       setUpdateSelectedFile(null);
       router.push("/users/proposals/grade-results");
     } catch (err) {
@@ -622,7 +628,12 @@ const SemesterResults = () => {
 
       const payload = {
         reason: deleteReason.trim(),
-        ...(uploadedFileName && { attachmentFile: uploadedFileName }),
+        ...(deleteUploadedFileUrl && {
+          attachmentFile: JSON.stringify({
+            url: deleteUploadedFileUrl,
+            name: deleteUploadedFileName || "File đính kèm",
+          }),
+        }),
       };
 
       await axiosInstance.post(
@@ -633,13 +644,15 @@ const SemesterResults = () => {
       handleNotify(
         "success",
         "Thành công",
-        `Đã gửi yêu cầu xóa kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}${uploadedFileName ? " kèm file đính kèm" : ""}. Vui lòng chờ Chỉ huy phê duyệt.`
+        `Đã gửi yêu cầu xóa kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}${deleteUploadedFileUrl ? " kèm file đính kèm" : ""}. Vui lòng chờ Chỉ huy phê duyệt.`
       );
 
       setShowDeleteModal(false);
       setViewingSemester(null);
       setDeleteReason("");
       setDeleteSelectedFile(null);
+      setDeleteUploadedFileUrl(null);
+      setDeleteUploadedFileName(null);
       router.push("/users/proposals/grade-results");
     } catch (err) {
       handleNotify(
@@ -654,25 +667,13 @@ const SemesterResults = () => {
     if (studentId) {
       try {
         const res = await axiosInstance.get(`/student/${studentId}/grades`);
-        console.log("DEBUG - fetchLearningResult response:", res.data);
-        console.log(
-          "DEBUG - fetchLearningResult subjects:",
-          res.data.semesterResults?.map((item) => ({
-            id: item.id,
-            semester: item.semester,
-            schoolYear: item.schoolYear,
-            subjectsCount: item.subjects?.length || 0,
-            subjects: item.subjects,
-          }))
-        );
-
         // semesterResults từ API giờ chỉ chứa kết quả đã duyệt
         const approvedResults = res.data.semesterResults || [];
 
         setLearningResult(approvedResults);
         setSemesterResults(approvedResults);
       } catch (error) {
-        console.log(error);
+        // Silent error handling - data sẽ được load lại khi cần
       }
     }
   };
@@ -693,10 +694,10 @@ const SemesterResults = () => {
       const res = await axiosInstance.get(`/student/by-user/${userId}`);
       setStudentId(res.data.id);
       return res.data.id;
-    } catch (error) {
-      console.error("Error fetching studentId:", error);
-      return null;
-    }
+      } catch (error) {
+        // Error handling đã được xử lý bởi axios interceptor
+        return null;
+      }
   };
 
   useEffect(() => {
@@ -727,7 +728,7 @@ const SemesterResults = () => {
         // Mặc định hiển thị "Tất cả học kỳ" khi mới vào
         // Không set selectedSemester để giữ giá trị rỗng
       } catch (e) {
-        console.log(e);
+        // Silent error - không cần xử lý
       }
     };
     fetchSemesters();
@@ -1218,48 +1219,28 @@ const SemesterResults = () => {
                   </table>
                 </div>
 
-                {/* Upload file */}
+                {/* Upload file - Sử dụng UploadThing */}
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tải lên file đính kèm{" "}
                     <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex items-center gap-3">
-                    <label className="flex-1 cursor-pointer">
-                      <input
-                        type="file"
-                        onChange={(e) =>
-                          setSelectedFile(e.target.files[0] || null)
-                        }
-                        className="hidden"
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      />
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
-                        <svg
-                          className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                          />
-                        </svg>
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          {selectedFile ? selectedFile.name : "Chọn file"}
-                        </span>
-                      </div>
-                    </label>
-                    {selectedFile && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedFile(null)}
-                        className="px-3 py-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                        title="Xóa file"
-                      >
+                  <div className="flex items-center justify-center gap-3">
+                    <UploadButton
+                      endpoint="gradeFiles"
+                      headers={{
+                        Authorization: `Bearer ${getAuthToken()}`,
+                      }}
+                      accept={FILE_UPLOAD_CONFIG.ACCEPTED_TYPES}
+                      {...createUploadHandlers({
+                        setFileUrl: setUploadedFileUrl,
+                        setFileName: setUploadedFileName,
+                        setUploading: setUploadingFile,
+                        setSelectedFile,
+                      })}
+                    />
+                    {uploadedFileUrl && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                         <svg
                           className="w-5 h-5"
                           fill="none"
@@ -1270,14 +1251,45 @@ const SemesterResults = () => {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth="2"
-                            d="M6 18L18 6M6 6l12 12"
+                            d="M5 13l4 4L19 7"
                           />
                         </svg>
-                      </button>
+                        <span>Đã upload:</span>
+                        <span className="font-medium">{uploadedFileName || "File"}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUploadedFileUrl(null);
+                            setUploadedFileName(null);
+                            setSelectedFile(null);
+                          }}
+                          className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400"
+                          title="Xóa file"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {uploadingFile && (
+                      <span className="text-sm text-blue-600 dark:text-blue-400">
+                        Đang upload...
+                      </span>
                     )}
                   </div>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Hỗ trợ: PDF, DOC, DOCX, JPG, PNG (tối đa 10MB)
+                    Hỗ trợ: {FILE_UPLOAD_CONFIG.SUPPORTED_EXTENSIONS} (tối đa {FILE_UPLOAD_CONFIG.MAX_SIZE})
                   </p>
                 </div>
 
@@ -1832,49 +1844,27 @@ const SemesterResults = () => {
                   </div>
                 </div>
 
-                {/* Upload file */}
+                {/* Upload file - Sử dụng UploadThing */}
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tải lên file minh chứng
                   </label>
                   <div className="flex items-center gap-3">
-                    <label className="flex-1 cursor-pointer">
-                      <input
-                        type="file"
-                        onChange={(e) =>
-                          setUpdateSelectedFile(e.target.files[0] || null)
-                        }
-                        className="hidden"
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      />
-                      <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
-                        <svg
-                          className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                          />
-                        </svg>
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                          {updateSelectedFile
-                            ? updateSelectedFile.name
-                            : "Chọn file"}
-                        </span>
-                      </div>
-                    </label>
-                    {updateSelectedFile && (
-                      <button
-                        type="button"
-                        onClick={() => setUpdateSelectedFile(null)}
-                        className="px-3 py-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                        title="Xóa file"
-                      >
+                    <UploadButton
+                      endpoint="gradeFiles"
+                      headers={{
+                        Authorization: `Bearer ${getAuthToken()}`,
+                      }}
+                      accept={FILE_UPLOAD_CONFIG.ACCEPTED_TYPES}
+                      {...createUploadHandlers({
+                        setFileUrl: setUpdateUploadedFileUrl,
+                        setFileName: setUpdateUploadedFileName,
+                        setUploading: setUpdateUploadingFile,
+                        setSelectedFile: setUpdateSelectedFile,
+                      })}
+                    />
+                    {updateUploadedFileUrl && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                         <svg
                           className="w-5 h-5"
                           fill="none"
@@ -1885,14 +1875,45 @@ const SemesterResults = () => {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth="2"
-                            d="M6 18L18 6M6 6l12 12"
+                            d="M5 13l4 4L19 7"
                           />
                         </svg>
-                      </button>
+                        <span>Đã upload:</span>
+                        <span className="font-medium">{updateUploadedFileName || "File"}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUpdateUploadedFileUrl(null);
+                            setUpdateUploadedFileName(null);
+                            setUpdateSelectedFile(null);
+                          }}
+                          className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400"
+                          title="Xóa file"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {updateUploadingFile && (
+                      <span className="text-sm text-blue-600 dark:text-blue-400">
+                        Đang upload...
+                      </span>
                     )}
                   </div>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Hỗ trợ: PDF, DOC, DOCX, JPG, PNG (tối đa 10MB)
+                    Hỗ trợ: {FILE_UPLOAD_CONFIG.SUPPORTED_EXTENSIONS} (tối đa {FILE_UPLOAD_CONFIG.MAX_SIZE})
                   </p>
                 </div>
 
@@ -1982,49 +2003,27 @@ const SemesterResults = () => {
                 />
               </div>
 
-              {/* Upload file */}
+              {/* Upload file - Sử dụng UploadThing */}
               <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Tải lên file minh chứng
                 </label>
-                <div className="flex items-center gap-3">
-                  <label className="flex-1 cursor-pointer">
-                    <input
-                      type="file"
-                      onChange={(e) =>
-                        setDeleteSelectedFile(e.target.files[0] || null)
-                      }
-                      className="hidden"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    />
-                    <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
-                      <svg
-                        className="w-5 h-5 text-gray-600 dark:text-gray-300"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                      </svg>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {deleteSelectedFile
-                          ? deleteSelectedFile.name
-                          : "Chọn file"}
-                      </span>
-                    </div>
-                  </label>
-                  {deleteSelectedFile && (
-                    <button
-                      type="button"
-                      onClick={() => setDeleteSelectedFile(null)}
-                      className="px-3 py-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                      title="Xóa file"
-                    >
+                <div className="flex items-center justify-center gap-3">
+                  <UploadButton
+                    endpoint="gradeFiles"
+                    headers={{
+                      Authorization: `Bearer ${getAuthToken()}`,
+                    }}
+                    accept={FILE_UPLOAD_CONFIG.ACCEPTED_TYPES}
+                    {...createUploadHandlers({
+                      setFileUrl: setDeleteUploadedFileUrl,
+                      setFileName: setDeleteUploadedFileName,
+                      setUploading: setDeleteUploadingFile,
+                      setSelectedFile: setDeleteSelectedFile,
+                    })}
+                  />
+                  {deleteUploadedFileUrl && (
+                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                       <svg
                         className="w-5 h-5"
                         fill="none"
@@ -2035,10 +2034,41 @@ const SemesterResults = () => {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth="2"
-                          d="M6 18L18 6M6 6l12 12"
+                          d="M5 13l4 4L19 7"
                         />
                       </svg>
-                    </button>
+                      <span>Đã upload:</span>
+                      <span className="font-medium">{deleteUploadedFileName || "File"}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteUploadedFileUrl(null);
+                          setDeleteUploadedFileName(null);
+                          setDeleteSelectedFile(null);
+                        }}
+                        className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400"
+                        title="Xóa file"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  {deleteUploadingFile && (
+                    <span className="text-sm text-blue-600 dark:text-blue-400">
+                      Đang upload...
+                    </span>
                   )}
                 </div>
                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">

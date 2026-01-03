@@ -4,14 +4,57 @@ import { BASE_URL } from "@/configs";
 
 /**
  * Component hiển thị các nút xem/tải file đính kèm
- * @param {string} fileName - Tên file đính kèm
+ * Hỗ trợ 3 format:
+ * 1. JSON string: {"url": "...", "name": "..."} (format mới)
+ * 2. URL string: "https://..." (UploadThing URL)
+ * 3. File name: "filename.pdf" (backward compatibility - file local cũ)
+ *
+ * @param {string} fileName - File attachment data (JSON string, URL, hoặc file name)
  */
 const FileAttachmentButtons = ({ fileName }) => {
   if (!fileName) return null;
 
-  const fileUrl = `${BASE_URL}/grade/file/${encodeURIComponent(fileName)}`;
-  const downloadUrl = `${fileUrl}?download=true`;
-  const isPdf = fileName.toLowerCase().endsWith(".pdf");
+  let fileUrl, displayFileName;
+
+  // Parse JSON nếu là JSON string (format mới)
+  try {
+    const fileData = JSON.parse(fileName);
+    if (fileData?.url && fileData?.name) {
+      fileUrl = fileData.url;
+      displayFileName = fileData.name;
+    } else {
+      throw new Error("Invalid JSON format");
+    }
+  } catch {
+    // Không phải JSON, xử lý như string
+    const isUploadThingUrl =
+      fileName.startsWith("http://") || fileName.startsWith("https://");
+
+    if (isUploadThingUrl) {
+      fileUrl = fileName;
+      // Lấy tên file từ query params x-ut-file-name
+      try {
+        const url = new URL(fileName);
+        const fileNameParam = url.searchParams.get("x-ut-file-name");
+        displayFileName = fileNameParam
+          ? decodeURIComponent(fileNameParam)
+          : url.pathname.split("/").pop() || "File đính kèm";
+      } catch {
+        displayFileName = fileName.split("/").pop() || "File đính kèm";
+      }
+    } else {
+      // Tên file cũ (local) - backward compatibility
+      fileUrl = `${BASE_URL}/grade/file/${encodeURIComponent(fileName)}`;
+      displayFileName = fileName;
+    }
+  }
+
+  const downloadUrl = fileUrl.includes("?")
+    ? `${fileUrl}&download=true`
+    : `${fileUrl}?download=true`;
+  const isPdf =
+    displayFileName.toLowerCase().endsWith(".pdf") ||
+    fileUrl.toLowerCase().includes(".pdf");
 
   return (
     <div className="flex items-center gap-3">
@@ -30,7 +73,7 @@ const FileAttachmentButtons = ({ fileName }) => {
           />
         </svg>
         <span className="text-sm text-gray-700 dark:text-gray-300">
-          {fileName}
+          {displayFileName}
         </span>
       </div>
       {isPdf && (
@@ -65,6 +108,8 @@ const FileAttachmentButtons = ({ fileName }) => {
       <a
         href={downloadUrl}
         download
+        target="_blank"
+        rel="noopener noreferrer"
         className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors duration-200 text-sm"
       >
         <svg
@@ -87,4 +132,3 @@ const FileAttachmentButtons = ({ fileName }) => {
 };
 
 export default FileAttachmentButtons;
-

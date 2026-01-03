@@ -7,6 +7,8 @@ import Loader from "@/components/loader";
 import { useLoading } from "@/hooks";
 import axiosInstance from "@/utils/axiosInstance";
 import { Select, ConfigProvider, theme } from "antd";
+import { BASE_URL } from "@/configs";
+import FileAttachmentButtons from "@/components/FileAttachmentButtons";
 
 const handleNotify = (type, title, message) => {
   const event = new CustomEvent("notify", {
@@ -128,8 +130,9 @@ const ProposalGradeResults = () => {
     if (!deletingProposal || !studentId) return;
 
     try {
+      // Sử dụng proposalId để xóa chính xác đề xuất cần xóa
       await axiosInstance.delete(
-        `/student/${studentId}/grades/${deletingProposal.semester}/${deletingProposal.schoolYear}`
+        `/student/${studentId}/grades/proposal/${deletingProposal.id}`
       );
       handleNotify(
         "success",
@@ -686,6 +689,16 @@ const ProposalGradeResults = () => {
                   </div>
                 )}
               </div>
+
+              {/* File đính kèm */}
+              {viewingProposal.attachmentFile && (
+                <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    File đính kèm
+                  </h3>
+                  <FileAttachmentButtons fileName={viewingProposal.attachmentFile} />
+                </div>
+              )}
 
               {/* Thong tin tong quan */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

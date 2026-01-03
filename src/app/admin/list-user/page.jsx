@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import dayjs from "dayjs";
 import DatePicker from "react-datepicker";
@@ -45,17 +45,19 @@ const ListUser = () => {
   const [allStudents, setAllStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [graduationDate, setGraduationDate] = useState(null);
+  const [graduationFilterFullName, setGraduationFilterFullName] = useState("");
   const [graduationFilterUnit, setGraduationFilterUnit] = useState("all");
+  const [graduationFilterEnrollment, setGraduationFilterEnrollment] = useState("");
   const [graduationFilterSchoolYear, setGraduationFilterSchoolYear] =
     useState("all");
-  const [graduationSearchTerm, setGraduationSearchTerm] = useState("");
   const [enrollmentYears, setEnrollmentYears] = useState([]);
   const [schoolYears, setSchoolYears] = useState([]);
   const [graduationDateError, setGraduationDateError] = useState("");
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-  const getValidationMessage = () => {
+  const getValidationMessage = useCallback(() => {
     return graduationDateError;
-  };
+  }, [graduationDateError]);
 
   // State cho form thông tin học viên
   const [profileUniversity, setProfileUniversity] = useState(null);
@@ -903,153 +905,251 @@ const ListUser = () => {
     setShowConfirm(false);
   };
 
+  // Hàm lấy metadata (năm học, năm nhập học) - tách riêng để tối ưu
+  const fetchGraduationMetadata = useCallback(async () => {
+    try {
+      const [schoolYearsResponse, enrollmentYearsResponse] = await Promise.all([
+        axiosInstance.get(`/commander/schoolYears`),
+        axiosInstance.get(`/commander/enrollmentYears`),
+      ]);
+      setSchoolYears(schoolYearsResponse.data);
+      setEnrollmentYears(enrollmentYearsResponse.data || []);
+    } catch (error) {
+      console.error("Error fetching metadata:", error);
+    }
+  }, []);
+
+  // Hàm lấy tất cả học viên với bộ lọc
+  const fetchAllStudentsForGraduation = useCallback(async () => {
+    setIsLoadingStudents(true);
+    try {
+      // Lấy metadata song song
+      await fetchGraduationMetadata();
+
+      const allStudentsList = [];
+      let currentPage = 1;
+      const pageSize = 100;
+      let hasMore = true;
+
+      // Lấy tất cả học viên bằng cách gọi nhiều lần
+      while (hasMore) {
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          pageSize: pageSize.toString(),
+        });
+
+        // Thêm bộ lọc nếu có
+        if (graduationFilterFullName) {
+          params.append("fullName", graduationFilterFullName);
+        }
+        if (graduationFilterUnit && graduationFilterUnit !== "all") {
+          params.append("unit", graduationFilterUnit);
+        }
+        if (graduationFilterEnrollment) {
+          params.append("enrollment", graduationFilterEnrollment);
+        }
+
+        const response = await axiosInstance.get(
+          `/commander/student?${params.toString()}`
+        );
+
+        if (response.data?.students) {
+          allStudentsList.push(...response.data.students);
+          hasMore =
+            currentPage < response.data.totalPages &&
+            response.data.students.length === pageSize;
+          currentPage++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setAllStudents(allStudentsList);
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      handleNotify("danger", "Lỗi!", "Không thể tải danh sách học viên");
+    } finally {
+      setIsLoadingStudents(false);
+    }
+  }, [
+    graduationFilterFullName,
+    graduationFilterUnit,
+    graduationFilterEnrollment,
+    fetchGraduationMetadata,
+  ]);
+
   // Hàm mở modal cập nhật đồng loạt ngày ra trường
   const handleBulkGraduationUpdate = async () => {
-    try {
-      // Lấy danh sách sinh viên
-      const studentsResponse = await axiosInstance.get(
-        `/commander/allStudents`,
-        {}
-      );
-      setAllStudents(studentsResponse.data);
+    // Reset filters về giá trị từ ngoài page
+    setGraduationFilterFullName(fullName);
+    setGraduationFilterUnit(unit || "all");
+    setGraduationFilterEnrollment(enrollmentYear || "");
+    setGraduationFilterSchoolYear(schoolYear || "all");
+    setSelectedStudents([]);
+    setGraduationDate(null);
+    setGraduationDateError("");
 
-      // Lấy danh sách năm học
-      const schoolYearsResponse = await axiosInstance.get(
-        `/commander/schoolYears`
-      );
-      setSchoolYears(schoolYearsResponse.data);
-
-      setShowGraduationModal(true);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      handleNotify("danger", "Lỗi!", "Không thể tải dữ liệu");
-    }
+    setShowGraduationModal(true);
+    await fetchAllStudentsForGraduation();
   };
 
-  // Hàm lọc và sắp xếp sinh viên
-  const filteredAndSortedStudents = allStudents
-    .filter((student) => {
-      const matchesUnit =
-        graduationFilterUnit === "all" || student.unit === graduationFilterUnit;
+  // Tự động áp dụng bộ lọc khi các filter thay đổi (chỉ khi modal đang mở)
+  useEffect(() => {
+    if (!showGraduationModal) return;
 
-      // Lọc theo năm học
-      let matchesSchoolYear = true;
-      if (graduationFilterSchoolYear !== "all") {
-        const startYear = parseInt(graduationFilterSchoolYear.split("-")[0]);
-        // Sinh viên vào trường từ năm startYear trở về trước và chưa ra trường
-        // hoặc đã ra trường nhưng sau năm startYear
-        matchesSchoolYear =
-          student.enrollment <= startYear &&
-          (!student.graduationDate ||
-            new Date(student.graduationDate) > new Date(startYear, 11, 31));
-      }
+    // Debounce để tránh gọi API quá nhiều lần
+    const timeoutId = setTimeout(() => {
+      fetchAllStudentsForGraduation();
+    }, 500);
 
-      const matchesSearch =
-        !graduationSearchTerm ||
-        student.fullName
-          .toLowerCase()
-          .includes(graduationSearchTerm.toLowerCase()) ||
-        student.studentId
-          .toLowerCase()
-          .includes(graduationSearchTerm.toLowerCase());
-      return matchesUnit && matchesSchoolYear && matchesSearch;
-    })
-    .sort((a, b) => {
-      // Đầu tiên sắp xếp theo trạng thái ra trường (chưa ra trường lên trên)
-      const aGraduated = !!a.graduationDate;
-      const bGraduated = !!b.graduationDate;
-      if (aGraduated !== bGraduated) {
-        return aGraduated ? 1 : -1; // Chưa ra trường lên trên
-      }
+    return () => clearTimeout(timeoutId);
+  }, [
+    showGraduationModal,
+    graduationFilterFullName,
+    graduationFilterUnit,
+    graduationFilterEnrollment,
+    fetchAllStudentsForGraduation,
+  ]);
 
-      // Nếu cùng trạng thái ra trường, sắp xếp theo đơn vị
-      if (a.unit !== b.unit) {
-        return a.unit.localeCompare(b.unit);
-      }
+  // Helper function để lọc sinh viên
+  const filterStudent = useCallback((student) => {
+    const searchTerm = graduationFilterFullName?.toLowerCase() || "";
+    const matchesFullName =
+      !graduationFilterFullName ||
+      student.fullName?.toLowerCase().includes(searchTerm) ||
+      student.studentId?.toLowerCase().includes(searchTerm);
 
-      // Nếu cùng đơn vị, sắp xếp theo ngày nhập ngũ
-      const dateA = a.dateOfEnlistment
-        ? new Date(a.dateOfEnlistment)
-        : new Date(0);
-      const dateB = b.dateOfEnlistment
-        ? new Date(b.dateOfEnlistment)
-        : new Date(0);
+    const matchesUnit =
+      graduationFilterUnit === "all" || student.unit === graduationFilterUnit;
 
-      if (aGraduated) {
-        // Nếu đã ra trường, sắp xếp từ mới nhất đến cũ nhất
-        return dateA - dateB;
-      } else {
-        // Nếu chưa ra trường, sắp xếp từ cũ nhất đến mới nhất
-        return dateB - dateA;
-      }
-    });
+    const matchesEnrollment =
+      !graduationFilterEnrollment ||
+      student.enrollment === parseInt(graduationFilterEnrollment);
+
+    let matchesSchoolYear = true;
+    if (graduationFilterSchoolYear && graduationFilterSchoolYear !== "all") {
+      const startYear = parseInt(graduationFilterSchoolYear.split("-")[0]);
+      const endYearDate = new Date(startYear, 11, 31, 23, 59, 59, 999);
+      
+      matchesSchoolYear =
+        student.enrollment <= startYear &&
+        (!student.graduationDate ||
+          new Date(student.graduationDate) > endYearDate);
+    }
+
+    return matchesFullName && matchesUnit && matchesEnrollment && matchesSchoolYear;
+  }, [
+    graduationFilterFullName,
+    graduationFilterUnit,
+    graduationFilterEnrollment,
+    graduationFilterSchoolYear,
+  ]);
+
+  // Helper function để sắp xếp sinh viên
+  const sortStudents = useCallback((a, b) => {
+    const aGraduated = !!a.graduationDate;
+    const bGraduated = !!b.graduationDate;
+    if (aGraduated !== bGraduated) {
+      return aGraduated ? 1 : -1;
+    }
+
+    if (a.unit !== b.unit) {
+      return a.unit.localeCompare(b.unit);
+    }
+
+    const dateA = a.dateOfEnlistment ? new Date(a.dateOfEnlistment) : new Date(0);
+    const dateB = b.dateOfEnlistment ? new Date(b.dateOfEnlistment) : new Date(0);
+
+    return aGraduated ? dateA - dateB : dateB - dateA;
+  }, []);
+
+  // Sử dụng useMemo để tối ưu performance
+  const filteredAndSortedStudents = useMemo(() => {
+    return allStudents.filter(filterStudent).sort(sortStudents);
+  }, [allStudents, filterStudent, sortStudents]);
 
   // Hàm chọn tất cả sinh viên đã lọc
-  const handleSelectAllStudents = () => {
+  const handleSelectAllStudents = useCallback(() => {
     const currentFilteredIds = filteredAndSortedStudents.map(
       (student) => student.id
     );
-    const newSelectedStudents = [...selectedStudents];
-
-    // Thêm tất cả sinh viên đã lọc vào danh sách đã chọn (nếu chưa có)
-    currentFilteredIds.forEach((id) => {
-      if (!newSelectedStudents.includes(id)) {
-        newSelectedStudents.push(id);
-      }
+    setSelectedStudents((prev) => {
+      const newSelected = [...prev];
+      currentFilteredIds.forEach((id) => {
+        if (!newSelected.includes(id)) {
+          newSelected.push(id);
+        }
+      });
+      return newSelected;
     });
-
-    setSelectedStudents(newSelectedStudents);
-  };
+  }, [filteredAndSortedStudents]);
 
   // Hàm bỏ chọn tất cả sinh viên đã lọc
-  const handleDeselectAllStudents = () => {
+  const handleDeselectAllStudents = useCallback(() => {
     const currentFilteredIds = filteredAndSortedStudents.map(
       (student) => student.id
     );
-    setSelectedStudents(
-      selectedStudents.filter((id) => !currentFilteredIds.includes(id))
+    setSelectedStudents((prev) =>
+      prev.filter((id) => !currentFilteredIds.includes(id))
     );
-  };
+  }, [filteredAndSortedStudents]);
 
   // Hàm chọn/bỏ chọn một sinh viên
-  const handleSelectStudent = (studentId) => {
-    if (selectedStudents.includes(studentId)) {
-      setSelectedStudents(selectedStudents.filter((id) => id !== studentId));
-    } else {
-      setSelectedStudents([...selectedStudents, studentId]);
+  const handleSelectStudent = useCallback((studentId) => {
+    setSelectedStudents((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  }, []);
+
+  // Validation ngày ra trường
+  const validateGraduationDate = useCallback((date, students) => {
+    if (!date) return null;
+
+    const selectedDate = new Date(date);
+    const maxFutureDate = new Date();
+    maxFutureDate.setFullYear(maxFutureDate.getFullYear() + 10);
+
+    if (selectedDate > maxFutureDate) {
+      return "Ngày ra trường không được quá xa trong tương lai";
     }
-  };
+
+    const invalidStudents = students.filter((student) => {
+      if (student.enrollment) {
+        const enrollmentDate = new Date(parseInt(student.enrollment), 0, 1);
+        return selectedDate < enrollmentDate;
+      }
+      return false;
+    });
+
+    if (invalidStudents.length > 0) {
+      return `Ngày ra trường phải sau ngày nhập học. Có ${invalidStudents.length} sinh viên vi phạm.`;
+    }
+
+    return null;
+  }, []);
 
   // Hàm cập nhật đồng loạt ngày ra trường
-  const handleBulkGraduationSubmit = async () => {
-    // Reset error
+  const handleBulkGraduationSubmit = useCallback(async () => {
     setGraduationDateError("");
 
     if (selectedStudents.length === 0) {
-      handleNotify(
-        "warning",
-        "Cảnh báo!",
-        "Vui lòng chọn ít nhất một sinh viên"
-      );
+      handleNotify("warning", "Cảnh báo!", "Vui lòng chọn ít nhất một sinh viên");
       return;
     }
 
-    // Kiểm tra trên toàn bộ danh sách, không phụ thuộc bộ lọc đang chọn
     const selectedStudentData = allStudents.filter((student) =>
       selectedStudents.includes(student.id)
     );
 
-    const hasGraduatedStudents = selectedStudentData.some(
-      (student) => student.graduationDate
-    );
-    const hasNonGraduatedStudents = selectedStudentData.some(
-      (student) => !student.graduationDate
-    );
-
-    // Kiểm tra validation: Nếu chọn sinh viên chưa ra trường mà không nhập ngày ra trường
-    if (hasNonGraduatedStudents && !graduationDate) {
-      setGraduationDateError("Sinh viên chưa ra trường cần có ngày ra trường");
-      return;
+    // Validation
+    if (graduationDate) {
+      const error = validateGraduationDate(graduationDate, selectedStudentData);
+      if (error) {
+        setGraduationDateError(error);
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -1058,7 +1158,7 @@ const ListUser = () => {
         `/commander/bulkUpdateGraduationDate`,
         {
           studentIds: selectedStudents,
-          graduationDate: graduationDate,
+          graduationDate: graduationDate || null,
         }
       );
 
@@ -1072,7 +1172,8 @@ const ListUser = () => {
         setSelectedStudents([]);
         setGraduationDate(null);
         setGraduationDateError("");
-        fetchProfile(); // Refresh danh sách
+        fetchProfile();
+        await fetchAllStudentsForGraduation();
       }
     } catch (error) {
       handleNotify(
@@ -1083,7 +1184,13 @@ const ListUser = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [
+    selectedStudents,
+    allStudents,
+    graduationDate,
+    validateGraduationDate,
+    fetchAllStudentsForGraduation,
+  ]);
 
   const handleRowClick = async (studentId) => {
     try {
@@ -4536,15 +4643,31 @@ const ListUser = () => {
               </div>
 
               <div className="p-4 sm:p-6 flex flex-col">
-                {/* Bộ lọc và tìm kiếm */}
-                <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {/* Bộ lọc và tìm kiếm - Giống với bộ lọc ngoài page */}
+                <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Tìm kiếm theo tên/mã
+                    </label>
+                    <input
+                      type="text"
+                      value={graduationFilterFullName}
+                      onChange={(e) => {
+                        setGraduationFilterFullName(e.target.value);
+                      }}
+                      placeholder="Nhập tên hoặc mã sinh viên..."
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Chọn đơn vị
                     </label>
                     <select
                       value={graduationFilterUnit}
-                      onChange={(e) => setGraduationFilterUnit(e.target.value)}
+                      onChange={(e) => {
+                        setGraduationFilterUnit(e.target.value);
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="all">Tất cả đơn vị</option>
@@ -4558,15 +4681,35 @@ const ListUser = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Lọc theo năm học
+                      Năm vào trường
+                    </label>
+                    <select
+                      value={graduationFilterEnrollment}
+                      onChange={(e) => {
+                        setGraduationFilterEnrollment(e.target.value);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Tất cả năm</option>
+                      {enrollmentYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Năm học
                     </label>
                     <select
                       value={graduationFilterSchoolYear}
-                      onChange={(e) =>
-                        setGraduationFilterSchoolYear(e.target.value)
-                      }
+                      onChange={(e) => {
+                        setGraduationFilterSchoolYear(e.target.value);
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
+                      <option value="all">Tất cả năm học</option>
                       {schoolYears.map((year) => (
                         <option key={year} value={year}>
                           {year}
@@ -4576,25 +4719,13 @@ const ListUser = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Tìm kiếm theo tên/mã sinh viên
-                    </label>
-                    <input
-                      type="text"
-                      value={graduationSearchTerm}
-                      onChange={(e) => setGraduationSearchTerm(e.target.value)}
-                      placeholder="Nhập tên hoặc mã sinh viên..."
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Ngày ra trường
                     </label>
                     <DatePicker
                       selected={graduationDate}
                       onChange={(date) => {
                         setGraduationDate(date);
-                        setGraduationDateError(""); // Clear error when user selects a date
+                        setGraduationDateError("");
                       }}
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Chọn ngày ra trường"
@@ -4610,7 +4741,7 @@ const ListUser = () => {
                         {graduationDateError}
                       </p>
                     ) : (
-                      <p className="text-xm text-gray-500 dark:text-gray-400 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Để trống nếu chưa ra trường
                       </p>
                     )}
@@ -4669,7 +4800,35 @@ const ListUser = () => {
 
                 {/* Danh sách tất cả sinh viên */}
                 <div className="max-h-72 sm:max-h-80 lg:max-h-[28rem] overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
-                  {filteredAndSortedStudents.length > 0 ? (
+                  {isLoadingStudents ? (
+                    <div className="text-center py-8">
+                      <div className="flex flex-col items-center">
+                        <svg
+                          className="animate-spin h-8 w-8 text-blue-600 mb-4"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Đang tải danh sách học viên...
+                        </p>
+                      </div>
+                    </div>
+                  ) : filteredAndSortedStudents.length > 0 ? (
                     <div className="grid gap-2 p-4">
                       {filteredAndSortedStudents.map((student) => (
                         <div
@@ -4740,7 +4899,7 @@ const ListUser = () => {
                     <div className="text-center py-8">
                       <div className="flex flex-col items-center">
                         <svg
-                          className="w-12 h-12 mb-4 text-gray-300 dark:text-gray-600"
+                          className="w-16 h-16 mb-4 text-gray-400 dark:text-gray-500"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -4748,14 +4907,14 @@ const ListUser = () => {
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                            strokeWidth="1.5"
+                            d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
                           />
                         </svg>
-                        <p className="text-lg font-medium text-gray-500 dark:text-gray-400">
+                        <p className="text-lg font-medium text-gray-600 dark:text-gray-300 mt-2">
                           Không có sinh viên nào
                         </p>
-                        <p className="text-sm text-gray-400 dark:text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                           Không tìm thấy sinh viên nào phù hợp với bộ lọc
                         </p>
                       </div>

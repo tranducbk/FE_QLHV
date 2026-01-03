@@ -1240,7 +1240,7 @@ const UserProfile = ({ params }) => {
                           </div>
                         ) : (
                           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                            Chưa có yếu tố nước ngoài
+                            Không có yếu tố nước ngoài
                           </div>
                         )}
                       </div>

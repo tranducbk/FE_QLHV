@@ -32,6 +32,12 @@ const SemesterResults = () => {
   const { loading, withLoading } = useLoading(true);
   const [gradeSemesterCode, setGradeSemesterCode] = useState("");
   const [studentId, setStudentId] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [updateSelectedFile, setUpdateSelectedFile] = useState(null);
+  const [updateUploadingFile, setUpdateUploadingFile] = useState(false);
+  const [deleteSelectedFile, setDeleteSelectedFile] = useState(null);
+  const [deleteUploadingFile, setDeleteUploadingFile] = useState(false);
   const router = useRouter();
 
   // Helpers cho nhập KQHT
@@ -173,6 +179,7 @@ const SemesterResults = () => {
   const openGradeModal = () => {
     // Reset state khi thêm mới
     setGradeSemesterCode("");
+    setSelectedFile(null);
     setGradeSubjects([
       {
         subjectCode: "",
@@ -241,7 +248,52 @@ const SemesterResults = () => {
       );
       return;
     }
+
+    if (!selectedFile) {
+      handleNotify(
+        "warning",
+        "Thiếu file đính kèm",
+        "Vui lòng tải lên file đính kèm để gửi đề xuất"
+      );
+      return;
+    }
+
     try {
+      let uploadedFileName = null;
+
+      setUploadingFile(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("studentId", studentId);
+        formData.append("semester", term);
+        formData.append("schoolYear", schoolYear);
+
+        const uploadResponse = await axiosInstance.post(
+          "/grade/upload-file",
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        uploadedFileName = uploadResponse.data.fileName;
+      } catch (uploadError) {
+        handleNotify(
+          "danger",
+          "Lỗi upload file",
+          uploadError?.response?.data?.error ||
+            uploadError.message ||
+            "Không thể upload file"
+        );
+        setUploadingFile(false);
+        return;
+      } finally {
+        setUploadingFile(false);
+      }
+
       const payload = {
         semester: term,
         schoolYear,
@@ -251,6 +303,7 @@ const SemesterResults = () => {
           credits: Number(s.credits || 0),
           gradePoint10: Number(s.grade10 || 0),
         })),
+        ...(uploadedFileName && { attachmentFile: uploadedFileName }),
       };
 
       // Thêm mới đề xuất kết quả học tập
@@ -258,11 +311,14 @@ const SemesterResults = () => {
       handleNotify(
         "success",
         "Thành công",
-        `Đã gửi đề xuất KQ học tập ${term} năm học ${schoolYear}. Vui lòng chờ Chỉ huy phê duyệt.`
+        `Đã gửi đề xuất KQ học tập ${term} năm học ${schoolYear}${
+          uploadedFileName ? " kèm file đính kèm" : ""
+        }. Vui lòng chờ Chỉ huy phê duyệt.`
       );
 
       // Đóng modal và reset state
       setShowGradeModal(false);
+      setSelectedFile(null);
       setGradeSubjects([
         {
           subjectCode: "",
@@ -292,15 +348,18 @@ const SemesterResults = () => {
   const openUpdateModal = () => {
     if (!viewingSemester) return;
     // Copy subjects từ kết quả hiện tại để chỉnh sửa
-    const subjects = viewingSemester.subjects?.map((s) => ({
-      subjectCode: s.subjectCode || "",
-      subjectName: s.subjectName || "",
-      credits: s.credits?.toString() || "",
-      grade10: s.gradePoint10?.toString() || "",
-    })) || [];
-    setUpdateSubjects(subjects.length > 0 ? subjects : [
-      { subjectCode: "", subjectName: "", credits: "", grade10: "" }
-    ]);
+    const subjects =
+      viewingSemester.subjects?.map((s) => ({
+        subjectCode: s.subjectCode || "",
+        subjectName: s.subjectName || "",
+        credits: s.credits?.toString() || "",
+        grade10: s.gradePoint10?.toString() || "",
+      })) || [];
+    setUpdateSubjects(
+      subjects.length > 0
+        ? subjects
+        : [{ subjectCode: "", subjectName: "", credits: "", grade10: "" }]
+    );
     setShowDetailModal(false);
     setShowUpdateModal(true);
   };
@@ -367,14 +426,31 @@ const SemesterResults = () => {
 
         let grade4 = 0.0;
         switch (letterGrade) {
-          case "A+": case "A": grade4 = 4.0; break;
-          case "B+": grade4 = 3.5; break;
-          case "B": grade4 = 3.0; break;
-          case "C+": grade4 = 2.5; break;
-          case "C": grade4 = 2.0; break;
-          case "D+": grade4 = 1.5; break;
-          case "D": grade4 = 1.0; break;
-          case "F": grade4 = 0.0; break;
+          case "A+":
+          case "A":
+            grade4 = 4.0;
+            break;
+          case "B+":
+            grade4 = 3.5;
+            break;
+          case "B":
+            grade4 = 3.0;
+            break;
+          case "C+":
+            grade4 = 2.5;
+            break;
+          case "C":
+            grade4 = 2.0;
+            break;
+          case "D+":
+            grade4 = 1.5;
+            break;
+          case "D":
+            grade4 = 1.0;
+            break;
+          case "F":
+            grade4 = 0.0;
+            break;
         }
 
         totalGradePoints4 += grade4 * credits;
@@ -415,11 +491,53 @@ const SemesterResults = () => {
     }
 
     if (validSubjects.length !== updateSubjects.length) {
-      handleNotify("warning", "Dữ liệu không hợp lệ", GRADE_MESSAGES.INVALID_SUBJECT_DATA);
+      handleNotify(
+        "warning",
+        "Dữ liệu không hợp lệ",
+        GRADE_MESSAGES.INVALID_SUBJECT_DATA
+      );
       return;
     }
 
     try {
+      let uploadedFileName = null;
+
+      // Upload file nếu có
+      if (updateSelectedFile) {
+        setUpdateUploadingFile(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", updateSelectedFile);
+          formData.append("studentId", studentId);
+          formData.append("semester", viewingSemester.semester);
+          formData.append("schoolYear", viewingSemester.schoolYear);
+
+          const uploadResponse = await axiosInstance.post(
+            "/grade/upload-file",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+
+          uploadedFileName = uploadResponse.data.fileName;
+        } catch (uploadError) {
+          handleNotify(
+            "danger",
+            "Lỗi upload file",
+            uploadError?.response?.data?.error ||
+              uploadError.message ||
+              "Không thể upload file"
+          );
+          setUpdateUploadingFile(false);
+          return;
+        } finally {
+          setUpdateUploadingFile(false);
+        }
+      }
+
       const payload = {
         subjects: updateSubjects.map((s) => ({
           subjectCode: s.subjectCode.trim(),
@@ -427,6 +545,7 @@ const SemesterResults = () => {
           credits: Number(s.credits || 0),
           gradePoint10: Number(s.grade10 || 0),
         })),
+        ...(uploadedFileName && { attachmentFile: uploadedFileName }),
       };
 
       await axiosInstance.post(
@@ -437,11 +556,12 @@ const SemesterResults = () => {
       handleNotify(
         "success",
         "Thành công",
-        `Đã gửi yêu cầu cập nhật kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}. Vui lòng chờ Chỉ huy phê duyệt.`
+        `Đã gửi yêu cầu cập nhật kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}${uploadedFileName ? " kèm file đính kèm" : ""}. Vui lòng chờ Chỉ huy phê duyệt.`
       );
 
       setShowUpdateModal(false);
       setViewingSemester(null);
+      setUpdateSelectedFile(null);
       router.push("/users/proposals/grade-results");
     } catch (err) {
       handleNotify(
@@ -462,19 +582,64 @@ const SemesterResults = () => {
     }
 
     try {
+      let uploadedFileName = null;
+
+      // Upload file nếu có
+      if (deleteSelectedFile) {
+        setDeleteUploadingFile(true);
+        try {
+          const formData = new FormData();
+          formData.append("file", deleteSelectedFile);
+          formData.append("studentId", studentId);
+          formData.append("semester", viewingSemester.semester);
+          formData.append("schoolYear", viewingSemester.schoolYear);
+
+          const uploadResponse = await axiosInstance.post(
+            "/grade/upload-file",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+
+          uploadedFileName = uploadResponse.data.fileName;
+        } catch (uploadError) {
+          handleNotify(
+            "danger",
+            "Lỗi upload file",
+            uploadError?.response?.data?.error ||
+              uploadError.message ||
+              "Không thể upload file"
+          );
+          setDeleteUploadingFile(false);
+          return;
+        } finally {
+          setDeleteUploadingFile(false);
+        }
+      }
+
+      const payload = {
+        reason: deleteReason.trim(),
+        ...(uploadedFileName && { attachmentFile: uploadedFileName }),
+      };
+
       await axiosInstance.post(
         `/student/${studentId}/grades/${viewingSemester.semester}/${viewingSemester.schoolYear}/request-delete`,
-        { reason: deleteReason.trim() }
+        payload
       );
 
       handleNotify(
         "success",
         "Thành công",
-        `Đã gửi yêu cầu xóa kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}. Vui lòng chờ Chỉ huy phê duyệt.`
+        `Đã gửi yêu cầu xóa kết quả học tập ${viewingSemester.semester} năm học ${viewingSemester.schoolYear}${uploadedFileName ? " kèm file đính kèm" : ""}. Vui lòng chờ Chỉ huy phê duyệt.`
       );
 
       setShowDeleteModal(false);
       setViewingSemester(null);
+      setDeleteReason("");
+      setDeleteSelectedFile(null);
       router.push("/users/proposals/grade-results");
     } catch (err) {
       handleNotify(
@@ -861,7 +1026,10 @@ const SemesterResults = () => {
                 Nhập kết quả học tập theo môn
               </h2>
               <button
-                onClick={() => setShowGradeModal(false)}
+                onClick={() => {
+                  setShowGradeModal(false);
+                  setSelectedFile(null);
+                }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <svg
@@ -1050,6 +1218,69 @@ const SemesterResults = () => {
                   </table>
                 </div>
 
+                {/* Upload file */}
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tải lên file đính kèm{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex-1 cursor-pointer">
+                      <input
+                        type="file"
+                        onChange={(e) =>
+                          setSelectedFile(e.target.files[0] || null)
+                        }
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      />
+                      <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
+                        <svg
+                          className="w-5 h-5 text-gray-600 dark:text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {selectedFile ? selectedFile.name : "Chọn file"}
+                        </span>
+                      </div>
+                    </label>
+                    {selectedFile && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFile(null)}
+                        className="px-3 py-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                        title="Xóa file"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Hỗ trợ: PDF, DOC, DOCX, JPG, PNG (tối đa 10MB)
+                  </p>
+                </div>
+
                 {/* Tổng kết học kỳ */}
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
@@ -1098,9 +1329,36 @@ const SemesterResults = () => {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
+                      disabled={uploadingFile}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                      Gửi đề xuất
+                      {uploadingFile ? (
+                        <>
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Đang tải file...
+                        </>
+                      ) : (
+                        "Gửi đề xuất"
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1280,15 +1538,16 @@ const SemesterResults = () => {
                       <div>
                         Cập nhật lần cuối:{" "}
                         {viewingSemester.updatedAt
-                          ? new Date(
-                              viewingSemester.updatedAt
-                            ).toLocaleString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                          ? new Date(viewingSemester.updatedAt).toLocaleString(
+                              "vi-VN",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )
                           : "-"}
                       </div>
                     </div>
@@ -1372,18 +1631,32 @@ const SemesterResults = () => {
       {/* Modal yêu cầu cập nhật */}
       {showUpdateModal && viewingSemester && (
         <div className="fixed inset-0 flex items-center justify-center z-50 pt-10 p-4">
-          <div className="bg-black bg-opacity-50 inset-0 fixed" onClick={() => setShowUpdateModal(false)}></div>
+          <div
+            className="bg-black bg-opacity-50 inset-0 fixed"
+            onClick={() => setShowUpdateModal(false)}
+          ></div>
           <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Yêu cầu cập nhật kết quả - {viewingSemester.semester} - {viewingSemester.schoolYear}
+                Yêu cầu cập nhật kết quả - {viewingSemester.semester} -{" "}
+                {viewingSemester.schoolYear}
               </h2>
               <button
                 onClick={() => setShowUpdateModal(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -1391,8 +1664,9 @@ const SemesterResults = () => {
               <form onSubmit={submitUpdateRequest} className="p-4">
                 <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
                   <p className="text-sm text-orange-700 dark:text-orange-300">
-                    Bạn đang yêu cầu cập nhật kết quả học tập đã được duyệt. Vui lòng chỉnh sửa thông tin bên dưới và gửi đề xuất.
-                    Chỉ huy sẽ xem xét và phê duyệt yêu cầu của bạn.
+                    Bạn đang yêu cầu cập nhật kết quả học tập đã được duyệt. Vui
+                    lòng chỉnh sửa thông tin bên dưới và gửi đề xuất. Chỉ huy sẽ
+                    xem xét và phê duyệt yêu cầu của bạn.
                   </p>
                 </div>
 
@@ -1402,8 +1676,18 @@ const SemesterResults = () => {
                     onClick={addUpdateSubjectRow}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md flex items-center gap-2 transition-colors duration-200"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
                     </svg>
                     Thêm môn học
                   </button>
@@ -1427,7 +1711,13 @@ const SemesterResults = () => {
                             <input
                               type="text"
                               value={row.subjectCode}
-                              onChange={(e) => updateUpdateSubjectField(idx, "subjectCode", e.target.value)}
+                              onChange={(e) =>
+                                updateUpdateSubjectField(
+                                  idx,
+                                  "subjectCode",
+                                  e.target.value
+                                )
+                              }
                               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
                               placeholder="Mã môn"
                             />
@@ -1436,7 +1726,13 @@ const SemesterResults = () => {
                             <input
                               type="text"
                               value={row.subjectName}
-                              onChange={(e) => updateUpdateSubjectField(idx, "subjectName", e.target.value)}
+                              onChange={(e) =>
+                                updateUpdateSubjectField(
+                                  idx,
+                                  "subjectName",
+                                  e.target.value
+                                )
+                              }
                               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
                               placeholder="Tên môn học"
                             />
@@ -1446,7 +1742,13 @@ const SemesterResults = () => {
                               type="number"
                               min="0"
                               value={row.credits}
-                              onChange={(e) => updateUpdateSubjectField(idx, "credits", e.target.value)}
+                              onChange={(e) =>
+                                updateUpdateSubjectField(
+                                  idx,
+                                  "credits",
+                                  e.target.value
+                                )
+                              }
                               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
                               placeholder="Tín chỉ"
                             />
@@ -1458,7 +1760,13 @@ const SemesterResults = () => {
                               max="10"
                               step="0.01"
                               value={row.grade10 || ""}
-                              onChange={(e) => updateUpdateSubjectField(idx, "grade10", e.target.value)}
+                              onChange={(e) =>
+                                updateUpdateSubjectField(
+                                  idx,
+                                  "grade10",
+                                  e.target.value
+                                )
+                              }
                               className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-2 py-1"
                               placeholder="0.0"
                             />
@@ -1470,8 +1778,18 @@ const SemesterResults = () => {
                               className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
                               title="Xóa môn học"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
                               </svg>
                             </button>
                           </td>
@@ -1483,21 +1801,99 @@ const SemesterResults = () => {
 
                 {/* Tổng kết */}
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Tổng kết (sau cập nhật)</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Tổng kết (sau cập nhật)
+                  </h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{calculateUpdateSummary().totalCredits}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">Tổng tín chỉ</div>
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {calculateUpdateSummary().totalCredits}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Tổng tín chỉ
+                      </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{calculateUpdateSummary().gpa4}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">GPA (Hệ 4)</div>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {calculateUpdateSummary().gpa4}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        GPA (Hệ 4)
+                      </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{calculateUpdateSummary().gpa10}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">GPA (Hệ 10)</div>
+                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {calculateUpdateSummary().gpa10}
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        GPA (Hệ 10)
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Upload file */}
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tải lên file minh chứng
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="flex-1 cursor-pointer">
+                      <input
+                        type="file"
+                        onChange={(e) =>
+                          setUpdateSelectedFile(e.target.files[0] || null)
+                        }
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      />
+                      <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
+                        <svg
+                          className="w-5 h-5 text-gray-600 dark:text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {updateSelectedFile
+                            ? updateSelectedFile.name
+                            : "Chọn file"}
+                        </span>
+                      </div>
+                    </label>
+                    {updateSelectedFile && (
+                      <button
+                        type="button"
+                        onClick={() => setUpdateSelectedFile(null)}
+                        className="px-3 py-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                        title="Xóa file"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Hỗ trợ: PDF, DOC, DOCX, JPG, PNG (tối đa 10MB)
+                  </p>
                 </div>
 
                 <div className="flex justify-end mt-4 gap-2">
@@ -1510,9 +1906,36 @@ const SemesterResults = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md"
+                    disabled={updateUploadingFile}
+                    className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Gửi yêu cầu cập nhật
+                    {updateUploadingFile ? (
+                      <>
+                        <svg
+                          className="animate-spin h-4 w-4"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Đang tải file...
+                      </>
+                    ) : (
+                      "Gửi yêu cầu cập nhật"
+                    )}
                   </button>
                 </div>
               </form>
@@ -1524,7 +1947,10 @@ const SemesterResults = () => {
       {/* Modal yêu cầu xóa */}
       {showDeleteModal && viewingSemester && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-          <div className="bg-black bg-opacity-50 inset-0 fixed" onClick={() => setShowDeleteModal(false)}></div>
+          <div
+            className="bg-black bg-opacity-50 inset-0 fixed"
+            onClick={() => setShowDeleteModal(false)}
+          ></div>
           <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -1534,8 +1960,11 @@ const SemesterResults = () => {
             <div className="p-6">
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-sm text-red-700 dark:text-red-300">
-                  Bạn đang yêu cầu xóa kết quả học tập <strong>{viewingSemester.semester} - {viewingSemester.schoolYear}</strong>.
-                  Hành động này cần được Chỉ huy phê duyệt.
+                  Bạn đang yêu cầu xóa kết quả học tập{" "}
+                  <strong>
+                    {viewingSemester.semester} - {viewingSemester.schoolYear}
+                  </strong>
+                  . Hành động này cần được Chỉ huy phê duyệt.
                 </p>
               </div>
 
@@ -1553,6 +1982,70 @@ const SemesterResults = () => {
                 />
               </div>
 
+              {/* Upload file */}
+              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tải lên file minh chứng
+                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      onChange={(e) =>
+                        setDeleteSelectedFile(e.target.files[0] || null)
+                      }
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    />
+                    <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
+                      <svg
+                        className="w-5 h-5 text-gray-600 dark:text-gray-300"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {deleteSelectedFile
+                          ? deleteSelectedFile.name
+                          : "Chọn file"}
+                      </span>
+                    </div>
+                  </label>
+                  {deleteSelectedFile && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteSelectedFile(null)}
+                      className="px-3 py-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      title="Xóa file"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Hỗ trợ: PDF, DOC, DOCX, JPG, PNG (tối đa 10MB)
+                </p>
+              </div>
+
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
@@ -1562,9 +2055,36 @@ const SemesterResults = () => {
                 </button>
                 <button
                   onClick={submitDeleteRequest}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                  disabled={deleteUploadingFile}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Gửi yêu cầu xóa
+                  {deleteUploadingFile ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Đang tải file...
+                    </>
+                  ) : (
+                    "Gửi yêu cầu xóa"
+                  )}
                 </button>
               </div>
             </div>

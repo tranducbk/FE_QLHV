@@ -8,6 +8,8 @@ import { useLoading } from "@/hooks";
 import { handleNotify } from "@/components/notify";
 import axiosInstance from "@/utils/axiosInstance";
 import { Select, Input, ConfigProvider, theme } from "antd";
+import { BASE_URL } from "@/configs";
+import FileAttachmentButtons from "@/components/FileAttachmentButtons";
 
 const AdminProposalGradeResults = () => {
   const [allResults, setAllResults] = useState([]);
@@ -1223,6 +1225,16 @@ const AdminProposalGradeResults = () => {
                   </div>
                 </div>
               </div>
+
+              {/* File đính kèm */}
+              {viewingSemester.attachmentFile && (
+                <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    File đính kèm
+                  </h3>
+                  <FileAttachmentButtons fileName={viewingSemester.attachmentFile} />
+                </div>
+              )}
 
               {/* Loại đề xuất và Trạng thái */}
               <div className="mb-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-700">

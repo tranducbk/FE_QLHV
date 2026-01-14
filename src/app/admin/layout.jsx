@@ -6,7 +6,7 @@ import Header from "@/components/header";
 import { MetadataContext, metadata } from "./metadataContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Sidebar from "@/components/sidebar";
-import axiosInstance from "@/utils/axiosInstance";
+import axiosInstance, { clearAuthData } from "@/utils/axiosInstance";
 import Loader from "@/components/loader";
 import "./globals.css";
 
@@ -45,9 +45,8 @@ export default function RootLayout({ children }) {
         setIsAuthenticated(true);
       } catch (error) {
         // Token không hợp lệ hoặc hết hạn
-        // Clear auth data và redirect về login
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("userRole");
+        // Clear auth data (localStorage + cookies) và redirect về login
+        clearAuthData();
         router.replace("/login");
       } finally {
         setIsChecking(false);

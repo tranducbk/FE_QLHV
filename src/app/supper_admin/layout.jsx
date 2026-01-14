@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Header from "@/components/header";
-import axiosInstance from "@/utils/axiosInstance";
+import axiosInstance, { clearAuthData } from "@/utils/axiosInstance";
 import Loader from "@/components/loader";
 import "../admin/globals.css";
 
@@ -41,9 +41,8 @@ export default function SupperAdminLayout({ children }) {
         setIsAuthenticated(true);
       } catch (error) {
         // Token không hợp lệ hoặc hết hạn
-        // Clear auth data và redirect về login
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("userRole");
+        // Clear auth data (localStorage + cookies) và redirect về login
+        clearAuthData();
         router.replace("/login");
       } finally {
         setIsChecking(false);

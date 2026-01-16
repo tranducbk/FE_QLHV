@@ -326,6 +326,23 @@ const TuitionFees = () => {
 
   const handleExportFileWord = async () => {
     try {
+      // Validate: Kiểm tra xem có semester nào được chọn không
+      if (exportSelectedSemesters.length > 0) {
+        const validSemesters = exportSelectedSemesters.filter((semesterId) => {
+          const semester = semesters.find((s) => s.id === semesterId);
+          return semester && semester.code && semester.schoolYear;
+        });
+
+        if (validSemesters.length === 0) {
+          handleNotify(
+            "warning",
+            "Cảnh báo",
+            "Vui lòng chọn ít nhất một học kỳ hợp lệ"
+          );
+          return;
+        }
+      }
+
       // Tạo tham số cho API
       const semesterParam =
         exportSelectedSemesters.length > 0
@@ -334,6 +351,7 @@ const TuitionFees = () => {
                 const semester = semesters.find((s) => s.id === semesterId);
                 return semester?.code;
               })
+              .filter(Boolean)
               .join(",")
           : "all";
 
@@ -369,8 +387,65 @@ const TuitionFees = () => {
         `/commander/tuitionFee/word?${params.toString()}`,
         {
           responseType: "blob",
+          validateStatus: function (status) {
+            // Cho phép tất cả status codes để xử lý lỗi trong catch
+            return status >= 200 && status < 600;
+          },
         }
       );
+
+      // Kiểm tra xem response có phải là JSON error không (status code >= 400)
+      if (response.status >= 400) {
+        // Nếu là lỗi, response.data sẽ là Blob chứa JSON
+        let text;
+        try {
+          text = await response.data.text();
+        } catch (e) {
+          throw new Error(
+            `Lỗi server (${response.status}). Vui lòng thử lại sau.`
+          );
+        }
+
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch (e) {
+          // Nếu không parse được JSON, có thể là lỗi khác
+          throw new Error(
+            `Lỗi server (${response.status}): ${text.substring(0, 100)}`
+          );
+        }
+
+        // Hiển thị thông báo lỗi chi tiết nếu có
+        const errorMessage =
+          errorData.message ||
+          errorData.error ||
+          "Không thể xuất file Word";
+        throw new Error(errorMessage);
+      }
+
+      // Kiểm tra content-type để đảm bảo đây là file Word
+      const contentType = response.headers["content-type"] || "";
+      if (
+        !contentType.includes("wordprocessingml") &&
+        !contentType.includes("octet-stream") &&
+        !contentType.includes("application/zip")
+      ) {
+        // Có thể là JSON error được trả về với content-type khác
+        try {
+          const text = await response.data.text();
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.message || "Không thể xuất file Word");
+        } catch (e) {
+          if (e.message && e.message.includes("Không thể xuất file Word")) {
+            throw e;
+          }
+          // Nếu không parse được, có thể là file Word nhưng content-type sai
+          console.warn(
+            "Warning: Content-Type không đúng nhưng vẫn tiếp tục tải file"
+          );
+        }
+      }
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
@@ -429,7 +504,39 @@ const TuitionFees = () => {
       handleNotify("success", "Thành công", "Đã xuất file Word");
     } catch (error) {
       console.error("Lỗi tải xuống file Word", error);
-      handleNotify("error", "Lỗi", "Không thể xuất file Word");
+      
+      // Lấy thông báo lỗi từ response nếu có
+      let errorMessage = "Không thể xuất file Word";
+      
+      if (error.response) {
+        // Nếu response là JSON (lỗi từ server)
+        if (error.response.data && typeof error.response.data === "object") {
+          try {
+            // Nếu response.data là Blob, đọc nó
+            if (error.response.data instanceof Blob) {
+              const text = await error.response.data.text();
+              const errorData = JSON.parse(text);
+              errorMessage = errorData.message || errorMessage;
+            } else {
+              errorMessage = error.response.data.message || errorMessage;
+            }
+          } catch (parseError) {
+            console.error("Lỗi parse error response:", parseError);
+            errorMessage = error.response.data?.message || error.message || errorMessage;
+          }
+        } else if (error.response.data && typeof error.response.data === "string") {
+          try {
+            const errorData = JSON.parse(error.response.data);
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            errorMessage = error.response.data || errorMessage;
+          }
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      handleNotify("error", "Lỗi", errorMessage);
     }
   };
 

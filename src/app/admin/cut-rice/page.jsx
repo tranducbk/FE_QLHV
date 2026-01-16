@@ -157,7 +157,7 @@ const CutRice = () => {
       });
       setCutRice(sortedData);
     } catch (error) {
-      console.log(error);
+      // Error fetching cut rice data
     }
   };
 
@@ -201,7 +201,7 @@ const CutRice = () => {
         });
         setCutRice(sortedData);
       } catch (error) {
-        console.log(error);
+        // Error fetching data for unit
       }
     };
 
@@ -218,6 +218,38 @@ const CutRice = () => {
     exportExcelWithScheduleSelectedUnits,
     setExportExcelWithScheduleSelectedUnits,
   ] = useState([]);
+  const [exportSelectedStudents, setExportSelectedStudents] = useState([]);
+  const [filteredStudentsForExport, setFilteredStudentsForExport] = useState([]);
+
+  // State cho bộ lọc tìm kiếm
+  const [searchText, setSearchText] = useState("");
+
+  // Filter cutRice theo searchText
+  const filteredCutRice = cutRice
+    ? cutRice.filter((item) => {
+        if (!searchText) return true;
+        const search = searchText.toLowerCase();
+        return (
+          item.fullName?.toLowerCase().includes(search) ||
+          item.studentCode?.toLowerCase().includes(search)
+        );
+      })
+    : [];
+
+  // Update filteredStudentsForExport khi exportSelectedUnits thay đổi
+  useEffect(() => {
+    if (cutRice && cutRice.length > 0) {
+      if (exportSelectedUnits.length === 0) {
+        setFilteredStudentsForExport(cutRice);
+      } else {
+        const filtered = cutRice.filter((item) =>
+          exportSelectedUnits.includes(item.unit)
+        );
+        setFilteredStudentsForExport(filtered);
+      }
+      setExportSelectedStudents([]);
+    }
+  }, [exportSelectedUnits, cutRice]);
 
   const handleExportFileExcel = async (e) => {
     e.preventDefault();
@@ -267,19 +299,32 @@ const CutRice = () => {
 
   const handleConfirmExport = async () => {
     try {
-      const unitParam =
-        exportSelectedUnits.length > 0 ? exportSelectedUnits.join(",") : "all";
+      // Build query params
+      const params = new URLSearchParams();
+
+      if (exportSelectedStudents.length > 0) {
+        // Nếu chọn học viên cụ thể
+        params.append("studentIds", exportSelectedStudents.join(","));
+      } else if (exportSelectedUnits.length > 0) {
+        // Nếu chỉ chọn đơn vị
+        params.append("unit", exportSelectedUnits.join(","));
+      } else {
+        // Xuất tất cả
+        params.append("unit", "all");
+      }
 
       const response = await axiosInstance.get(
-        `/commander/cutRice/excel?unit=${unitParam}`,
+        `/commander/cutRice/excel?${params.toString()}`,
         {
           responseType: "blob",
         }
       );
 
-      // Tạo tên file theo đơn vị được chọn
+      // Tạo tên file theo đơn vị hoặc học viên được chọn
       let fileName = "Danh_sach_cat_com_he_hoc_vien_5";
-      if (exportSelectedUnits.length > 0) {
+      if (exportSelectedStudents.length > 0) {
+        fileName += `_${exportSelectedStudents.length}_hoc_vien`;
+      } else if (exportSelectedUnits.length > 0) {
         const unitNames = exportSelectedUnits.map((unit) =>
           unit.replace(/\s+/g, "_")
         );
@@ -299,6 +344,7 @@ const CutRice = () => {
 
       setShowExportModal(false);
       setExportSelectedUnits([]);
+      setExportSelectedStudents([]);
       handleNotify("success", "Thành công!", "Xuất file Excel thành công");
     } catch (error) {
       const errorMessage =
@@ -580,7 +626,7 @@ const CutRice = () => {
               </div>
               <div className="w-full pt-2 pl-5 pb-5 pr-5">
                 <div className="w-full">
-                  <div className="mb-4">
+                  <div className="mb-4 flex flex-wrap gap-4 items-end">
                     <div>
                       <label
                         htmlFor="unit"
@@ -599,7 +645,7 @@ const CutRice = () => {
                           id="unit"
                           value={unit}
                           onChange={(value) => handleUnitChange(value)}
-                          style={{ width: 224 }}
+                          style={{ width: 224, height: 38 }}
                           options={[
                             { value: "", label: "Tất cả đơn vị" },
                             { value: "L1 - H5", label: "L1 - H5" },
@@ -611,6 +657,22 @@ const CutRice = () => {
                           ]}
                         />
                       </ConfigProvider>
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="search"
+                        className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        Tìm kiếm
+                      </label>
+                      <input
+                        type="text"
+                        id="search"
+                        placeholder="Nhập tên hoặc MSSV..."
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        className="w-64 h-[38px] px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
                     </div>
                   </div>
                 </div>
@@ -727,7 +789,8 @@ const CutRice = () => {
                           scope="col"
                           className="border-r border-gray-200 dark:border-gray-600 py-2 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                         >
-                          HỌ VÀ TÊN
+                          <div>HỌ VÀ TÊN</div>
+                          <div className="text-[10px] font-normal normal-case">MSSV - Chuyên ngành</div>
                         </th>
 
                         <th
@@ -887,8 +950,8 @@ const CutRice = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800">
-                      {cutRice && cutRice.length > 0 ? (
-                        cutRice.map((item) => (
+                      {filteredCutRice && filteredCutRice.length > 0 ? (
+                        filteredCutRice.map((item) => (
                           <tr
                             key={item.id}
                             className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -897,7 +960,10 @@ const CutRice = () => {
                               {item.unit || ""}
                             </td>
                             <td className="whitespace-nowrap font-medium border-r py-4 px-2 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white">
-                              {item.fullName}
+                              <div>{item.fullName}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-normal">
+                                {item.studentCode}{item.studentCode && item.major ? " - " : ""}{item.major || ""}
+                              </div>
                             </td>
 
                             <td className="whitespace-nowrap font-medium border-r border-gray-200 dark:border-gray-600">
@@ -1155,15 +1221,16 @@ const CutRice = () => {
       {showExportModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
-          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+          <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Xuất Excel
+                Xuất Excel lịch cắt cơm
               </h2>
               <button
                 onClick={() => {
                   setShowExportModal(false);
                   setExportSelectedUnits([]);
+                  setExportSelectedStudents([]);
                 }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
@@ -1182,7 +1249,7 @@ const CutRice = () => {
                 </svg>
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
               <div className="mb-4">
                 <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                   Chọn đơn vị
@@ -1215,6 +1282,40 @@ const CutRice = () => {
                   Chọn nhiều đơn vị hoặc để trống để xuất tất cả đơn vị.
                 </p>
               </div>
+
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Chọn học viên cụ thể (tùy chọn)
+                </label>
+                <ConfigProvider
+                  theme={{
+                    algorithm: isDark
+                      ? theme.darkAlgorithm
+                      : theme.defaultAlgorithm,
+                  }}
+                >
+                  <Select
+                    mode="multiple"
+                    style={{ width: "100%" }}
+                    placeholder="Chọn học viên cụ thể..."
+                    allowClear
+                    showSearch
+                    filterOption={(input, option) =>
+                      option.label.toLowerCase().includes(input.toLowerCase())
+                    }
+                    value={exportSelectedStudents}
+                    onChange={setExportSelectedStudents}
+                    options={filteredStudentsForExport.map((student) => ({
+                      value: student.studentId,
+                      label: `${student.fullName} - ${student.studentCode || ""} (${student.unit || ""})`,
+                    }))}
+                  />
+                </ConfigProvider>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Để trống nếu muốn xuất theo đơn vị đã chọn.
+                </p>
+              </div>
+
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
@@ -1222,6 +1323,7 @@ const CutRice = () => {
                   onClick={() => {
                     setShowExportModal(false);
                     setExportSelectedUnits([]);
+                    setExportSelectedStudents([]);
                   }}
                 >
                   Hủy

@@ -20,6 +20,16 @@ import {
 } from "antd";
 import { useState as useThemeState } from "react";
 import axiosInstance from "@/utils/axiosInstance";
+import { useExportExcel } from "@/hooks/useExportExcel";
+import ExportExcelModal from "@/components/ExportExcelModal";
+import {
+  getYearlyGPA,
+  getCumulativeCPA,
+  filterByGradeRange,
+  sortByGrade,
+} from "@/utils/gradeUtils";
+import { UNIT_OPTIONS } from "@/constants/units";
+import SortableTableHeader from "@/components/SortableTableHeader";
 
 const YearlyStatistics = () => {
   const [yearlyResults, setYearlyResults] = useState([]);
@@ -42,6 +52,23 @@ const YearlyStatistics = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // State cho sắp xếp
+  const [sortBy, setSortBy] = useState(null); // 'gpa' hoặc 'cpa'
+  const [sortOrder, setSortOrder] = useState(null); // 'asc' hoặc 'desc'
+
+  // State cho bộ lọc khoảng điểm
+  const [gpaMin, setGpaMin] = useState("");
+  const [gpaMax, setGpaMax] = useState("");
+  const [cpaMin, setCpaMin] = useState("");
+  const [cpaMax, setCpaMax] = useState("");
+
+  // Custom hook cho export Excel
+  const exportExcel = useExportExcel({
+    apiEndpoint: "/commander/yearly-statistics/excel",
+    baseFileName: "Thong_ke_nam_hoc",
+    data: yearlyResults || [],
+  });
 
   // Phát hiện theme hiện tại
   useEffect(() => {
@@ -411,6 +438,7 @@ const YearlyStatistics = () => {
   const getFilteredResults = () => {
     if (!yearlyResults) return [];
 
+    // Lọc theo search term và unit
     let filtered = yearlyResults.filter((item) => {
       const matchesSearch =
         searchTerm === "" ||
@@ -425,9 +453,64 @@ const YearlyStatistics = () => {
       return matchesSearch && matchesUnit;
     });
 
-    // Sắp xếp theo điểm GPA từ cao xuống thấp (đã được sắp xếp từ backend)
-    // Giữ nguyên thứ tự từ API
+    // Lọc theo khoảng điểm
+    filtered = filterByGradeRange(
+      filtered,
+      { gpaMin, gpaMax, cpaMin, cpaMax },
+      getYearlyGPA,
+      getCumulativeCPA
+    );
+
+    // Sắp xếp mặc định: theo đơn vị (L1-L6), rồi theo năm học (mới nhất trước)
+    const unitOrder = {
+      "L1 - H5": 1,
+      "L2 - H5": 2,
+      "L3 - H5": 3,
+      "L4 - H5": 4,
+      "L5 - H5": 5,
+      "L6 - H5": 6,
+    };
+
+    filtered.sort((a, b) => {
+      // So sánh đơn vị trước
+      const unitA = unitOrder[a.unit] || 999;
+      const unitB = unitOrder[b.unit] || 999;
+      if (unitA !== unitB) return unitA - unitB;
+
+      // Cùng đơn vị thì sắp xếp theo năm học (mới nhất trước)
+      const yearA = a.schoolYear || "";
+      const yearB = b.schoolYear || "";
+      if (yearA !== yearB) return yearB.localeCompare(yearA);
+
+      // Cùng năm học thì sắp xếp theo tên
+      return (a.fullName || "").localeCompare(b.fullName || "", "vi");
+    });
+
+    // Sắp xếp theo GPA/CPA nếu user chọn
+    if (sortBy) {
+      filtered = sortByGrade(
+        filtered,
+        sortBy,
+        sortOrder,
+        getYearlyGPA,
+        getCumulativeCPA
+      );
+    }
+
     return filtered;
+  };
+
+  // Hàm xử lý sắp xếp
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      // Nếu đang sắp xếp cột này, đảo ngược thứ tự
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Nếu chọn cột mới, mặc định là giảm dần (cao -> thấp)
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+    setCurrentPage(1); // Reset về trang đầu
   };
 
   // Tính toán dữ liệu phân trang
@@ -532,10 +615,11 @@ const YearlyStatistics = () => {
                     Quản lý và xem kết quả học tập của tất cả học viên
                   </p>
                 </div>
-                {/* <div className="flex gap-2">
+                <div className="flex gap-2">
                   <button
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 border border-blue-600 hover:border-blue-700 rounded-lg transition-colors duration-200 flex items-center"
-                    onClick={handleExportPDF}
+                    type="button"
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 border border-green-600 hover:border-green-700 rounded-lg transition-colors duration-200 flex items-center"
+                    onClick={() => exportExcel.setShowExportModal(true)}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -551,9 +635,9 @@ const YearlyStatistics = () => {
                         d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
                       />
                     </svg>
-                    Xuất PDF
+                    Xuất Excel
                   </button>
-                </div> */}
+                </div>
               </div>
 
               <div className="w-full p-4 md:p-5">
@@ -612,15 +696,7 @@ const YearlyStatistics = () => {
                           }}
                           placeholder="Chọn đơn vị"
                           style={{ width: "100%", height: 36 }}
-                          options={[
-                            { value: "all", label: "Tất cả đơn vị" },
-                            { value: "L1 - H5", label: "L1 - H5" },
-                            { value: "L2 - H5", label: "L2 - H5" },
-                            { value: "L3 - H5", label: "L3 - H5" },
-                            { value: "L4 - H5", label: "L4 - H5" },
-                            { value: "L5 - H5", label: "L5 - H5" },
-                            { value: "L6 - H5", label: "L6 - H5" },
-                          ]}
+                          options={UNIT_OPTIONS}
                         />
                       </ConfigProvider>
                     </Col>
@@ -641,12 +717,96 @@ const YearlyStatistics = () => {
                         style={{ height: 36 }}
                       />
                     </Col>
+                  </Row>
+
+                  {/* Dòng 2: Bộ lọc khoảng điểm GPA, CPA và nút Xóa bộ lọc */}
+                  <Row gutter={[12, 12]} align="bottom" className="mt-3">
+                    <Col xs={24} sm={12} md={6} lg={4}>
+                      <label className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                        GPA (Từ - Đến)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="4"
+                          value={gpaMin}
+                          onChange={(e) => {
+                            setGpaMin(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          placeholder="Từ"
+                          className="bg-gray-50 dark:bg-gray-700 border w-full border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
+                          style={{ height: 36 }}
+                        />
+                        <span className="text-gray-500">-</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="4"
+                          value={gpaMax}
+                          onChange={(e) => {
+                            setGpaMax(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          placeholder="Đến"
+                          className="bg-gray-50 dark:bg-gray-700 border w-full border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
+                          style={{ height: 36 }}
+                        />
+                      </div>
+                    </Col>
+
+                    <Col xs={24} sm={12} md={6} lg={4}>
+                      <label className="block mb-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300">
+                        CPA (Từ - Đến)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="4"
+                          value={cpaMin}
+                          onChange={(e) => {
+                            setCpaMin(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          placeholder="Từ"
+                          className="bg-gray-50 dark:bg-gray-700 border w-full border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
+                          style={{ height: 36 }}
+                        />
+                        <span className="text-gray-500">-</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="4"
+                          value={cpaMax}
+                          onChange={(e) => {
+                            setCpaMax(e.target.value);
+                            setCurrentPage(1);
+                          }}
+                          placeholder="Đến"
+                          className="bg-gray-50 dark:bg-gray-700 border w-full border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
+                          style={{ height: 36 }}
+                        />
+                      </div>
+                    </Col>
+
                     <Col xs={12} sm={6} md={4} lg={3}>
                       <button
                         onClick={() => {
                           setSearchTerm("");
                           setSelectedUnit("all");
                           setSelectedSchoolYear("all");
+                          setGpaMin("");
+                          setGpaMax("");
+                          setCpaMin("");
+                          setCpaMax("");
+                          setSortBy(null);
+                          setSortOrder(null);
                           setCurrentPage(1);
                           withLoading(fetchInitialData);
                         }}
@@ -1207,12 +1367,20 @@ const YearlyStatistics = () => {
                             <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                               NĂM HỌC
                             </th>
-                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                              GPA
-                            </th>
-                            <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                              CPA
-                            </th>
+                            <SortableTableHeader
+                              title="GPA"
+                              sortBy="gpa"
+                              currentSortBy={sortBy}
+                              sortOrder={sortOrder}
+                              onSort={handleSort}
+                            />
+                            <SortableTableHeader
+                              title="CPA"
+                              sortBy="cpa"
+                              currentSortBy={sortBy}
+                              sortOrder={sortOrder}
+                              onSort={handleSort}
+                            />
                             <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                               TÍN CHỈ
                             </th>
@@ -1672,7 +1840,8 @@ const YearlyStatistics = () => {
                       </div>
                       <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
                         <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                          {studentDetail.cumulativeGrade10?.toFixed(2) || "0.00"}
+                          {studentDetail.cumulativeGrade10?.toFixed(2) ||
+                            "0.00"}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
                           CPA (Hệ 10)
@@ -2135,6 +2304,22 @@ const YearlyStatistics = () => {
           font-weight: 600 !important;
         }
       `}</style>
+
+      {/* Export Modal */}
+      <ExportExcelModal
+        visible={exportExcel.showExportModal}
+        onClose={() => {
+          exportExcel.setShowExportModal(false);
+          exportExcel.resetExportForm();
+        }}
+        onConfirm={exportExcel.handleExport}
+        filters={exportExcel.exportFilters}
+        onFilterChange={exportExcel.updateExportFilter}
+        filteredStudents={exportExcel.filteredStudentsForExport}
+        availableSchoolYears={exportExcel.availableSchoolYears}
+        isDark={isDark}
+        showSemesterFilter={false}
+      />
     </>
   );
 };

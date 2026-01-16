@@ -8,6 +8,16 @@ import { useLoading } from "@/hooks";
 import { TreeSelect, ConfigProvider, theme, Input, Select } from "antd";
 import { useState as useThemeState } from "react";
 import axiosInstance from "@/utils/axiosInstance";
+import { useExportExcel } from "@/hooks/useExportExcel";
+import ExportExcelModal from "@/components/ExportExcelModal";
+import {
+  getSemesterGPA,
+  getCumulativeCPA,
+  filterByGradeRange,
+  sortByGrade,
+} from "@/utils/gradeUtils";
+import { UNIT_OPTIONS } from "@/constants/units";
+import SortableTableHeader from "@/components/SortableTableHeader";
 
 const LearningResults = () => {
   const [learningResults, setLearningResults] = useState([]);
@@ -30,6 +40,23 @@ const LearningResults = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  
+  // State cho sắp xếp
+  const [sortBy, setSortBy] = useState(null); // 'gpa' hoặc 'cpa'
+  const [sortOrder, setSortOrder] = useState(null); // 'asc' hoặc 'desc'
+  
+  // State cho bộ lọc khoảng điểm
+  const [gpaMin, setGpaMin] = useState("");
+  const [gpaMax, setGpaMax] = useState("");
+  const [cpaMin, setCpaMin] = useState("");
+  const [cpaMax, setCpaMax] = useState("");
+
+  // Custom hook cho export Excel
+  const exportExcel = useExportExcel({
+    apiEndpoint: "/commander/learning-results/excel",
+    baseFileName: "Ket_qua_hoc_tap",
+    data: learningResults || [],
+  });
 
   // Phát hiện theme hiện tại
   useEffect(() => {
@@ -392,9 +419,11 @@ const LearningResults = () => {
     })),
   ];
 
+
   const getFilteredResults = () => {
     if (!learningResults) return [];
 
+    // Lọc theo search term và unit
     let filtered = learningResults.filter((item) => {
       const matchesSearch =
         searchTerm === "" ||
@@ -409,9 +438,78 @@ const LearningResults = () => {
       return matchesSearch && matchesUnit;
     });
 
-    // Sắp xếp theo điểm GPA từ cao xuống thấp (đã được sắp xếp từ backend)
-    // Giữ nguyên thứ tự từ API
+    // Lọc theo khoảng điểm
+    filtered = filterByGradeRange(
+      filtered,
+      { gpaMin, gpaMax, cpaMin, cpaMax },
+      getSemesterGPA,
+      getCumulativeCPA
+    );
+
+    // Sắp xếp mặc định: theo đơn vị (L1-L6), rồi theo năm học (mới nhất trước), rồi học kỳ
+    const unitOrder = {
+      "L1 - H5": 1,
+      "L2 - H5": 2,
+      "L3 - H5": 3,
+      "L4 - H5": 4,
+      "L5 - H5": 5,
+      "L6 - H5": 6,
+    };
+
+    const semesterOrder = {
+      "Học kỳ 1": 1,
+      "Học kỳ 2": 2,
+      "Học kỳ 3": 3,
+      "HK1": 1,
+      "HK2": 2,
+      "HK3": 3,
+    };
+
+    filtered.sort((a, b) => {
+      // So sánh đơn vị trước
+      const unitA = unitOrder[a.unit] || 999;
+      const unitB = unitOrder[b.unit] || 999;
+      if (unitA !== unitB) return unitA - unitB;
+
+      // Cùng đơn vị thì sắp xếp theo năm học (mới nhất trước)
+      const yearA = a.schoolYear || "";
+      const yearB = b.schoolYear || "";
+      if (yearA !== yearB) return yearB.localeCompare(yearA);
+
+      // Cùng năm học thì sắp xếp theo học kỳ
+      const semA = semesterOrder[a.semester] || 999;
+      const semB = semesterOrder[b.semester] || 999;
+      if (semA !== semB) return semA - semB;
+
+      // Cùng học kỳ thì sắp xếp theo tên
+      return (a.fullName || "").localeCompare(b.fullName || "", "vi");
+    });
+
+    // Sắp xếp theo GPA/CPA nếu user chọn
+    if (sortBy) {
+      filtered = sortByGrade(
+        filtered,
+        sortBy,
+        sortOrder,
+        getSemesterGPA,
+        getCumulativeCPA
+      );
+    }
+
     return filtered;
+  };
+
+  // Hàm xử lý sắp xếp
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      // Nếu đang sắp xếp cột này, đảo ngược thứ tự
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Nếu chọn cột mới, mặc định là giảm dần (cao -> thấp)
+      setSortBy(column);
+      setSortOrder("desc");
+    }
+    setCurrentPage(1); // Reset về trang đầu
   };
 
   // Tính toán dữ liệu phân trang
@@ -502,10 +600,11 @@ const LearningResults = () => {
                     Quản lý và xem kết quả học tập của tất cả học viên
                   </p>
                 </div>
-                {/* <div className="flex gap-2">
+                <div className="flex gap-2">
                   <button
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 border border-blue-600 hover:border-blue-700 rounded-lg transition-colors duration-200 flex items-center"
-                    onClick={handleExportPDF}
+                    type="button"
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 border border-green-600 hover:border-green-700 rounded-lg transition-colors duration-200 flex items-center"
+                    onClick={() => exportExcel.setShowExportModal(true)}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -521,192 +620,271 @@ const LearningResults = () => {
                         d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
                       />
                     </svg>
-                    Xuất PDF
+                    Xuất Excel
                   </button>
-                </div> */}
+                </div>
               </div>
 
               <div className="w-full p-5">
                 <div className="mb-4">
-                  <form className="flex items-center gap-3 flex-wrap">
-                    <div>
-                      <label
-                        htmlFor="semester"
-                        className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300"
-                      >
-                        Chọn học kỳ
-                      </label>
-                      <ConfigProvider
-                        theme={{
-                          algorithm: isDark
-                            ? theme.darkAlgorithm
-                            : theme.defaultAlgorithm,
-                          token: {
-                            colorPrimary: "#2563eb",
-                            borderRadius: 8,
-                            controlOutline: "rgba(37,99,235,0.2)",
-                          },
-                        }}
-                      >
-                        <TreeSelect
-                          treeData={treeData}
-                          treeCheckable
-                          showCheckedStrategy={TreeSelect.SHOW_PARENT}
-                          placeholder="Chọn học kỳ"
-                          allowClear
-                          showSearch={false}
-                          maxTagCount={2}
-                          maxTagPlaceholder={(omittedValues) =>
-                            `+${omittedValues.length} học kỳ`
-                          }
-                          style={{ width: 280, minHeight: 36 }}
-                          dropdownStyle={{
-                            backgroundColor: isDark ? "#1f2937" : "#ffffff",
-                            color: isDark ? "#e5e7eb" : "#111827",
-                            border: `1px solid ${
-                              isDark ? "#374151" : "#e5e7eb"
-                            }`,
-                            borderRadius: 8,
+                  <form>
+                    {/* Dòng 1: Chọn học kỳ, Chọn đơn vị, Tìm kiếm */}
+                    <div className="flex items-center gap-3 flex-wrap mb-3">
+                      <div>
+                        <label
+                          htmlFor="semester"
+                          className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                          Chọn học kỳ
+                        </label>
+                        <ConfigProvider
+                          theme={{
+                            algorithm: isDark
+                              ? theme.darkAlgorithm
+                              : theme.defaultAlgorithm,
+                            token: {
+                              colorPrimary: "#2563eb",
+                              borderRadius: 8,
+                              controlOutline: "rgba(37,99,235,0.2)",
+                            },
                           }}
-                          popupClassName="custom-tree-select-dropdown"
-                          tagRender={(props) => {
-                            const { label, onClose } = props;
-                            return (
-                              <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 mr-1"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <span className="text-xs">{label}</span>
-                                <button
-                                  onClick={onClose}
-                                  className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
-                                  aria-label="remove"
+                        >
+                          <TreeSelect
+                            treeData={treeData}
+                            treeCheckable
+                            showCheckedStrategy={TreeSelect.SHOW_PARENT}
+                            placeholder="Chọn học kỳ"
+                            allowClear
+                            showSearch={false}
+                            maxTagCount={2}
+                            maxTagPlaceholder={(omittedValues) =>
+                              `+${omittedValues.length} học kỳ`
+                            }
+                            style={{ width: 280, minHeight: 36 }}
+                            dropdownStyle={{
+                              backgroundColor: isDark ? "#1f2937" : "#ffffff",
+                              color: isDark ? "#e5e7eb" : "#111827",
+                              border: `1px solid ${
+                                isDark ? "#374151" : "#e5e7eb"
+                              }`,
+                              borderRadius: 8,
+                            }}
+                            popupClassName="custom-tree-select-dropdown"
+                            tagRender={(props) => {
+                              const { label, onClose } = props;
+                              return (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 mr-1"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
                                 >
-                                  ×
-                                </button>
-                              </span>
-                            );
+                                  <span className="text-xs">{label}</span>
+                                  <button
+                                    onClick={onClose}
+                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                                    aria-label="remove"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              );
+                            }}
+                            onChange={(values) => setSelectedSemesters(values)}
+                          />
+                        </ConfigProvider>
+                      </div>
+
+                      <div>
+                        <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Chọn đơn vị
+                        </label>
+                        <ConfigProvider
+                          theme={{
+                            algorithm: isDark
+                              ? theme.darkAlgorithm
+                              : theme.defaultAlgorithm,
+                            token: {
+                              colorPrimary: "#2563eb",
+                              borderRadius: 8,
+                              controlOutline: "rgba(37,99,235,0.2)",
+                            },
                           }}
-                          onChange={(values) => setSelectedSemesters(values)}
+                        >
+                          <Select
+                            value={selectedUnit}
+                            onChange={setSelectedUnit}
+                            placeholder="Chọn đơn vị"
+                            style={{ width: 160, height: 36 }}
+                            options={UNIT_OPTIONS}
+                          />
+                        </ConfigProvider>
+                      </div>
+                      <div>
+                        <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Tìm kiếm
+                        </label>
+                        <input
+                          size="small"
+                          type="text"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder="Tên hoặc mã sinh viên..."
+                          className="bg-gray-50 dark:bg-gray-700 border w-64 h-9 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
                         />
-                      </ConfigProvider>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Chọn đơn vị
-                      </label>
-                      <ConfigProvider
-                        theme={{
-                          algorithm: isDark
-                            ? theme.darkAlgorithm
-                            : theme.defaultAlgorithm,
-                          token: {
-                            colorPrimary: "#2563eb",
-                            borderRadius: 8,
-                            controlOutline: "rgba(37,99,235,0.2)",
-                          },
-                        }}
-                      >
-                        <Select
-                          value={selectedUnit}
-                          onChange={setSelectedUnit}
-                          placeholder="Chọn đơn vị"
-                          style={{ width: 160, height: 36 }}
-                          options={[
-                            { value: "all", label: "Tất cả đơn vị" },
-                            { value: "L1 - H5", label: "L1 - H5" },
-                            { value: "L2 - H5", label: "L2 - H5" },
-                            { value: "L3 - H5", label: "L3 - H5" },
-                            { value: "L4 - H5", label: "L4 - H5" },
-                            { value: "L5 - H5", label: "L5 - H5" },
-                            { value: "L6 - H5", label: "L6 - H5" },
-                          ]}
-                        />
-                      </ConfigProvider>
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Tìm kiếm
-                      </label>
-                      <input
-                        size="small"
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Tên hoặc mã sinh viên..."
-                        className="bg-gray-50 dark:bg-gray-700 border w-64 h-9 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
-                      />
-                    </div>
-                    <div className="pt-6">
-                      <button
-                        onClick={() => {
-                          setSearchTerm("");
-                          setSelectedUnit("all");
-                          setCurrentPage(1); // Reset về trang đầu khi xóa bộ lọc
-                        }}
-                        className="h-9 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center mr-2"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M6 18L18 6M6 6l12 12"
+                    {/* Dòng 2: Bộ lọc khoảng điểm GPA, CPA, nút Xóa bộ lọc và các nút khác */}
+                    <div className="flex items-center gap-3 flex-wrap w-full mt-3">
+                      {/* Bộ lọc khoảng điểm GPA */}
+                      <div>
+                        <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          GPA (Từ - Đến)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="4"
+                            value={gpaMin}
+                            onChange={(e) => {
+                              setGpaMin(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            placeholder="Từ"
+                            className="bg-gray-50 dark:bg-gray-700 border w-20 h-9 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
                           />
-                        </svg>
-                        Xóa bộ lọc
-                      </button>
-                    </div>
-                    <div className="pt-6">
-                      <Link
-                        href="/admin/semester-management"
-                        className="h-9 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center mr-2"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          <span className="text-gray-500">-</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="4"
+                            value={gpaMax}
+                            onChange={(e) => {
+                              setGpaMax(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            placeholder="Đến"
+                            className="bg-gray-50 dark:bg-gray-700 border w-20 h-9 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
                           />
-                        </svg>
-                        Quản lý học kỳ
-                      </Link>
-                    </div>
-                    <div className="pt-6">
-                      <Link
-                        href="/admin/yearly-statistics"
-                        className="h-9 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        </div>
+                      </div>
+
+                      {/* Bộ lọc khoảng điểm CPA */}
+                      <div>
+                        <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                          CPA (Từ - Đến)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="4"
+                            value={cpaMin}
+                            onChange={(e) => {
+                              setCpaMin(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            placeholder="Từ"
+                            className="bg-gray-50 dark:bg-gray-700 border w-20 h-9 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
                           />
-                        </svg>
-                        Thống kê theo năm
-                      </Link>
+                          <span className="text-gray-500">-</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="4"
+                            value={cpaMax}
+                            onChange={(e) => {
+                              setCpaMax(e.target.value);
+                              setCurrentPage(1);
+                            }}
+                            placeholder="Đến"
+                            className="bg-gray-50 dark:bg-gray-700 border w-20 h-9 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-6">
+                        <button
+                          onClick={() => {
+                            setSearchTerm("");
+                            setSelectedUnit("all");
+                          setGpaMin("");
+                          setGpaMax("");
+                          setCpaMin("");
+                          setCpaMax("");
+                          setSortBy(null);
+                          setSortOrder(null);
+                          setCurrentPage(1);
+                          }}
+                          className="h-9 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center mr-2"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                          Xóa bộ lọc
+                        </button>
+                      </div>
+                      
+                      <div className="pt-6">
+                        <Link
+                          href="/admin/semester-management"
+                          className="h-9 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center mr-2"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          Quản lý học kỳ
+                        </Link>
+                      </div>
+                      
+                      <div className="pt-6">
+                        <Link
+                          href="/admin/yearly-statistics"
+                          className="h-9 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-4 transition-colors duration-200 flex items-center"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                            />
+                          </svg>
+                          Thống kê theo năm
+                        </Link>
+                      </div>
                     </div>
                   </form>
                 </div>
@@ -802,12 +980,20 @@ const LearningResults = () => {
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           HỌC KỲ
                         </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          GPA
-                        </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
-                          CPA
-                        </th>
+                        <SortableTableHeader
+                          title="GPA"
+                          sortBy="gpa"
+                          currentSortBy={sortBy}
+                          sortOrder={sortOrder}
+                          onSort={handleSort}
+                        />
+                        <SortableTableHeader
+                          title="CPA"
+                          sortBy="cpa"
+                          currentSortBy={sortBy}
+                          sortOrder={sortOrder}
+                          onSort={handleSort}
+                        />
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap">
                           TC TÍCH LŨY
                         </th>
@@ -1701,6 +1887,22 @@ const LearningResults = () => {
           font-weight: 600 !important;
         }
       `}</style>
+
+      {/* Export Modal */}
+      <ExportExcelModal
+        visible={exportExcel.showExportModal}
+        onClose={() => {
+          exportExcel.setShowExportModal(false);
+          exportExcel.resetExportForm();
+        }}
+        onConfirm={exportExcel.handleExport}
+        filters={exportExcel.exportFilters}
+        onFilterChange={exportExcel.updateExportFilter}
+        filteredStudents={exportExcel.filteredStudentsForExport}
+        availableSchoolYears={exportExcel.availableSchoolYears}
+        isDark={isDark}
+        showSemesterFilter={true}
+      />
     </>
   );
 };

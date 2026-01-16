@@ -16,6 +16,7 @@ import axiosInstance from "@/utils/axiosInstance";
 const ListUser = () => {
   const router = useRouter();
   const [profile, setProfile] = useState([]);
+  const [allProfiles, setAllProfiles] = useState([]); // Lưu toàn bộ dữ liệu để filter FE
   const [profileDetail, setProfileDetail] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -54,6 +55,44 @@ const ListUser = () => {
   const [schoolYears, setSchoolYears] = useState([]);
   const [graduationDateError, setGraduationDateError] = useState("");
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+  // State cho modal xuất Excel QLCTNB
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFilterFullName, setExportFilterFullName] = useState("");
+  const [exportFilterUnit, setExportFilterUnit] = useState("all");
+  const [exportFilterEnrollment, setExportFilterEnrollment] = useState("");
+  const [exportFilterSchoolYear, setExportFilterSchoolYear] = useState("");
+  const [exportAllStudents, setExportAllStudents] = useState([]);
+  const [exportSelectedStudents, setExportSelectedStudents] = useState([]);
+  const [isLoadingExportStudents, setIsLoadingExportStudents] = useState(false);
+  const [exportSelectedColumns, setExportSelectedColumns] = useState([
+    "personalInfo",
+    "rank",
+    "family",
+    "enlistment",
+    "ethnicity",
+    "religion",
+    "foreignRelations",
+    "party",
+    "partyRating",
+    "rewards",
+    "trainingRating",
+  ]);
+
+  // Định nghĩa các cột có thể xuất (không bao gồm STT và Đơn vị vì luôn bắt buộc)
+  const exportColumnOptions = [
+    { value: "personalInfo", label: "Thông tin cá nhân (Họ tên, Ngày sinh, Quê quán...)" },
+    { value: "rank", label: "Cấp bậc" },
+    { value: "family", label: "Gia đình" },
+    { value: "enlistment", label: "Nhập ngũ" },
+    { value: "ethnicity", label: "Dân tộc" },
+    { value: "religion", label: "Tôn giáo" },
+    { value: "foreignRelations", label: "Yếu tố nước ngoài" },
+    { value: "party", label: "Đảng (Vào Đảng, Chính thức)" },
+    { value: "partyRating", label: "Xếp loại Đảng viên" },
+    { value: "rewards", label: "Khen thưởng" },
+    { value: "trainingRating", label: "Xếp loại rèn luyện" },
+  ];
 
   const getValidationMessage = useCallback(() => {
     return graduationDateError;
@@ -139,7 +178,8 @@ const ListUser = () => {
       showFormAdd ||
       showForm ||
       showConfirm ||
-      showGraduationModal
+      showGraduationModal ||
+      showExportModal
   );
 
   const handleAddFormData = async (e) => {
@@ -301,23 +341,48 @@ const ListUser = () => {
     initializeData();
   }, [withLoading]);
 
-  // useEffect riêng để xử lý phân trang
+  // useEffect riêng để xử lý phân trang và năm học (chỉ gọi API khi thay đổi)
   useEffect(() => {
     if (schoolYear) {
       loadStudentsWithSchoolYear(schoolYear);
     } else {
       fetchProfile();
     }
-  }, [currentPage, pageSize, schoolYear, fullName, unit, enrollmentYear]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, schoolYear]); // Bỏ fullName, unit, enrollmentYear - lọc ở FE
+
+  // Filter dữ liệu ở FE
+  const filteredProfiles = useMemo(() => {
+    if (!allProfiles || allProfiles.length === 0) return [];
+
+    return allProfiles.filter((student) => {
+      // Filter theo tên
+      if (fullName) {
+        const searchLower = fullName.toLowerCase();
+        const nameMatch = student.fullName?.toLowerCase().includes(searchLower);
+        const idMatch = student.studentId?.toLowerCase().includes(searchLower);
+        if (!nameMatch && !idMatch) return false;
+      }
+
+      // Filter theo đơn vị
+      if (unit && student.unit !== unit) return false;
+
+      // Filter theo năm nhập học
+      if (enrollmentYear && student.enrollment !== parseInt(enrollmentYear)) return false;
+
+      return true;
+    });
+  }, [allProfiles, fullName, unit, enrollmentYear]);
 
   const fetchProfile = async () => {
     try {
       const res = await axiosInstance.get(
-        `/commander/student?page=${currentPage}&pageSize=${pageSize}&fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&graduated=false`
+        `/commander/student?page=${currentPage}&pageSize=${pageSize}&graduated=false`
       );
       setProfile(res.data);
+      setAllProfiles(res.data?.students || []);
     } catch (error) {
-      console.log(error);
+      // Error fetching profile
     }
   };
 
@@ -326,11 +391,9 @@ const ListUser = () => {
       const res = await axiosInstance.get(`/university`);
       setUniversities(res.data);
     } catch (error) {
-      console.log(error);
+      // Error fetching universities
     }
   };
-
-  // Đã bỏ sử dụng bộ lọc Năm vào trường
 
   const fetchSchoolYears = async () => {
     try {
@@ -344,7 +407,7 @@ const ListUser = () => {
         await loadStudentsWithSchoolYear(latestSchoolYear);
       }
     } catch (error) {
-      console.log(error);
+      // Error fetching school years
     }
   };
 
@@ -362,16 +425,11 @@ const ListUser = () => {
         `/commander/student?page=${currentPage}&pageSize=${pageSize}&schoolYear=${schoolYearValue}&graduated=false`
       );
       setProfile(res.data);
+      setAllProfiles(res.data?.students || []);
     } catch (error) {
-      console.log(error);
       setProfile([]);
+      setAllProfiles([]);
     }
-  };
-
-  const handleSchoolYearChange = (newSchoolYear) => {
-    setSchoolYear(newSchoolYear);
-    // Chỉ cập nhật state, không gọi API tự động
-    // Người dùng phải bấm nút "Tìm kiếm" để áp dụng bộ lọc
   };
 
   const fetchOrganizations = async (universityId) => {
@@ -382,7 +440,6 @@ const ListUser = () => {
         );
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -397,7 +454,6 @@ const ListUser = () => {
         );
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -412,7 +468,6 @@ const ListUser = () => {
         );
         return res.data;
       } catch (error) {
-        console.log(error);
         return [];
       }
     }
@@ -450,9 +505,6 @@ const ListUser = () => {
         `/commander/student/${studentId}`,
         {}
       );
-
-      console.log("Student data for edit:", res.data);
-      console.log("Available universities:", universities);
 
       setFormData({
         studentId: res.data.studentId || "",
@@ -501,13 +553,11 @@ const ListUser = () => {
       ) {
         // Ưu tiên sử dụng university object từ API
         foundUniversity = res.data.university;
-        console.log("University from API:", foundUniversity);
       } else if (res.data.universityId) {
         // Fallback: tìm theo universityId
         foundUniversity = universities.find(
           (u) => u.id === res.data.universityId
         );
-        console.log("University found by universityId:", foundUniversity);
       } else if (
         res.data.university &&
         typeof res.data.university === "string"
@@ -516,7 +566,6 @@ const ListUser = () => {
         foundUniversity = universities.find(
           (u) => u.universityName === res.data.university
         );
-        console.log("University found by name:", foundUniversity);
       }
 
       if (foundUniversity) {
@@ -537,7 +586,6 @@ const ListUser = () => {
           ) {
             // Ưu tiên sử dụng organization object từ API
             selectedOrgId = res.data.organization.id;
-            console.log("Organization from API:", res.data.organization);
           } else if (res.data.organizationId) {
             // Fallback: sử dụng organizationId
             selectedOrgId = res.data.organizationId;
@@ -568,17 +616,9 @@ const ListUser = () => {
             ) {
               // Ưu tiên sử dụng education_level object từ API
               selectedLevelId = res.data.education_level.id;
-              console.log(
-                "✅ Education level from API:",
-                res.data.education_level
-              );
             } else if (res.data.educationLevelId) {
               // Fallback: sử dụng educationLevelId
               selectedLevelId = res.data.educationLevelId;
-              console.log(
-                "✅ Education level from educationLevelId:",
-                selectedLevelId
-              );
             } else if (
               res.data.educationLevel &&
               typeof res.data.educationLevel === "object"
@@ -596,7 +636,6 @@ const ListUser = () => {
 
             if (selectedLevelId) {
               setSelectedLevel(selectedLevelId);
-              console.log("✅ Set selectedLevel:", selectedLevelId);
 
               // Load classes
               const classes = await fetchClasses(selectedLevelId);
@@ -611,7 +650,6 @@ const ListUser = () => {
               ) {
                 // Ưu tiên sử dụng class object từ API
                 selectedClassId = res.data.class.id;
-                console.log("Class from API:", res.data.class);
               } else if (res.data.classId) {
                 // Fallback: sử dụng classId
                 selectedClassId = res.data.classId;
@@ -629,12 +667,8 @@ const ListUser = () => {
             }
           }
         } catch (error) {
-          console.error("Error loading cascading data:", error);
+          // Error loading cascading data
         }
-
-        console.log("Selected university set:", foundUniversity);
-      } else {
-        console.log("No university found for:", res.data.university);
       }
 
       // Load thông tin gia đình và yếu tố nước ngoài vào state
@@ -650,7 +684,6 @@ const ListUser = () => {
           })
         );
         setFamilyMembers(formattedFamilyMembers);
-        console.log("Loaded family members for edit:", formattedFamilyMembers);
       } else {
         setFamilyMembers([]);
       }
@@ -671,10 +704,6 @@ const ListUser = () => {
           })
         );
         setForeignRelations(formattedForeignRelations);
-        console.log(
-          "Loaded foreign relations for edit:",
-          formattedForeignRelations
-        );
       } else {
         setForeignRelations([]);
       }
@@ -682,7 +711,6 @@ const ListUser = () => {
       setSelectedStudentId(studentId);
       setShowForm(true);
     } catch (error) {
-      console.log(error);
       handleNotify("danger", "Lỗi!", "Không thể tải thông tin học viên");
     }
   };
@@ -785,7 +813,6 @@ const ListUser = () => {
 
     if (event.target.files) {
       const avatar = URL.createObjectURL(event.target.files[0]);
-      console.log(avatar);
       setFormData({
         ...formData,
         avatar: avatar,
@@ -1192,6 +1219,219 @@ const ListUser = () => {
     fetchAllStudentsForGraduation,
   ]);
 
+  // ===== Các hàm cho modal xuất Excel QLCTNB =====
+
+  // Fetch danh sách học viên cho export modal
+  const fetchAllStudentsForExport = useCallback(async () => {
+    setIsLoadingExportStudents(true);
+    try {
+      let allStudentsData = [];
+      let currentPage = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await axiosInstance.get(`/commander/student`, {
+          params: {
+            page: currentPage,
+            pageSize: 100,
+            schoolYear: exportFilterSchoolYear || schoolYear || schoolYears[0] || "",
+          },
+        });
+
+        if (response.data.students && response.data.students.length > 0) {
+          allStudentsData = [...allStudentsData, ...response.data.students];
+          currentPage++;
+          hasMore = response.data.students.length === 100;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setExportAllStudents(allStudentsData);
+    } catch (error) {
+      console.error("Error fetching students for export:", error);
+      handleNotify("error", "Lỗi!", "Không thể tải danh sách học viên");
+    } finally {
+      setIsLoadingExportStudents(false);
+    }
+  }, [exportFilterSchoolYear, schoolYear, schoolYears]);
+
+  // Filter học viên cho export modal
+  const filterExportStudent = useCallback(
+    (student) => {
+      const matchesName =
+        !exportFilterFullName ||
+        student.fullName
+          ?.toLowerCase()
+          .includes(exportFilterFullName.toLowerCase()) ||
+        student.studentId
+          ?.toLowerCase()
+          .includes(exportFilterFullName.toLowerCase());
+
+      const matchesUnit =
+        exportFilterUnit === "all" || student.unit === exportFilterUnit;
+
+      const matchesEnrollment =
+        !exportFilterEnrollment ||
+        student.enrollment?.toString() === exportFilterEnrollment;
+
+      return matchesName && matchesUnit && matchesEnrollment;
+    },
+    [exportFilterFullName, exportFilterUnit, exportFilterEnrollment]
+  );
+
+  // Sắp xếp học viên theo đơn vị
+  const sortExportStudents = useCallback((a, b) => {
+    const unitOrder = {
+      "L1 - H5": 1,
+      "L2 - H5": 2,
+      "L3 - H5": 3,
+      "L4 - H5": 4,
+      "L5 - H5": 5,
+      "L6 - H5": 6,
+    };
+    const unitA = unitOrder[a.unit] || 999;
+    const unitB = unitOrder[b.unit] || 999;
+    if (unitA !== unitB) return unitA - unitB;
+    return a.fullName?.localeCompare(b.fullName, "vi") || 0;
+  }, []);
+
+  // Danh sách học viên đã filter và sắp xếp cho export
+  const filteredAndSortedExportStudents = useMemo(() => {
+    return exportAllStudents.filter(filterExportStudent).sort(sortExportStudents);
+  }, [exportAllStudents, filterExportStudent, sortExportStudents]);
+
+  // Chọn tất cả học viên đã filter cho export
+  const handleSelectAllExportStudents = useCallback(() => {
+    const currentFilteredIds = filteredAndSortedExportStudents.map(
+      (student) => student.id
+    );
+    setExportSelectedStudents((prev) => {
+      const newSelected = [...prev];
+      currentFilteredIds.forEach((id) => {
+        if (!newSelected.includes(id)) {
+          newSelected.push(id);
+        }
+      });
+      return newSelected;
+    });
+  }, [filteredAndSortedExportStudents]);
+
+  // Bỏ chọn tất cả học viên đã filter cho export
+  const handleDeselectAllExportStudents = useCallback(() => {
+    const currentFilteredIds = filteredAndSortedExportStudents.map(
+      (student) => student.id
+    );
+    setExportSelectedStudents((prev) =>
+      prev.filter((id) => !currentFilteredIds.includes(id))
+    );
+  }, [filteredAndSortedExportStudents]);
+
+  // Chọn/bỏ chọn một học viên cho export
+  const handleSelectExportStudent = useCallback((studentId) => {
+    setExportSelectedStudents((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  }, []);
+
+  // Toggle chọn cột cho export
+  const handleToggleExportColumn = useCallback((columnValue) => {
+    setExportSelectedColumns((prev) =>
+      prev.includes(columnValue)
+        ? prev.filter((col) => col !== columnValue)
+        : [...prev, columnValue]
+    );
+  }, []);
+
+  // Chọn tất cả các cột
+  const handleSelectAllColumns = useCallback(() => {
+    setExportSelectedColumns(exportColumnOptions.map((col) => col.value));
+  }, []);
+
+  // Bỏ chọn tất cả các cột
+  const handleDeselectAllColumns = useCallback(() => {
+    setExportSelectedColumns([]);
+  }, []);
+
+  // Hàm xuất Excel với các filter
+  const handleExportExcel = useCallback(async () => {
+    const selectedSchoolYear = exportFilterSchoolYear || schoolYear || schoolYears[0];
+
+    if (!selectedSchoolYear) {
+      handleNotify("error", "Lỗi!", "Vui lòng chọn năm học trước khi xuất file");
+      return;
+    }
+
+    if (exportSelectedColumns.length === 0) {
+      handleNotify("error", "Lỗi!", "Vui lòng chọn ít nhất một trường để xuất");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("schoolYear", selectedSchoolYear);
+      // STT và Đơn vị luôn bắt buộc, thêm vào đầu danh sách
+      const allColumns = ["stt", "unit", ...exportSelectedColumns];
+      params.append("columns", allColumns.join(","));
+
+      if (exportFilterUnit !== "all") {
+        params.append("unit", exportFilterUnit);
+      }
+
+      if (exportSelectedStudents.length > 0) {
+        params.append("studentIds", exportSelectedStudents.join(","));
+      }
+
+      const response = await axiosInstance.get(
+        `/commander/political-management/excel?${params.toString()}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `quan-ly-chinh-tri-noi-bo-${selectedSchoolYear}.xlsx`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      handleNotify("success", "Thành công!", "Xuất file Excel thành công");
+      setShowExportModal(false);
+    } catch (error) {
+      console.error("Lỗi khi xuất file:", error);
+      const errorMessage =
+        error.response?.data?.message || "Không thể xuất file Excel";
+      handleNotify("error", "Lỗi!", errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    exportFilterSchoolYear,
+    schoolYear,
+    schoolYears,
+    exportSelectedColumns,
+    exportFilterUnit,
+    exportSelectedStudents,
+  ]);
+
+  // Effect để fetch học viên khi mở modal export hoặc thay đổi năm học
+  useEffect(() => {
+    if (showExportModal) {
+      fetchAllStudentsForExport();
+    }
+  }, [showExportModal, exportFilterSchoolYear, fetchAllStudentsForExport]);
+
+  // ===== Kết thúc các hàm cho modal xuất Excel QLCTNB =====
+
   const handleRowClick = async (studentId) => {
     try {
       const res = await axiosInstance.get(
@@ -1237,14 +1477,12 @@ const ListUser = () => {
             res.data.educationLevel.length === 24
           ) {
             try {
-              console.log("Fetching education level:", res.data.educationLevel);
               const educationLevelRes = await axiosInstance.get(
                 `/university/education-levels/${res.data.educationLevel}`
               );
-              console.log("Education level data:", educationLevelRes.data);
               setProfileEducationLevel(educationLevelRes.data);
             } catch (error) {
-              console.error("Error fetching education level:", error);
+              // Error fetching education level
             }
 
             // Fetch class
@@ -1254,14 +1492,12 @@ const ListUser = () => {
               res.data.class.length === 24
             ) {
               try {
-                console.log("Fetching class:", res.data.class);
                 const classRes = await axiosInstance.get(
                   `/university/classes/${res.data.class}`
                 );
-                console.log("Class data:", classRes.data);
                 setProfileClass(classRes.data);
               } catch (error) {
-                console.error("Error fetching class:", error);
+                // Error fetching class
               }
             }
           }
@@ -1270,50 +1506,27 @@ const ListUser = () => {
 
       setShowProfileDetail(true);
     } catch (error) {
-      console.log(error);
+      // Error loading profile detail
     }
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    router.push(
-      `/admin/list-user?fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&schoolYear=${schoolYear}`
-    );
-    try {
-      const res = await axiosInstance.get(
-        `/commander/student?page=${currentPage}&pageSize=${pageSize}&fullName=${fullName}&unit=${unit}&enrollment=${enrollmentYear}&schoolYear=${schoolYear}&graduated=false`,
-        {}
-      );
-
-      if (res.status === 404) setProfile([]);
-
-      setProfile(res.data);
-    } catch (error) {
-      handleNotify("danger", "Lỗi!", error);
-    }
+  // Handler cho các filter - chỉ cập nhật state, lọc ở FE qua useMemo
+  const handleUnitChange = (val) => {
+    setUnit(val || "");
   };
 
-  const handleClearFilter = async () => {
+  const handleSchoolYearFilterChange = (val) => {
+    const newSchoolYear = val || schoolYears[0] || "";
+    setSchoolYear(newSchoolYear);
+    // Năm học thay đổi thì gọi API để lấy dữ liệu mới
+  };
+
+  const handleClearFilter = () => {
     setFullName("");
     setUnit("");
     setEnrollmentYear("");
-    setSchoolYear(schoolYears[0] || ""); // Reset về năm học mới nhất
-
-    // Reset URL
-    router.push("/admin/list-user");
-
-    // Fetch all data với năm học mới nhất
-    try {
-      const latestYear = schoolYears[0] || "";
-      const res = await axiosInstance.get(
-        `/commander/student?page=1&pageSize=${pageSize}&schoolYear=${latestYear}&graduated=false`
-      );
-
-      if (res.status === 404) setProfile([]);
-      setProfile(res.data);
-    } catch (error) {
-      handleNotify("danger", "Lỗi!", error);
-    }
+    // Không reset năm học, giữ nguyên năm học hiện tại
+    // Filter sẽ tự động clear qua useMemo
   };
 
   const handlePageSizeChange = (newPageSize) => {
@@ -3102,74 +3315,12 @@ const ListUser = () => {
                     <span className="text-sm">Thêm Học viên</span>
                   </div>
                   <div
-                    onClick={async () => {
-                      if (!schoolYear) {
-                        try {
-                          const response = await axiosInstance.get(
-                            `/commander/political-management/school-years`
-                          );
-
-                          if (
-                            response.data.success &&
-                            response.data.schoolYears.length > 0
-                          ) {
-                            const availableYears =
-                              response.data.schoolYears.join(", ");
-                            handleNotify(
-                              "error",
-                              "Lỗi!",
-                              `Vui lòng chọn năm học trước khi xuất file. Các năm học có sẵn: ${availableYears}`
-                            );
-                          } else {
-                            handleNotify(
-                              "error",
-                              "Lỗi!",
-                              "Vui lòng chọn năm học trước khi xuất file"
-                            );
-                          }
-                        } catch (error) {
-                          handleNotify(
-                            "error",
-                            "Lỗi!",
-                            "Vui lòng chọn năm học trước khi xuất file"
-                          );
-                        }
-                        return;
+                    onClick={() => {
+                      // Set năm học mặc định cho modal nếu đã chọn
+                      if (schoolYear) {
+                        setExportFilterSchoolYear(schoolYear);
                       }
-                      try {
-                        const response = await axiosInstance.get(
-                          `/commander/political-management/excel?schoolYear=${schoolYear}`,
-                          {
-                            responseType: "blob",
-                          }
-                        );
-
-                        const url = window.URL.createObjectURL(
-                          new Blob([response.data])
-                        );
-                        const link = document.createElement("a");
-                        link.href = url;
-                        link.setAttribute(
-                          "download",
-                          `quan-ly-chinh-tri-noi-bo-${schoolYear}.xlsx`
-                        );
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-                        window.URL.revokeObjectURL(url);
-
-                        handleNotify(
-                          "success",
-                          "Thành công!",
-                          "Xuất file Excel thành công"
-                        );
-                      } catch (error) {
-                        console.error("Lỗi khi xuất file:", error);
-                        const errorMessage =
-                          error.response?.data?.message ||
-                          "Không thể xuất file Excel";
-                        handleNotify("error", "Lỗi!", errorMessage);
-                      }
+                      setShowExportModal(true);
                     }}
                     className="flex hover:text-blue-700 cursor-pointer items-center"
                   >
@@ -3192,10 +3343,7 @@ const ListUser = () => {
                 </div>
               </div>
               <div className="w-full pt-2 ml-5 pr-5 pb-5">
-                <form
-                  className="flex items-end pb-4"
-                  onSubmit={(e) => handleSearch(e)}
-                >
+                <div className="flex items-end pb-4">
                   <div className="flex items-center gap-3 flex-wrap">
                     <div>
                       <label
@@ -3209,7 +3357,7 @@ const ListUser = () => {
                         id="fullName"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="bg-gray-50 dark:bg-gray-700 border w-56 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pb-1 pt-1.5 pr-10"
+                        className="bg-gray-50 dark:bg-gray-700 border w-56 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pb-1 pt-1.5 pr-10 h-9"
                         placeholder="vd: Nguyễn Văn X"
                       />
                     </div>
@@ -3219,7 +3367,7 @@ const ListUser = () => {
                       </label>
                       <Select
                         value={unit || ""}
-                        onChange={(val) => setUnit(val || "")}
+                        onChange={handleUnitChange}
                         placeholder="Chọn đơn vị"
                         style={{ width: 200, height: 36 }}
                         allowClear
@@ -3240,9 +3388,7 @@ const ListUser = () => {
                       </label>
                       <Select
                         value={schoolYear || schoolYears[0] || ""}
-                        onChange={(val) =>
-                          handleSchoolYearChange(val || schoolYears[0] || "")
-                        }
+                        onChange={handleSchoolYearFilterChange}
                         placeholder="Chọn năm học"
                         style={{ width: 200, height: 36 }}
                         allowClear
@@ -3257,17 +3403,6 @@ const ListUser = () => {
                         &nbsp;
                       </label>
                       <button
-                        type="submit"
-                        className="h-9 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium rounded-lg text-sm w-full sm:w-auto px-5 transition-colors duration-200"
-                      >
-                        Tìm kiếm
-                      </button>
-                    </div>
-                    <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300 opacity-0">
-                        &nbsp;
-                      </label>
-                      <button
                         type="button"
                         onClick={handleClearFilter}
                         className="h-9 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm px-5 transition-colors duration-200"
@@ -3276,7 +3411,7 @@ const ListUser = () => {
                       </button>
                     </div>
                   </div>
-                </form>
+                </div>
                 <div className="overflow-x-auto mt-4">
                   <table className="table-auto w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <thead className="bg-gray-50 dark:bg-gray-700">
@@ -3327,8 +3462,8 @@ const ListUser = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {profile?.students && profile.students.length > 0 ? (
-                        profile.students.map((item, index) => (
+                      {filteredProfiles && filteredProfiles.length > 0 ? (
+                        filteredProfiles.map((item, index) => (
                           <tr
                             className="hover:cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                             key={item.id}
@@ -3490,7 +3625,10 @@ const ListUser = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    Trang {currentPage} / {profile?.totalPages || 1}(
+                    Trang {currentPage} / {profile?.totalPages || 1} (
+                    {fullName || unit || enrollmentYear
+                      ? `${filteredProfiles.length} kết quả lọc / `
+                      : ""}
                     {profile?.totalStudents || 0} học viên)
                   </span>
                   <nav aria-label="Page navigation example">
@@ -4991,6 +5129,409 @@ const ListUser = () => {
             </div>
           </div>
         )}
+
+        {/* Modal xuất Excel QLCTNB */}
+        {showExportModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4 mt-14">
+            <div className="bg-black bg-opacity-50 inset-0 fixed"></div>
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl max-h-[90vh] sm:max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Xuất Excel Quản lý Chính trị Nội bộ
+                  </h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Chọn năm học, đơn vị, các trường dữ liệu và học viên cần xuất
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowExportModal(false);
+                    setExportSelectedStudents([]);
+                    setExportFilterFullName("");
+                    setExportFilterUnit("all");
+                    setExportFilterEnrollment("");
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-6 flex flex-col">
+                {/* Phần chọn các trường để xuất */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Chọn các trường dữ liệu để xuất
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        STT và Đơn vị luôn được xuất
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSelectAllColumns}
+                        className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                      >
+                        Chọn tất cả
+                      </button>
+                      <button
+                        onClick={handleDeselectAllColumns}
+                        className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                      >
+                        Bỏ chọn tất cả
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {exportColumnOptions.map((column) => (
+                      <label
+                        key={column.value}
+                        className={`inline-flex items-center px-3 py-2 rounded-lg border cursor-pointer transition-colors duration-200 ${
+                          exportSelectedColumns.includes(column.value)
+                            ? "bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300"
+                            : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={exportSelectedColumns.includes(column.value)}
+                          onChange={() => handleToggleExportColumn(column.value)}
+                          className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm">{column.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Đã chọn: {exportSelectedColumns.length + 2}/{exportColumnOptions.length + 2} trường (bao gồm STT, Đơn vị)
+                  </p>
+                </div>
+
+                {/* Bộ lọc và tìm kiếm */}
+                <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Năm học <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={exportFilterSchoolYear || schoolYear || schoolYears[0] || ""}
+                      onChange={(e) => {
+                        setExportFilterSchoolYear(e.target.value);
+                        setExportSelectedStudents([]);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Chọn năm học</option>
+                      {schoolYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Chọn đơn vị
+                    </label>
+                    <select
+                      value={exportFilterUnit}
+                      onChange={(e) => {
+                        setExportFilterUnit(e.target.value);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">Tất cả đơn vị</option>
+                      <option value="L1 - H5">L1 - H5</option>
+                      <option value="L2 - H5">L2 - H5</option>
+                      <option value="L3 - H5">L3 - H5</option>
+                      <option value="L4 - H5">L4 - H5</option>
+                      <option value="L5 - H5">L5 - H5</option>
+                      <option value="L6 - H5">L6 - H5</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Năm vào trường
+                    </label>
+                    <select
+                      value={exportFilterEnrollment}
+                      onChange={(e) => {
+                        setExportFilterEnrollment(e.target.value);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Tất cả năm</option>
+                      {enrollmentYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Tìm kiếm theo tên/mã
+                    </label>
+                    <input
+                      type="text"
+                      value={exportFilterFullName}
+                      onChange={(e) => {
+                        setExportFilterFullName(e.target.value);
+                      }}
+                      placeholder="Nhập tên hoặc mã học viên..."
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Nút chọn tất cả và bỏ chọn học viên */}
+                <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSelectAllExportStudents}
+                      disabled={
+                        filteredAndSortedExportStudents.length === 0 ||
+                        filteredAndSortedExportStudents.every((s) =>
+                          exportSelectedStudents.includes(s.id)
+                        )
+                      }
+                      className={
+                        `px-4 py-2 rounded-lg transition-colors duration-200 text-sm text-white ` +
+                        (filteredAndSortedExportStudents.length === 0 ||
+                        filteredAndSortedExportStudents.every((s) =>
+                          exportSelectedStudents.includes(s.id)
+                        )
+                          ? "bg-blue-400 cursor-not-allowed opacity-60"
+                          : "bg-blue-600 hover:bg-blue-700")
+                      }
+                    >
+                      Chọn tất cả học viên
+                    </button>
+                    <button
+                      onClick={handleDeselectAllExportStudents}
+                      disabled={
+                        filteredAndSortedExportStudents.length === 0 ||
+                        filteredAndSortedExportStudents.every(
+                          (s) => !exportSelectedStudents.includes(s.id)
+                        )
+                      }
+                      className={
+                        `px-4 py-2 rounded-lg transition-colors duration-200 text-sm text-white ` +
+                        (filteredAndSortedExportStudents.length === 0 ||
+                        filteredAndSortedExportStudents.every(
+                          (s) => !exportSelectedStudents.includes(s.id)
+                        )
+                          ? "bg-gray-400 cursor-not-allowed opacity-60"
+                          : "bg-gray-600 hover:bg-gray-700")
+                      }
+                    >
+                      Bỏ chọn tất cả
+                    </button>
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">
+                      {exportSelectedStudents.length > 0
+                        ? `Đã chọn: ${exportSelectedStudents.length} học viên`
+                        : `Xuất tất cả: ${filteredAndSortedExportStudents.length} học viên`}
+                    </span>
+                    <span className="text-xs ml-2 text-gray-500">
+                      (Không chọn = xuất tất cả theo bộ lọc)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Danh sách học viên */}
+                <div className="max-h-64 sm:max-h-72 lg:max-h-80 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                  {isLoadingExportStudents ? (
+                    <div className="text-center py-8">
+                      <div className="flex flex-col items-center">
+                        <svg
+                          className="animate-spin h-8 w-8 text-blue-600 mb-4"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Đang tải danh sách học viên...
+                        </p>
+                      </div>
+                    </div>
+                  ) : filteredAndSortedExportStudents.length > 0 ? (
+                    <div className="grid gap-2 p-4">
+                      {filteredAndSortedExportStudents.map((student) => (
+                        <div
+                          key={student.id}
+                          className={`flex items-center p-2 sm:p-3 rounded-lg border cursor-pointer transition-colors duration-200 ${
+                            exportSelectedStudents.includes(student.id)
+                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700"
+                              : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                          onClick={() => handleSelectExportStudent(student.id)}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={exportSelectedStudents.includes(student.id)}
+                            onChange={() => handleSelectExportStudent(student.id)}
+                            className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center">
+                              <img
+                                src={
+                                  student.avatar ||
+                                  "https://i.pinimg.com/736x/81/09/3a/81093a0429e25b0ff579fa41aa96c421.jpg"
+                                }
+                                alt="avatar"
+                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full mr-2 sm:mr-3 flex-shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-gray-900 dark:text-white truncate">
+                                  {student.fullName}
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                                  Mã HV: {student.studentId} • Đơn vị: {student.unit} • Năm: {student.enrollment}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="flex flex-col items-center">
+                        <svg
+                          className="w-16 h-16 mb-4 text-gray-400 dark:text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.5"
+                            d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"
+                          />
+                        </svg>
+                        <p className="text-lg font-medium text-gray-600 dark:text-gray-300 mt-2">
+                          Không có học viên nào
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Vui lòng chọn năm học hoặc thay đổi bộ lọc
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Nút xuất */}
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-3 sm:space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowExportModal(false);
+                      setExportSelectedStudents([]);
+                      setExportFilterFullName("");
+                      setExportFilterUnit("all");
+                      setExportFilterEnrollment("");
+                    }}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors duration-200"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={handleExportExcel}
+                    disabled={
+                      isLoading ||
+                      exportSelectedColumns.length === 0 ||
+                      !(exportFilterSchoolYear || schoolYear || schoolYears[0])
+                    }
+                    className={`px-6 py-2 rounded-lg transition-colors duration-200 flex items-center justify-center ${
+                      isLoading ||
+                      exportSelectedColumns.length === 0 ||
+                      !(exportFilterSchoolYear || schoolYear || schoolYears[0])
+                        ? "bg-gray-400 cursor-not-allowed text-gray-600"
+                        : "bg-green-600 hover:bg-green-700 text-white"
+                    }`}
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Đang xuất file...
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="1.5"
+                          stroke="currentColor"
+                          className="w-5 h-5 mr-2"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                          />
+                        </svg>
+                        Xuất Excel
+                      </div>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <style jsx global>{`
           .ant-select .ant-select-selector {
             background-color: rgb(255 255 255) !important;

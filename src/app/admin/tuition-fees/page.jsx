@@ -18,6 +18,9 @@ const TuitionFees = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportSelectedSemesters, setExportSelectedSemesters] = useState([]);
   const [exportSelectedUnits, setExportSelectedUnits] = useState([]);
+  const [exportSelectedStudents, setExportSelectedStudents] = useState([]);
+  const [filteredStudentsForExport, setFilteredStudentsForExport] = useState([]);
+  const [exportSelectedStatus, setExportSelectedStatus] = useState(""); // Trạng thái thanh toán
   // Danh sách đơn vị cố định
   const units = [
     { id: "1", unitName: "L1 - H5" },
@@ -132,6 +135,45 @@ const TuitionFees = () => {
     observer.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
   }, []);
+
+  // Lọc học viên theo đơn vị được chọn trong modal export
+  useEffect(() => {
+    if (tuitionFees?.tuitionFees && tuitionFees.tuitionFees.length > 0) {
+      // Tạo danh sách học viên unique từ tuitionFees
+      const studentMap = new Map();
+      tuitionFees.tuitionFees.forEach((item) => {
+        if (!studentMap.has(item.studentId)) {
+          studentMap.set(item.studentId, {
+            studentId: item.studentId,
+            fullName: item.fullName,
+            unit: item.unit,
+          });
+        }
+      });
+
+      let students = Array.from(studentMap.values());
+
+      // Lọc theo đơn vị nếu có chọn
+      if (exportSelectedUnits.length > 0) {
+        students = students.filter((s) => exportSelectedUnits.includes(s.unit));
+      }
+
+      // Sắp xếp theo đơn vị và tên
+      const unitOrder = {
+        "L1 - H5": 1, "L2 - H5": 2, "L3 - H5": 3,
+        "L4 - H5": 4, "L5 - H5": 5, "L6 - H5": 6,
+      };
+      students.sort((a, b) => {
+        const unitA = unitOrder[a.unit] || 999;
+        const unitB = unitOrder[b.unit] || 999;
+        if (unitA !== unitB) return unitA - unitB;
+        return (a.fullName || "").localeCompare(b.fullName || "", "vi");
+      });
+
+      setFilteredStudentsForExport(students);
+      setExportSelectedStudents([]); // Reset khi đơn vị thay đổi
+    }
+  }, [exportSelectedUnits, tuitionFees]);
 
   const fetchSemesters = async () => {
     try {
@@ -369,19 +411,20 @@ const TuitionFees = () => {
       const unitParam =
         exportSelectedUnits.length > 0 ? exportSelectedUnits.join(",") : "all";
 
-      console.log("Frontend - Export Word parameters:", {
-        semesterParam,
-        schoolYearParam,
-        unitParam,
-        exportSelectedSemesters,
-        exportSelectedUnits,
-      });
+      const studentIdsParam =
+        exportSelectedStudents.length > 0 ? exportSelectedStudents.join(",") : "";
 
       // Encode các tham số để tránh lỗi với ký tự đặc biệt
       const params = new URLSearchParams();
       params.append("semester", semesterParam);
       params.append("schoolYear", schoolYearParam);
       params.append("unit", unitParam);
+      if (studentIdsParam) {
+        params.append("studentIds", studentIdsParam);
+      }
+      if (exportSelectedStatus) {
+        params.append("status", exportSelectedStatus);
+      }
 
       const response = await axiosInstance.get(
         `/commander/tuitionFee/word?${params.toString()}`,
@@ -489,6 +532,20 @@ const TuitionFees = () => {
         fileName += "_tat_ca_don_vi";
       }
 
+      // Thêm thông tin học viên cụ thể
+      if (exportSelectedStudents.length > 0) {
+        fileName += `_${exportSelectedStudents.length}_hoc_vien`;
+      }
+
+      // Thêm thông tin trạng thái
+      if (exportSelectedStatus) {
+        const statusMap = {
+          paid: "da_thanh_toan",
+          unpaid: "chua_thanh_toan",
+        };
+        fileName += `_${statusMap[exportSelectedStatus] || exportSelectedStatus}`;
+      }
+
       fileName += ".docx";
 
       link.setAttribute("download", fileName);
@@ -500,6 +557,8 @@ const TuitionFees = () => {
       setShowExportModal(false);
       setExportSelectedSemesters([]);
       setExportSelectedUnits([]);
+      setExportSelectedStudents([]);
+      setExportSelectedStatus("");
 
       handleNotify("success", "Thành công", "Đã xuất file Word");
     } catch (error) {
@@ -808,7 +867,7 @@ const TuitionFees = () => {
                         scope="col"
                         className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 whitespace-nowrap"
                       >
-                        TRƯỜNG
+                        CƠ SỞ ĐÀO TẠO
                       </th>
                       <th
                         scope="col"
@@ -1282,6 +1341,91 @@ const TuitionFees = () => {
                   </ConfigProvider>
                 </div>
 
+                {/* Chọn học viên cụ thể */}
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Chọn học viên cụ thể (tùy chọn)
+                  </label>
+                  <ConfigProvider
+                    theme={{
+                      algorithm: isDark
+                        ? theme.darkAlgorithm
+                        : theme.defaultAlgorithm,
+                      token: {
+                        colorPrimary: "#2563eb",
+                        borderRadius: 8,
+                        controlOutline: "rgba(37,99,235,0.2)",
+                      },
+                    }}
+                  >
+                    <Select
+                      mode="multiple"
+                      placeholder="Chọn học viên cụ thể..."
+                      allowClear
+                      showSearch
+                      filterOption={(input, option) =>
+                        option.label.toLowerCase().includes(input.toLowerCase())
+                      }
+                      style={{ width: "100%" }}
+                      value={exportSelectedStudents}
+                      onChange={setExportSelectedStudents}
+                      dropdownStyle={{
+                        backgroundColor: isDark ? "#1f2937" : "#ffffff",
+                        color: isDark ? "#e5e7eb" : "#111827",
+                        border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+                        borderRadius: 8,
+                      }}
+                      options={filteredStudentsForExport.map((student) => ({
+                        value: student.studentId,
+                        label: `${student.fullName} (${student.unit || ""})`,
+                      }))}
+                    />
+                  </ConfigProvider>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Để trống nếu muốn xuất theo đơn vị đã chọn.
+                  </p>
+                </div>
+
+                {/* Chọn trạng thái thanh toán */}
+                <div>
+                  <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Trạng thái thanh toán
+                  </label>
+                  <ConfigProvider
+                    theme={{
+                      algorithm: isDark
+                        ? theme.darkAlgorithm
+                        : theme.defaultAlgorithm,
+                      token: {
+                        colorPrimary: "#2563eb",
+                        borderRadius: 8,
+                        controlOutline: "rgba(37,99,235,0.2)",
+                      },
+                    }}
+                  >
+                    <Select
+                      placeholder="Tất cả trạng thái"
+                      allowClear
+                      style={{ width: "100%" }}
+                      value={exportSelectedStatus || undefined}
+                      onChange={(value) => setExportSelectedStatus(value || "")}
+                      dropdownStyle={{
+                        backgroundColor: isDark ? "#1f2937" : "#ffffff",
+                        color: isDark ? "#e5e7eb" : "#111827",
+                        border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+                        borderRadius: 8,
+                      }}
+                      options={[
+                        { value: "paid", label: "Đã thanh toán" },
+                        { value: "unpaid", label: "Chưa thanh toán" },
+                      ]}
+                    />
+                  </ConfigProvider>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Để trống để xuất tất cả trạng thái.
+                  </p>
+                </div>
+
                 {/* Thông báo */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                   <div className="flex items-start">
@@ -1302,10 +1446,10 @@ const TuitionFees = () => {
                       <p className="font-medium">Lưu ý:</p>
                       <ul className="mt-1 list-disc list-inside space-y-1">
                         <li>
-                          Để trống cả hai trường để xuất tất cả học kỳ và đơn vị
+                          Để trống tất cả để xuất toàn bộ dữ liệu học phí
                         </li>
                         <li>
-                          Có thể chọn nhiều học kỳ và nhiều đơn vị cùng lúc
+                          Có thể chọn nhiều học kỳ, đơn vị và học viên cùng lúc
                         </li>
                         <li>File Word sẽ được tải xuống tự động</li>
                       </ul>
@@ -1322,6 +1466,8 @@ const TuitionFees = () => {
                     setShowExportModal(false);
                     setExportSelectedSemesters([]);
                     setExportSelectedUnits([]);
+                    setExportSelectedStudents([]);
+                    setExportSelectedStatus("");
                   }}
                 >
                   Hủy
